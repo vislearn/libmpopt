@@ -1,0 +1,196 @@
+#!/usr/bin/env python3
+
+import copy
+import lzma
+import re
+import sys
+from collections import namedtuple
+
+import ct
+
+
+class JugBase:
+
+    def __repr__(self):
+        args = ['{}={!r}'.format(x, self.__dict__[x]) for x in sorted(self.__dict__.keys())]
+        return '{}({})'.format(self.__class__.__name__, ', '.join(args))
+
+    def _yes(self):
+        return True
+
+    def _no(self):
+        return False
+
+    is_variable = _no
+    is_detection = _no
+    is_disappearance = _no
+    is_appearance = _no
+    is_disappearance = _no
+    is_move = _no
+    is_division = _no
+    is_conf_set = _no
+
+    def is_transition(self):
+        return self.is_move() or self.is_division()
+
+
+class JugVariable(JugBase):
+
+    def __init__(self, timestep, index, cost):
+        self.timestep = timestep
+        self.index = index
+        self.cost = cost
+
+    is_variable = JugBase._yes
+
+
+class JugDetection(JugVariable):
+
+    is_detection = JugVariable._yes
+
+
+class JugAppearance(JugVariable):
+
+    is_appearance = JugVariable._yes
+
+
+class JugDisappearance(JugVariable):
+
+    is_disappearance = JugVariable._yes
+
+
+class JugMove(JugVariable):
+
+    def __init__(self, timestep, index, index_to, cost):
+        super().__init__(timestep, index, cost)
+        self.index_to = index_to
+
+    is_move = JugVariable._yes
+
+
+class JugDivision(JugVariable):
+
+    def __init__(self, timestep, index, index_to_1, index_to_2, cost):
+        super().__init__(timestep, index, cost)
+        self.index_to_1 = index_to_1
+        self.index_to_2 = index_to_2
+
+    is_division = JugVariable._yes
+
+
+class JugConfSet(JugBase):
+
+    def __init__(self, timestep, detections):
+        self.timestep = timestep
+        self.detections = detections
+
+    is_conf_set = JugBase._yes
+
+
+def parse_jug_model(f):
+    re_comment = re.compile(r'^#|^$')
+    re_hypothesis = re.compile(r'^H +([0-9]+) +([0-9]+) +([-.0-9]+) ')
+    re_app = re.compile(r'^(DIS)?APP +([0-9]+) +([0-9]+) +([-.0-9]+)')
+    re_move = re.compile(r'^MOVE +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([-.0-9]+)')
+    re_div = re.compile(r'^DIV +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([-.0-9]+)')
+    re_confset = re.compile(r'^CONFSET +(.+) +<= 1$')
+
+    for line in f:
+        line = line.rstrip('\r\n')
+
+        m = re_comment.search(line)
+        if m:
+            continue
+
+        m = re_hypothesis.search(line)
+        if m:
+            yield JugDetection(timestep=int(m.group(1)),
+                    index=int(m.group(2)),
+                    cost=float(m.group(3)))
+            continue
+
+        m = re_app.search(line)
+        if m:
+            ctor = JugDisappearance if m.group(1) == 'DIS' else JugAppearance
+            yield ctor(timestep=int(m.group(2)),
+                    index=int(m.group(3)),
+                    cost=float(m.group(4)))
+            continue
+
+        m = re_move.search(line)
+        if m:
+            assert(int(m.group(1)) == int(m.group(3)) - 1)
+            yield JugMove(timestep=int(m.group(1)),
+                    index=int(m.group(2)),
+                    index_to=int(m.group(4)),
+                    cost=float(m.group(5)))
+            continue
+
+        m = re_div.search(line)
+        if m:
+            assert(int(m.group(1)) == int(m.group(3)) - 1)
+            assert(int(m.group(1)) == int(m.group(5)) - 1)
+            yield JugDivision(timestep=int(m.group(1)),
+                    index=int(m.group(2)),
+                    index_to_1=int(m.group(4)),
+                    index_to_2=int(m.group(6)),
+                    cost=float(m.group(7)))
+            continue
+
+        m = re_confset.search(line)
+        if m:
+            tuples = []
+            for x in re.split(r' *\+ *', m.group(1)):
+                m = re.search(r'([0-9]+) +([0-9]+)', x)
+                assert(m)
+                tuples.append((int(m.group(1)), int(m.group(2))))
+            assert(tuples[0][0] == x[0] for x in tuples[1:])
+
+            yield JugConfSet(timestep=tuples[0][0],
+                    detections=[x[1] for x in tuples])
+            continue
+
+        raise RuntimeError('Unhandled input line: {}'.format(line))
+
+
+def convert_jug_to_model(jug_model):
+    m = ct.Model()
+
+    for item in jug_model:
+        if item.is_detection():
+            r = m.add_detection(item.timestep, detection=item.cost)
+            assert(r == item.index)
+        elif item.is_appearance():
+            m.set_detection_cost(item.timestep, item.index, appearance=item.cost)
+        elif item.is_disappearance():
+            m.set_detection_cost(item.timestep, item.index, disappearance=item.cost)
+        elif item.is_move():
+            m.add_transition(item.timestep, item.index, item.index_to, item.cost)
+        elif item.is_division():
+            m.add_division(item.timestep, item.index, item.index_to_1, item.index_to_2, item.cost)
+        elif item.is_conf_set():
+            m.add_conflict(item.timestep, item.detections)
+        else:
+            assert(False)
+
+    return m
+
+def smart_open(filename, *args, **kwargs):
+    if filename.endswith('.xz'):
+        return lzma.open(filename, *args, **kwargs)
+    else:
+        return open(filename, *args, **kwargs)
+
+
+if __name__ == '__main__':
+    print('Loading model... ', end='', flush=True)
+    input_filename, = sys.argv[1:]
+    with smart_open(input_filename, 'rt') as f:
+        model = convert_jug_to_model(parse_jug_model(f))
+    print('ok')
+
+    print('Converting in libct model... ', end='', flush=True)
+    tracker = model.construct_tracker()
+    print('ok, initial lb = {}'.format(tracker.lower_bound()), flush=True)
+    tracker.run()
+    print('final lower bound = {}'.format(tracker.lower_bound()))
