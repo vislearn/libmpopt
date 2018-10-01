@@ -1,0 +1,21 @@
+#!/bin/bash
+set -eu -o pipefail
+
+source_dir=$(pwd)
+build_dir=$(mktemp -d)
+install_dir=$(mktemp -d)
+
+cd "${build_dir}"
+cmake -GNinja -DCMAKE_INSTALL_PREFIX="${install_dir}" -DCMAKE_BUILD_TYPE=Debug "${source_dir}"
+ninja
+ninja install
+
+python_path=$(find "${install_dir}/lib" -name 'site-packages' -type d | head -n1)
+
+env PYTHONPATH="${python_path}" \
+    LD_LIBRARY_PATH="${install_dir}/lib" \
+    PATH="${install_dir}/bin:${PATH}" \
+    ${SHELL}
+
+rm -rf "${build_dir}"
+rm -rf "${install_dir}"
