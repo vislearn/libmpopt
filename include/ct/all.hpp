@@ -9,6 +9,7 @@
 #include <ct/util/debug.hpp>
 #include <ct/util/fixed_vector.hpp>
 #include <ct/util/misc.hpp>
+#include <ct/util/signal_handler.hpp>
 
 #include <ct/factor/detection.hpp>
 #include <ct/factor/conflict.hpp>

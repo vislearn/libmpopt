@@ -5,6 +5,7 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <csignal>
 #include <cstdlib>
 #include <functional>
 #include <iostream>

@@ -234,10 +234,11 @@ public:
     }
 #endif
 
+    signal_handler h;
     using clock_type = std::chrono::high_resolution_clock;
     const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
-    for (int i = 0; i < max_iterations; ++i) {
+    for (int i = 0; i < max_iterations && !h.signaled(); ++i) {
       std::cout << "it=" << i << " ";
       forward_pass();
       std::cout << "lb_fw=" << lower_bound() << " ";
