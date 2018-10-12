@@ -3,30 +3,45 @@
 
 namespace ct {
 
+template<typename DETECTION>
+struct conflict_message_storage {
+  conflict_message_storage()
+  : detection(nullptr)
+  , weight(-1)
+  { }
+
+  DETECTION* detection;
+  cost weight;
+
+  bool is_prepared() const
+  {
+    return detection != nullptr && weight >= 0 && weight <= 1;
+  }
+};
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class conflict_messages {
 public:
   using conflict_type = conflict_factor<ALLOCATOR>;
   using detection_type = detection_factor<ALLOCATOR>;
-  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<detection_type*>;
-
-  static constexpr cost weight = 0.05;
+  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<conflict_message_storage<detection_type>>;
 
   conflict_messages(conflict_type* conflict, const index number_of_detections, const ALLOCATOR& allocator = ALLOCATOR())
   : conflict_(conflict)
-  , detections_(number_of_detections, nullptr, allocator)
+  , detections_(number_of_detections, allocator)
   { }
 
-  void add_link(const index slot, detection_type* detection)
+  void add_link(const index slot, detection_type* detection, const cost weight)
   {
-    assert(detections_[slot] == nullptr);
-    detections_[slot] = detection;
+    assert(!detections_[slot].is_prepared());
+    detections_[slot].detection = detection;
+    detections_[slot].weight = weight;
   }
 
   bool is_prepared() const
   {
-    for (auto* detection : detections_)
-      if (detection == nullptr)
+    for (auto& d : detections_)
+      if (! d.is_prepared())
         return false;
 
     return true;
@@ -35,18 +50,17 @@ public:
   void send_message_to_conflict()
   {
     index i = 0;
-    for (auto* detection : detections_) {
-      const auto msg_on = detection->min_detection() * weight;
-      detection->repam_detection_on(-msg_on);
+    for (auto& d : detections_) {
+      const auto msg_on = d.detection->min_detection() * d.weight;
+      d.detection->repam_detection_on(-msg_on);
       conflict_->repam_on(i, msg_on);
 
-      const auto msg_off = detection->detection_off() * weight;
-      detection->repam_detection_off(-msg_off);
+      const auto msg_off = d.detection->detection_off() * d.weight;
+      d.detection->repam_detection_off(-msg_off);
       conflict_->repam_off(i, msg_off);
 
       ++i;
     }
-
   }
 
   void send_message_to_detection()
@@ -56,14 +70,14 @@ public:
     uniform_minorant(conflict_->costs_.cbegin(), conflict_->costs_.cend(), minorant.begin(), minorant.end());
 
     index i = 0;
-    for (auto* detection : detections_) {
-      const cost msg_on = minorant[i][1] * weight;
+    for (auto& d : detections_) {
+      const cost msg_on = minorant[i][1];
       conflict_->repam_on(i, -msg_on);
-      detection->repam_detection_on(msg_on);
+      d.detection->repam_detection_on(msg_on);
 
-      const cost msg_off = minorant[i][0] * weight;
+      const cost msg_off = minorant[i][0];
       conflict_->repam_off(i, -msg_off);
-      detection->repam_detection_off(msg_off);
+      d.detection->repam_detection_off(msg_off);
 
       ++i;
     }
@@ -71,7 +85,7 @@ public:
 
 protected:
   conflict_type* conflict_;
-  fixed_vector<detection_type*, allocator_type> detections_;
+  fixed_vector<conflict_message_storage<detection_type>, allocator_type> detections_;
 };
 
 }

@@ -121,11 +121,24 @@ class Model:
 
                 detection_map[(timestep, detection)] = d
 
+            conflict_counter = {}
+            for conflict in range(self._no_conflicts.get(timestep, 0)):
+                detections = self._conflicts[(timestep, conflict)]
+                for d in detections:
+                    self._inc_dict(conflict_counter, d)
+
             for conflict in range(self._no_conflicts.get(timestep, 0)):
                 detections = self._conflicts[(timestep, conflict)]
                 c = tracker_add_conflict(t.tracker, timestep, conflict, len(detections))
                 for i, d in enumerate(detections):
-                    tracker_add_conflict_link(t.tracker, timestep, conflict, i, d)
+                    conflict_count = conflict_counter[d]
+                    assert(conflict_count >= 1)
+                    tracker_add_conflict_link(t.tracker, timestep, conflict, i, d, 1.0 / conflict_count)
+                    conflict_counter[d] = conflict_count - 1
+
+            if __debug__:
+                for k, v in conflict_counter.items():
+                    assert(v == 0)
 
         slot_map = {}      # (timestep, detection, left/right) -> slot_index
         for k, cost in self._transitions.items():

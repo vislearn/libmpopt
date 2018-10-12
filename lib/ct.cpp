@@ -63,9 +63,9 @@ void ct_tracker_add_division(ct_tracker* t, int timestep_from, int detection_fro
   t->tracker.add_division(timestep_from, detection_from, index_from, detection_to_1, index_to_1, detection_to_2, index_to_2);
 }
 
-void ct_tracker_add_conflict_link(ct_tracker* t, const int timestep, const int conflict, const int slot, const int detection)
+void ct_tracker_add_conflict_link(ct_tracker* t, const int timestep, const int conflict, const int slot, const int detection, const double weight)
 {
-  t->tracker.add_conflict_link(timestep, conflict, slot, detection);
+  t->tracker.add_conflict_link(timestep, conflict, slot, detection, weight);
 }
 
 ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict)

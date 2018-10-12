@@ -23,7 +23,7 @@ ct_detection* ct_tracker_add_detection(ct_tracker* t, int timestep, int detectio
 ct_conflict* ct_tracker_add_conflict(ct_tracker* t, int timestep, int conflict, int number_of_detections);
 void ct_tracker_add_transition(ct_tracker* t, int timestep_from, int detection_from, int index_from, int detection_to, int index_to);
 void ct_tracker_add_division(ct_tracker* t, int timestep_from, int detection_from, int index_from, int detection_to_1, int index_to_1, int detection_to_2, int index_to_2);
-void ct_tracker_add_conflict_link(ct_tracker* t, const int timestep, const int conflict, const int slot, const int detection);
+void ct_tracker_add_conflict_link(ct_tracker* t, const int timestep, const int conflict, const int slot, const int detection, const double weight);
 
 ct_detection* ct_tracker_get_detection(ct_tracker* t, int timestep, int detection);
 ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict);

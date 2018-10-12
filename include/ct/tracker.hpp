@@ -143,11 +143,11 @@ public:
     to_messages_2->set_left_transition(index_to_2, from_detection, index_from);
   }
 
-  void add_conflict_link(const index timestep, const index conflict, const index slot, const index detection)
+  void add_conflict_link(const index timestep, const index conflict, const index slot, const index detection, const cost weight)
   {
     auto [d, _1] = timesteps_[timestep].detections[detection];
     auto [_2, m] = timesteps_[timestep].conflicts[conflict];
-    m->add_link(slot, d);
+    m->add_link(slot, d, weight);
   }
 
   detection_type* detection(const index timestep, const index detection)
@@ -182,10 +182,11 @@ public:
 
     // FIXME: No data locality here!
     for (auto timestep = timesteps_.begin(); timestep != timesteps_.end(); ++timestep) {
-      for (auto [_, messages] : timestep->conflicts) {
+      for (auto [_, messages] : timestep->conflicts)
         messages->send_message_to_conflict();
+
+      for (auto [_, messages] : timestep->conflicts)
         messages->send_message_to_detection();
-      }
 
       for (auto [_, messages] : timestep->detections)
         messages->send_messages_to_right();
@@ -205,10 +206,11 @@ public:
 
     // FIXME: No data locality here!
     for (auto timestep = timesteps_.rbegin(); timestep != timesteps_.rend(); ++timestep) {
-      for (auto [_, messages] : timestep->conflicts) {
+      for (auto [_, messages] : timestep->conflicts)
         messages->send_message_to_conflict();
+
+      for (auto [_, messages] : timestep->conflicts)
         messages->send_message_to_detection();
-      }
 
       for (auto [_, messages] : timestep->detections)
         messages->send_messages_to_left();
