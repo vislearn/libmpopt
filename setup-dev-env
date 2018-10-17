@@ -1,6 +1,13 @@
 #!/bin/bash
 set -eu -o pipefail
 
+cleanup() {
+	[[ -n "${build_dir}" ]] && rm -rf "${build_dir}"
+	[[ -n "${install_dir}" ]] && rm -rf "${install_dir}"
+}
+
+trap cleanup EXIT
+
 source_dir=$(pwd)
 build_dir=$(mktemp -d)
 install_dir=$(mktemp -d)
@@ -16,6 +23,3 @@ env PYTHONPATH="${python_path}" \
     LD_LIBRARY_PATH="${install_dir}/lib" \
     PATH="${install_dir}/bin:${PATH}" \
     ${SHELL}
-
-rm -rf "${build_dir}"
-rm -rf "${install_dir}"
