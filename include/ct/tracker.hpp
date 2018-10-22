@@ -241,7 +241,7 @@ public:
       iterations_ += config_batch;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
-                << "t=" << seconds.count() << "\n";
+                << "t=" << seconds.count() << std::endl;
     }
   }
 
