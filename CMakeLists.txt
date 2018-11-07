@@ -46,6 +46,7 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" -c "from distutils import syscon
 find_package(SWIG REQUIRED)
 include(UseSWIG)
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
+set_source_files_properties(swig/ct.i PROPERTIES DEPENDS include/ct/ct.h)
 swig_add_library(libct_swig TYPE SHARED
     LANGUAGE python
     SOURCES swig/ct.i)
