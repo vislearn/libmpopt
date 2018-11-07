@@ -174,22 +174,20 @@ public:
     return result;
   }
 
-  void forward_pass()
+  template<bool forward>
+  void single_pass()
   {
 #ifndef NDEBUG
     auto lb_before = lower_bound();
 #endif
 
     // FIXME: No data locality here!
-    for (auto timestep = timesteps_.begin(); timestep != timesteps_.end(); ++timestep) {
-      for (auto [_, messages] : timestep->conflicts)
-        messages->send_message_to_conflict();
-
-      for (auto [_, messages] : timestep->conflicts)
-        messages->send_message_to_detection();
-
-      for (auto [_, messages] : timestep->detections)
-        messages->send_messages_to_right();
+    if constexpr (forward) {
+      for (auto it = timesteps_.begin(); it != timesteps_.end(); ++it)
+        single_step<forward>(*it);
+    } else {
+      for (auto it = timesteps_.rbegin(); it != timesteps_.rend(); ++it)
+        single_step<forward>(*it);
     }
 
 #ifndef NDEBUG
@@ -198,29 +196,8 @@ public:
 #endif
   }
 
-  void backward_pass()
-  {
-#ifndef NDEBUG
-    auto lb_before = lower_bound();
-#endif
-
-    // FIXME: No data locality here!
-    for (auto timestep = timesteps_.rbegin(); timestep != timesteps_.rend(); ++timestep) {
-      for (auto [_, messages] : timestep->conflicts)
-        messages->send_message_to_conflict();
-
-      for (auto [_, messages] : timestep->conflicts)
-        messages->send_message_to_detection();
-
-      for (auto [_, messages] : timestep->detections)
-        messages->send_messages_to_left();
-    }
-
-#ifndef NDEBUG
-    auto lb_after = lower_bound();
-    assert(lb_before <= lb_after + epsilon);
-#endif
-  }
+  void forward_pass() { single_pass<true>(); }
+  void backward_pass() { single_pass<false>(); }
 
   void run(const int max_iterations = 1000)
   {
@@ -258,6 +235,22 @@ protected:
     std::vector<std::tuple<detection_type*, transition_type*>> detections;
     std::vector<std::tuple<conflict_type*, conflict_messages_type*>> conflicts;
   };
+
+  template<bool forward>
+  void single_step(const timestep& t)
+  {
+    for (auto [_, messages] : t.conflicts)
+      messages->send_message_to_conflict();
+
+    for (auto [_, messages] : t.conflicts)
+      messages->send_message_to_detection();
+
+    for (auto [_, messages] : t.detections)
+      if constexpr (forward)
+        messages->send_messages_to_right();
+      else
+        messages->send_messages_to_left();
+  }
 
   const ALLOCATOR allocator_;
   std::vector<timestep> timesteps_; // FIXME: Use flat allocator
