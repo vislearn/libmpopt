@@ -35,7 +35,7 @@ double ct_tracker_lower_bound(ct_tracker* t);
 // detection API
 //
 
-void ct_detection_set_detection_cost(ct_detection* d, double on, double off);
+void ct_detection_set_detection_cost(ct_detection* d, double on);
 void ct_detection_set_appearance_cost(ct_detection* d, double c);
 void ct_detection_set_disappearance_cost(ct_detection* d, double c);
 void ct_detection_set_incoming_cost(ct_detection* d, int idx, double c);

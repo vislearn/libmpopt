@@ -110,7 +110,7 @@ class Model:
 
                 c_det, c_app, c_dis = self._detections[timestep, detection]
                 assert(c_det <= 0 and c_app >= 0 and c_dis >= 0)
-                libct.detection_set_detection_cost(d, c_det, 0)
+                libct.detection_set_detection_cost(d, c_det)
                 libct.detection_set_appearance_cost(d, c_app)
                 libct.detection_set_disappearance_cost(d, c_dis)
 

@@ -51,13 +51,9 @@ public:
   {
     index i = 0;
     for (auto& d : detections_) {
-      const auto msg_on = d.detection->min_detection() * d.weight;
-      d.detection->repam_detection_on(-msg_on);
-      conflict_->repam_on(i, msg_on);
-
-      const auto msg_off = d.detection->detection_off() * d.weight;
-      d.detection->repam_detection_off(-msg_off);
-      conflict_->repam_off(i, msg_off);
+      const auto msg = d.detection->min_detection() * d.weight;
+      d.detection->repam_detection(-msg);
+      conflict_->repam(i, msg);
 
       ++i;
     }
@@ -71,13 +67,9 @@ public:
 
     index i = 0;
     for (auto& d : detections_) {
-      const cost msg_on = minorant[i][1];
-      conflict_->repam_on(i, -msg_on);
-      d.detection->repam_detection_on(msg_on);
-
-      const cost msg_off = minorant[i][0];
-      conflict_->repam_off(i, -msg_off);
-      d.detection->repam_detection_off(msg_off);
+      const cost msg = minorant[i][1] - minorant[i][0];
+      conflict_->repam(i, -msg);
+      d.detection->repam_detection(msg);
 
       ++i;
     }

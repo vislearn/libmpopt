@@ -81,7 +81,7 @@ double ct_tracker_lower_bound(ct_tracker* t) { return t->tracker.lower_bound(); 
 // detection API
 //
 
-void ct_detection_set_detection_cost(ct_detection* d, double on, double off) { from_detection(d)->set_detection_cost(on, off); }
+void ct_detection_set_detection_cost(ct_detection* d, double on) { from_detection(d)->set_detection_cost(on); }
 void ct_detection_set_appearance_cost(ct_detection* d, double c) { from_detection(d)->set_appearance_cost(c); }
 void ct_detection_set_disappearance_cost(ct_detection* d, double c) { from_detection(d)->set_disappearance_cost(c); }
 void ct_detection_set_incoming_cost(ct_detection* d, int idx, double c) { from_detection(d)->set_incoming_cost(idx, c); }

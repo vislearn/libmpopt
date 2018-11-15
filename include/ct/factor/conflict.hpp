@@ -27,21 +27,10 @@ public:
     return *std::min_element(costs_.begin(), costs_.end());
   }
 
-  void repam_on(const index idx, const cost msg)
+  void repam(const index idx, const cost msg)
   {
     assert_index(idx);
     costs_[idx] += msg;
-  }
-
-  void repam_off(const index idx, const cost msg)
-  {
-    assert_index(idx);
-    index i = 0;
-    for (auto& x : costs_) {
-      if (i != idx)
-        x += msg;
-      ++i;
-    }
   }
 
 protected:

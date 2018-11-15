@@ -70,7 +70,7 @@ public:
     const auto constant = detection_->detection() + detection_->min_incoming();
     const auto [first_minimum, second_minimum] = least_two_values(detection_->outgoing_.begin(), detection_->outgoing_.end() - 1);
 
-    const auto set_to = std::min(constant + std::min(second_minimum, detection_->disappearance()), detection_->detection_off());
+    const auto set_to = std::min(constant + std::min(second_minimum, detection_->disappearance()), 0.0);
 
     index idx = 0;
     for (auto& edge : right_) {
@@ -91,7 +91,7 @@ public:
     const auto constant = detection_->detection() + detection_->min_outgoing();
     const auto [first_minimum, second_minimum] = least_two_values(detection_->incoming_.begin(), detection_->incoming_.end() - 1);
 
-    const auto set_to = std::min(constant + std::min(second_minimum, detection_->appearance()), detection_->detection_off());
+    const auto set_to = std::min(constant + std::min(second_minimum, detection_->appearance()), 0.0);
 
     index idx = 0;
     for (auto& edge : left_) {
