@@ -63,8 +63,11 @@ public:
   using transition_type = transition_messages<ALLOCATOR>;
   using conflict_messages_type = conflict_messages<ALLOCATOR>;
 
+  static constexpr int config_batch = 100;
+
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : allocator_(allocator)
+  , iterations_(0)
   { }
 
   detection_type* add_detection(const index timestep, const index detection, const index number_of_incoming, const index number_of_outgoing)
@@ -199,7 +202,7 @@ public:
   void forward_pass() { single_pass<true>(); }
   void backward_pass() { single_pass<false>(); }
 
-  void run(const int max_iterations = 1000)
+  void run(const int max_batches = 1000 / config_batch)
   {
 #ifndef NDEBUG
     auto assert_prepared = [](auto& vec) {
@@ -217,16 +220,19 @@ public:
     using clock_type = std::chrono::high_resolution_clock;
     const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
-    for (int i = 0; i < max_iterations && !h.signaled(); ++i) {
-      std::cout << "it=" << i << " ";
-      forward_pass();
-      std::cout << "lb_fw=" << lower_bound() << " ";
-      backward_pass();
-      std::cout << "lb_bw=" << lower_bound() << " ";
+    for (int i = 0; i < max_batches && !h.signaled(); ++i) {
+      for (int j = 0; j < config_batch && !h.signaled(); ++j) {
+        forward_pass();
+        backward_pass();
+      }
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
-      std::cout << "t=" << seconds.count() << "\n";
+
+      iterations_ += config_batch;
+      std::cout << "it=" << iterations_ << " "
+                << "lb=" << lower_bound() << " "
+                << "t=" << seconds.count() << "\n";
     }
   }
 
@@ -255,6 +261,7 @@ protected:
   const ALLOCATOR allocator_;
   std::vector<timestep> timesteps_; // FIXME: Use flat allocator
   factor_counter factor_counter_;
+  int iterations_;
 };
 
 }
