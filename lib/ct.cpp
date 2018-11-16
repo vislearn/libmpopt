@@ -52,7 +52,6 @@ ct_detection* ct_tracker_get_detection(ct_tracker* t, int timestep, int detectio
   return to_detection(d);
 }
 
-
 void ct_tracker_add_transition(ct_tracker* t, int timestep_from, int detection_from, int index_from, int detection_to, int index_to)
 {
   t->tracker.add_transition(timestep_from, detection_from, index_from, detection_to, index_to);
@@ -76,6 +75,8 @@ ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict)
 
 void ct_tracker_run(ct_tracker* t, int max_iterations) { t->tracker.run(max_iterations); }
 double ct_tracker_lower_bound(ct_tracker* t) { return t->tracker.lower_bound(); }
+void ct_tracker_forward_step(ct_tracker* t, int timestep) { t->tracker.single_step<true>(timestep); }
+void ct_tracker_backward_step(ct_tracker* t, int timestep) { t->tracker.single_step<false>(timestep); }
 
 //
 // detection API
@@ -86,6 +87,19 @@ void ct_detection_set_appearance_cost(ct_detection* d, double c) { from_detectio
 void ct_detection_set_disappearance_cost(ct_detection* d, double c) { from_detection(d)->set_disappearance_cost(c); }
 void ct_detection_set_incoming_cost(ct_detection* d, int idx, double c) { from_detection(d)->set_incoming_cost(idx, c); }
 void ct_detection_set_outgoing_cost(ct_detection* d, int idx, double c) { from_detection(d)->set_outgoing_cost(idx, c); }
+
+double ct_detection_get_detection_cost(ct_detection* d) { return from_detection(d)->detection(); }
+double ct_detection_get_appearance_cost(ct_detection* d) { return from_detection(d)->appearance(); }
+double ct_detection_get_disappearance_cost(ct_detection* d) { return from_detection(d)->disappearance(); }
+double ct_detection_get_incoming_cost(ct_detection* d, int idx) { return from_detection(d)->incoming(idx); }
+double ct_detection_get_outgoing_cost(ct_detection* d, int idx) { return from_detection(d)->outgoing(idx); }
+
+//
+// conflict API
+//
+
+void ct_conflict_set_cost(ct_conflict* c, int idx, double cost) { from_conflict(c)->set(idx, cost); }
+double ct_conflict_get_cost(ct_conflict* c, int idx) { return from_conflict(c)->get(idx); }
 
 }
 

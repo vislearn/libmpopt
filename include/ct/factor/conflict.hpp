@@ -21,6 +21,9 @@ public:
 
   bool is_prepared() const { return true; }
 
+  void set(const index idx, cost c) { assert_index(idx); costs_[idx] = c; }
+  cost get(const index idx) { assert_index(idx); return costs_[idx]; }
+
   cost lower_bound() const
   {
     assert(costs_.size() > 0);

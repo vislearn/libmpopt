@@ -30,6 +30,8 @@ ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict);
 
 void ct_tracker_run(ct_tracker* t, int max_iterations);
 double ct_tracker_lower_bound(ct_tracker* t);
+void ct_tracker_forward_step(ct_tracker* t, int timestep);
+void ct_tracker_backward_step(ct_tracker* t, int timestep);
 
 //
 // detection API
@@ -40,6 +42,19 @@ void ct_detection_set_appearance_cost(ct_detection* d, double c);
 void ct_detection_set_disappearance_cost(ct_detection* d, double c);
 void ct_detection_set_incoming_cost(ct_detection* d, int idx, double c);
 void ct_detection_set_outgoing_cost(ct_detection* d, int idx, double c);
+
+double ct_detection_get_detection_cost(ct_detection* d);
+double ct_detection_get_appearance_cost(ct_detection* d);
+double ct_detection_get_disappearance_cost(ct_detection* d);
+double ct_detection_get_incoming_cost(ct_detection* d, int idx);
+double ct_detection_get_outgoing_cost(ct_detection* d, int idx);
+
+//
+// conflict API
+//
+
+void ct_conflict_set_cost(ct_conflict* c, int idx, double cost);
+double ct_conflict_get_cost(ct_conflict* c, int idx);
 
 #ifdef __cplusplus
 }

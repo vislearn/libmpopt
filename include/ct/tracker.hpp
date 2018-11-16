@@ -178,6 +178,14 @@ public:
   }
 
   template<bool forward>
+  void single_step(const index timestep_idx)
+  {
+    assert(timestep_idx >= 0 && timestep_idx < timesteps_.size());
+    const auto& t = timesteps_[timestep_idx];
+    single_step<forward>(t);
+  }
+
+  template<bool forward>
   void single_pass()
   {
 #ifndef NDEBUG

@@ -18,3 +18,9 @@ class Tracker:
 
     def run(self, max_iterations=1000):
         libct.tracker_run(self.tracker, max_iterations)
+
+    def forward_step(self, timestep):
+        libct.tracker_forward_step(self.tracker, timestep)
+
+    def backward_step(self, timestep):
+        libct.tracker_backward_step(self.tracker, timestep)
