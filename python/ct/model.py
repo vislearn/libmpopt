@@ -5,7 +5,7 @@ from . import libct
 class Model:
 
     def __init__(self):
-        self._detections = {}        # (timestep, index) -> cost
+        self._detections = {}        # (timestep, index) -> (detection_cost, appearance_cost, disappearance_cost)
         self._no_detections = {}     # timestep -> count
 
         self._conflicts = {}         # (timestep, index) -> [detection_index]

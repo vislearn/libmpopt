@@ -89,7 +89,7 @@ class JugConfSet(JugBase):
 
 def parse_jug_model(f):
     re_comment = re.compile(r'^#|^$')
-    re_hypothesis = re.compile(r'^H +([0-9]+) +([0-9]+) +([-.0-9]+) ')
+    re_hypothesis = re.compile(r'^H +([0-9]+) +([0-9]+) +([-.0-9]+)')
     re_app = re.compile(r'^(DIS)?APP +([0-9]+) +([0-9]+) +([-.0-9]+)')
     re_move = re.compile(r'^MOVE +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([-.0-9]+)')
     re_div = re.compile(r'^DIV +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([0-9]+) +([-.0-9]+)')
