@@ -260,10 +260,7 @@ protected:
       messages->send_message_to_detection();
 
     for (auto [_, messages] : t.detections)
-      if constexpr (forward)
-        messages->send_messages_to_right();
-      else
-        messages->send_messages_to_left();
+      messages->template send_messages<forward>();
   }
 
   const ALLOCATOR allocator_;

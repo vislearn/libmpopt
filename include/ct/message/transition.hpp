@@ -65,40 +65,38 @@ public:
     return helper(left_) && helper(right_);
   }
 
-  void send_messages_to_right()
+  template<bool to_right>
+  void send_messages()
   {
-    const auto constant = detection_->detection() + detection_->min_incoming();
-    const auto [first_minimum, second_minimum] = least_two_values(detection_->outgoing_.begin(), detection_->outgoing_.end() - 1);
+    const auto min_other_side   = to_right ? detection_->min_incoming()
+                                           : detection_->min_outgoing();
+    const auto& costs_this_side = to_right ? detection_->outgoing_
+                                           : detection_->incoming_;
+    const auto cost_nirvana     = to_right ? detection_->disappearance()
+                                           : detection_->appearance();
 
-    const auto set_to = std::min(constant + std::min(second_minimum, detection_->disappearance()), 0.0);
+    const auto constant = detection_->detection() + min_other_side;
+    const auto [first_minimum, second_minimum] = least_two_values(costs_this_side.begin(), costs_this_side.end() - 1);
+
+    const auto set_to = std::min(constant + std::min(second_minimum, cost_nirvana), 0.0);
 
     index idx = 0;
-    for (auto& edge : right_) {
-      auto msg = constant + detection_->outgoing(idx) - set_to;
-      detection_->repam_outgoing(idx, -msg);
+    for (auto& edge : (to_right ? right_ : left_)) {
+      const auto slot_cost   = to_right ? detection_->outgoing(idx)
+                                        : detection_->incoming(idx);
+      const auto repam_this  = to_right ? &detection_type::repam_outgoing
+                                        : &detection_type::repam_incoming;
+      const auto repam_other = to_right ? &detection_type::repam_incoming
+                                        : &detection_type::repam_outgoing;
+
+      auto msg = constant + slot_cost - set_to;
+      (detection_->*repam_this)(idx, -msg);
       if (edge.is_division()) {
-        edge.detection1->repam_incoming(edge.index1, .5 * msg);
-        edge.detection2->repam_incoming(edge.index2, .5 * msg);
+        (edge.detection1->*repam_other)(edge.index1, .5 * msg);
+        (edge.detection2->*repam_other)(edge.index2, .5 * msg);
       } else {
-        edge.detection1->repam_incoming(edge.index1, msg);
+        (edge.detection1->*repam_other)(edge.index1, msg);
       }
-      ++idx;
-    }
-  }
-
-  void send_messages_to_left()
-  {
-    const auto constant = detection_->detection() + detection_->min_outgoing();
-    const auto [first_minimum, second_minimum] = least_two_values(detection_->incoming_.begin(), detection_->incoming_.end() - 1);
-
-    const auto set_to = std::min(constant + std::min(second_minimum, detection_->appearance()), 0.0);
-
-    index idx = 0;
-    for (auto& edge : left_) {
-      auto msg = constant + detection_->incoming(idx) - set_to;
-      assert(!edge.is_division());
-      detection_->repam_incoming(idx, -msg);
-      edge.detection1->repam_outgoing(edge.index1, msg);
       ++idx;
     }
   }
