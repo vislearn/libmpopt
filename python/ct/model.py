@@ -17,7 +17,7 @@ class Model:
         self._no_outgoing_edges = {} # (timestep, index) -> count
 
     def add_detection(self, timestep, detection=None, appearance=None, disappearance=None):
-        assert(timestep >= 0)
+        assert timestep >= 0
         index = self.no_detections(timestep)
         self._detections[timestep, index] = (detection, appearance, disappearance)
         self._no_detections[timestep] = index + 1
@@ -38,17 +38,17 @@ class Model:
         self._detections[timestep, index] = tuple(costs)
 
     def add_conflict(self, timestep, detections):
-        assert(timestep >= 0)
+        assert timestep >= 0
         for detection in detections:
-            assert((timestep, detection) in self._detections)
+            assert (timestep, detection) in self._detections
 
         if __debug__:
             # Verify that subset of new conflict set is not already present.
             for k, v in self._conflicts.items():
                 if timestep == k[0]:
                     s1, s2 = set(detections), set(v)
-                    assert(not s1.issubset(s2))
-                    assert(not s2.issubset(s1))
+                    assert not s1.issubset(s2)
+                    assert not s2.issubset(s1)
 
         index = self.no_conflicts(timestep)
         self._conflicts[timestep, index] = detections
@@ -57,30 +57,30 @@ class Model:
     def add_transition(self, timestep, index_from, index_to, cost):
         k_left = (timestep, index_from)
         k_right = (timestep + 1, index_to)
-        assert(k_left in self._detections)
-        assert(k_right in self._detections)
+        assert k_left in self._detections
+        assert k_right in self._detections
 
         slot_left = self._inc_dict(self._no_outgoing_edges, k_left)
         slot_right = self._inc_dict(self._no_incoming_edges, k_right)
 
         k = (timestep, index_from, index_to)
-        assert(k not in self._transitions)
+        assert k not in self._transitions
         self._transitions[k] = (slot_left, slot_right, cost)
 
     def add_division(self, timestep, index_from, index_to_1, index_to_2, cost):
         k_left = (timestep, index_from)
         k_right1 = (timestep + 1, index_to_1)
         k_right2 = (timestep + 1, index_to_2)
-        assert(k_left in self._detections)
-        assert(k_right1 in self._detections)
-        assert(k_right2 in self._detections)
+        assert k_left in self._detections
+        assert k_right1 in self._detections
+        assert k_right2 in self._detections
 
         slot_left = self._inc_dict(self._no_outgoing_edges, k_left)
         slot_right1 = self._inc_dict(self._no_incoming_edges, k_right1)
         slot_right2 = self._inc_dict(self._no_incoming_edges, k_right2)
 
         k = (timestep, index_from, index_to_1, index_to_2)
-        assert(k not in self._divisions)
+        assert k not in self._divisions
         self._divisions[k] = (slot_left, slot_right1, slot_right2, cost)
 
     def no_timesteps(self):
@@ -109,7 +109,7 @@ class Model:
                         self.no_outgoing_edges(timestep, detection))
 
                 c_det, c_app, c_dis = self._detections[timestep, detection]
-                assert(c_det <= 0 and c_app >= 0 and c_dis >= 0)
+                assert c_det <= 0 and c_app >= 0 and c_dis >= 0
                 libct.detection_set_detection_cost(d, c_det)
                 libct.detection_set_appearance_cost(d, c_app)
                 libct.detection_set_disappearance_cost(d, c_dis)
@@ -127,18 +127,18 @@ class Model:
                 c = libct.tracker_add_conflict(t.tracker, timestep, conflict, len(detections))
                 for i, d in enumerate(detections):
                     conflict_count = conflict_counter[d]
-                    assert(conflict_count >= 1)
+                    assert conflict_count >= 1
                     libct.tracker_add_conflict_link(t.tracker, timestep, conflict, i, d, 0.5 / conflict_count)
                     conflict_counter[d] = conflict_count - 1
 
             if __debug__:
                 for k, v in conflict_counter.items():
-                    assert(v == 0)
+                    assert v == 0
 
         for k, v in self._transitions.items():
             timestep, index_from, index_to = k
             slot_left, slot_right, cost = v
-            assert(cost >= 0)
+            assert cost >= 0
 
             libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
                     slot_left, cost * .5)
@@ -150,7 +150,7 @@ class Model:
         for k, v in self._divisions.items():
             timestep, index_from, index_to_1, index_to_2 = k
             slot_left, slot_right_1, slot_right_2, cost = v
-            assert(cost >= 0)
+            assert cost >= 0
 
             libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
                     slot_left, cost / 3.0)

@@ -174,12 +174,12 @@ class Gurobi:
                 off_cost = variables.detection_slack.RC
                 libct.detection_set_detection_cost(factor, on_cost - off_cost)
 
-                assert(len(variables.incoming) == self._model.no_incoming_edges(t, d) + 1)
+                assert len(variables.incoming) == self._model.no_incoming_edges(t, d) + 1
                 for i in range(self._model.no_incoming_edges(t, d)):
                     libct.detection_set_incoming_cost(factor, i, variables.incoming[i].RC)
                 libct.detection_set_appearance_cost(factor, variables.incoming[-1].RC)
 
-                assert(len(variables.outgoing) == self._model.no_outgoing_edges(t, d) + 1)
+                assert len(variables.outgoing) == self._model.no_outgoing_edges(t, d) + 1
                 for i in range(self._model.no_outgoing_edges(t, d)):
                     libct.detection_set_outgoing_cost(factor, i, variables.outgoing[i].RC)
                 libct.detection_set_disappearance_cost(factor, variables.outgoing[-1].RC)
@@ -189,8 +189,8 @@ class Gurobi:
                 variables = self._conflicts[t, c]
                 detections = self._model._conflicts[t, c]
 
-                assert(len(detections) + 1 == len(variables))
+                assert len(detections) + 1 == len(variables)
                 for i in range(len(detections)):
                     libct.conflict_set_cost(factor, i, variables[i].RC - variables[-1].RC)
 
-        assert(abs(self._gurobi.ObjBound - self._tracker.lower_bound()) < 1e-4)
+        assert abs(self._gurobi.ObjBound - self._tracker.lower_bound()) < 1e-4
