@@ -165,6 +165,8 @@ def convert_jug_to_model(jug_model):
     id_to_model = {}
 
     def update_bimap(model_key, id_key):
+        assert model_key not in model_to_id
+        assert id_key not in id_to_model
         model_to_id[model_key] = id_key
         id_to_model[id_key] = model_key
 
