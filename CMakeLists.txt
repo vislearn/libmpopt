@@ -35,12 +35,14 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # installations prefix, but we really would like to have it relative to
 # ${CMAKE_INSTALL_PREFIX} :-/
 
-execute_process(COMMAND "${Python3_EXECUTABLE}" -c "from distutils import sysconfig as sc; print(sc.get_python_lib(prefix='', plat_specific=False))"
-    OUTPUT_VARIABLE Python3_RELATIVE_SITELIB
+set(ENV{CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_PREFIX})
+
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitelib
+    OUTPUT_VARIABLE Python3_SITELIB
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-execute_process(COMMAND "${Python3_EXECUTABLE}" -c "from distutils import sysconfig as sc; print(sc.get_python_lib(prefix='', plat_specific=True))"
-    OUTPUT_VARIABLE Python3_RELATIVE_SITEARCH
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitearch
+    OUTPUT_VARIABLE Python3_SITEARCH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 find_package(SWIG REQUIRED)
@@ -63,10 +65,10 @@ endif()
 install(PROGRAMS bin/jugct DESTINATION bin)
 
 install(DIRECTORY python/ct
-    DESTINATION "${Python3_RELATIVE_SITELIB}")
+    DESTINATION "${Python3_SITELIB}")
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/_libct.so"
               "${CMAKE_CURRENT_BINARY_DIR}/libct.py"
-    DESTINATION "${Python3_RELATIVE_SITEARCH}/ct")
+    DESTINATION "${Python3_SITEARCH}/ct")
 
-install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${CMAKE_INSTALL_PREFIX}/${Python3_RELATIVE_SITELIB}\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${Python3_SITELIB}\")")
