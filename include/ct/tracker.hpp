@@ -229,7 +229,7 @@ public:
     const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      for (int j = 0; j < config_batch && !h.signaled(); ++j) {
+      for (int j = 0; j < config_batch; ++j) {
         forward_pass();
         backward_pass();
       }
@@ -237,9 +237,10 @@ public:
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
 
+      const auto lb = lower_bound();
       iterations_ += config_batch;
       std::cout << "it=" << iterations_ << " "
-                << "lb=" << lower_bound() << " "
+                << "lb=" << lb << " "
                 << "t=" << seconds.count() << "\n";
     }
   }
