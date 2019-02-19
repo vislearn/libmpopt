@@ -6,7 +6,7 @@ namespace ct {
 template<typename ALLOCATOR = std::allocator<cost>>
 class conflict_factor {
 public:
-  using allocator_type = ALLOCATOR;
+  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<cost>;
   static constexpr cost initial_cost = 0.0;
 
   conflict_factor(index number_of_detections, const ALLOCATOR& allocator = ALLOCATOR())
@@ -39,7 +39,7 @@ public:
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size() - 1); }
 
-  fixed_vector<cost, ALLOCATOR> costs_;
+  fixed_vector<cost, allocator_type> costs_;
 
   template<typename> friend class conflict_messages;
 };

@@ -6,7 +6,7 @@ namespace ct {
 template<typename ALLOCATOR = std::allocator<cost>>
 class detection_factor {
 public:
-  using allocator_type = ALLOCATOR;
+  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<cost>;
   static constexpr cost initial_cost = std::numeric_limits<cost>::signaling_NaN();
 
   detection_factor(index number_of_incoming, index number_of_outgoing, const ALLOCATOR& allocator = ALLOCATOR())
@@ -75,8 +75,8 @@ protected:
   void assert_incoming(const index idx) const { assert(idx >= 0 && idx < incoming_.size() - 1); }
   void assert_outgoing(const index idx) const { assert(idx >= 0 && idx < outgoing_.size() - 1); }
   cost detection_;
-  fixed_vector<cost, ALLOCATOR> incoming_;
-  fixed_vector<cost, ALLOCATOR> outgoing_;
+  fixed_vector<cost, allocator_type> incoming_;
+  fixed_vector<cost, allocator_type> outgoing_;
 
   template<typename> friend class transition_messages;
 };
