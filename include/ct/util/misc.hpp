@@ -119,7 +119,7 @@ void uniform_minorant(ITERATOR_IN in_begin, ITERATOR_IN in_end, ITERATOR_OUT out
 
   for (in_it = in_begin, out_it = out_begin; in_it != in_end; ++in_it, ++out_it) {
     if (in_it == first)
-      (*out_it) = { second_split , first_split };
+      (*out_it) = { second_split, first_split };
     else if (in_it == second)
       (*out_it) = { first_split, second_split };
     else
@@ -144,3 +144,5 @@ void uniform_minorant(ITERATOR_IN in_begin, ITERATOR_IN in_end, ITERATOR_OUT out
 }
 
 #endif
+
+/* vim: set ts=8 sts=2 sw=2 et ft=cpp: */
