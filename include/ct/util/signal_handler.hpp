@@ -30,7 +30,7 @@ public:
   bool signaled() const { return libct_signaled != 0; };
 
 private:
-  __sighandler_t old_handler_;
+  void(*old_handler_)(int);
 };
 
 }

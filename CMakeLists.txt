@@ -54,6 +54,12 @@ set_target_properties(libct_swig PROPERTIES OUTPUT_NAME libct)
 target_include_directories(libct_swig PUBLIC ${Python3_INCLUDE_DIRS})
 target_link_libraries(libct_swig PUBLIC libct_static ${Python3_LIBRARIES})
 
+# This should be handled in FindSWIG.cmake if LANGUAGE is set to Python.
+# TODO: File upstream bug/PR.
+if(APPLE)
+    set_target_properties(libct_swig PROPERTIES SUFFIX .so)
+endif()
+
 install(PROGRAMS bin/jugct DESTINATION bin)
 
 install(DIRECTORY python/ct
