@@ -113,7 +113,7 @@ std::vector<std::array<cost,2>> uniform_minorant_generic(const std::vector<std::
       o += duals[i][i == on];
       n += minorant[i][i == on];
     }
-    assert(std::abs(o - n) < 1e-8);
+    assert(dbg::are_idential(o, n));
   }
 #endif
 
@@ -151,8 +151,8 @@ void uniform_minorant(ITERATOR_IN in_begin, ITERATOR_IN in_end, ITERATOR_OUT out
 
   out_it = out_begin;
   for (auto& x : slow_version) {
-    assert(std::abs(x[0] - (*out_it)[0]) < epsilon);
-    assert(std::abs(x[1] - (*out_it)[1]) < epsilon);
+    assert(dbg::are_idential(x[0], (*out_it)[0]));
+    assert(dbg::are_idential(x[1], (*out_it)[1]));
     ++out_it;
   }
 #endif
