@@ -161,6 +161,8 @@ class Model:
             libct.tracker_add_division(t.tracker, timestep, index_from, slot_left,
                     index_to_1, slot_right_1, index_to_2, slot_right_2)
 
+        libct.tracker_finalize(t.tracker)
+
         return t
 
     def dump(self):

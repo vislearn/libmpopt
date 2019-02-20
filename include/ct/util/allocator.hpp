@@ -60,6 +60,9 @@ public:
       throw std::bad_alloc();
     assert(result == memory_);
     size_ = current_size;
+#ifndef NDEBUG
+      std::cout << "[mem] finalize: size=" << size_ << " (" << (size_ / 1024.0 / 1024.0) << " MiB)" << std::endl;
+#endif
     finalized_ = true;
   }
 
