@@ -1,16 +1,10 @@
 #!/bin/bash
 set -eu -o pipefail
 
-cleanup() {
-	[[ -n "${build_dir}" ]] && rm -rf "${build_dir}"
-	[[ -n "${install_dir}" ]] && rm -rf "${install_dir}"
-}
-
-trap cleanup EXIT
-
 source_dir=$(pwd)
 build_dir=$(mktemp -d)
 install_dir=$(mktemp -d)
+trap 'rm -rf "${build_dir}" "${install_dir}"' EXIT
 
 cd "${build_dir}"
 cmake -GNinja -DCMAKE_INSTALL_PREFIX="${install_dir}" -DCMAKE_BUILD_TYPE=Debug "${source_dir}"
@@ -20,7 +14,7 @@ ninja install
 py_sitelib="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitelib)"
 py_sitearch="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitearch)"
 
-env PYTHONPATH="${py_sitelib}:${py_sitearch}" \
-    LD_LIBRARY_PATH="${install_dir}/lib" \
-    PATH="${install_dir}/bin:${PATH}" \
-    ${SHELL}
+export PYTHONPATH="${py_sitelib}:${py_sitearch}${PYTHONPATH:+:${PYTHONPATH}}"
+export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="${install_dir}/bin:${PATH:+:${PATH}}"
+${SHELL}
