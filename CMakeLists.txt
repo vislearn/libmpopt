@@ -62,7 +62,7 @@ if(APPLE)
     set_target_properties(libct_swig PROPERTIES SUFFIX .so)
 endif()
 
-install(PROGRAMS bin/jugct bin/juggurobi DESTINATION bin)
+install(PROGRAMS bin/jug_ct bin/jug_gurobi DESTINATION bin)
 
 install(DIRECTORY python/ct
     DESTINATION "${Python3_SITELIB}")
