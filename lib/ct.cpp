@@ -95,12 +95,31 @@ double ct_detection_get_disappearance_cost(ct_detection* d) { return from_detect
 double ct_detection_get_incoming_cost(ct_detection* d, int idx) { return from_detection(d)->incoming(idx); }
 double ct_detection_get_outgoing_cost(ct_detection* d, int idx) { return from_detection(d)->outgoing(idx); }
 
+int ct_detection_get_incoming_primal(ct_detection* d)
+{
+  auto p = from_detection(d)->primal().incoming();
+  if (p == ct::detection_primal::undecided || p == ct::detection_primal::off)
+    return -1;
+  else
+    return p;
+}
+
+int ct_detection_get_outgoing_primal(ct_detection* d)
+{
+  auto p = from_detection(d)->primal().outgoing();
+  if (p == ct::detection_primal::undecided || p == ct::detection_primal::off)
+    return -1;
+  else
+    return p;
+}
+
 //
 // conflict API
 //
 
 void ct_conflict_set_cost(ct_conflict* c, int idx, double cost) { from_conflict(c)->set(idx, cost); }
 double ct_conflict_get_cost(ct_conflict* c, int idx) { return from_conflict(c)->get(idx); }
+int ct_conflict_get_primal(ct_conflict* c) { return from_conflict(c)->primal(); }
 
 }
 

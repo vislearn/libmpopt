@@ -102,6 +102,26 @@ def copy_primals(primals):
     return result
 
 
+def extract_primals_from_tracker(model, tracker):
+    primals = Primals(model)
+    for timestep in range(model.no_timesteps()):
+        for detection in range(model.no_detections(timestep)):
+            factor = libct.tracker_get_detection(tracker.tracker, timestep, detection)
+            incoming_primal = libct.detection_get_incoming_primal(factor)
+            outgoing_primal = libct.detection_get_outgoing_primal(factor)
+
+            assert (incoming_primal == -1) == (outgoing_primal == -1)
+            primals.detection(timestep, detection, (incoming_primal != -1) and (outgoing_primal != -1))
+
+            if incoming_primal >= 0 and incoming_primal < model.no_incoming_edges(timestep, detection):
+                primals.incoming(timestep, detection, incoming_primal)
+
+            if outgoing_primal >= 0 and outgoing_primal < model.no_outgoing_edges(timestep, detection):
+                primals.outgoing(timestep, detection, outgoing_primal)
+
+    return primals
+
+
 #
 # Build Gurobi problem consisting only of neighboring timesteps and solve
 # them to obtain a rounded solution.
