@@ -29,7 +29,7 @@ public:
 
   bool signaled() const { return libct_signaled != 0; };
 
-private:
+protected:
   void(*old_handler_)(int);
 };
 
