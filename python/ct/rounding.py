@@ -122,6 +122,26 @@ def extract_primals_from_tracker(model, tracker):
     return primals
 
 
+def extract_primals_from_gurobi(gurobi):
+    model = gurobi._model
+    primals = Primals(model)
+    for timestep in range(model.no_timesteps()):
+        for detection in range(model.no_detections(timestep)):
+            variables = gurobi._detections[timestep, detection]
+
+            primals.detection(timestep, detection, variables.detection.X > .5)
+
+            for i in range(model.no_incoming_edges(timestep, detection)):
+                if variables.incoming[i].X > .5:
+                    primals.incoming(timestep, detection, i)
+
+            for i in range(model.no_outgoing_edges(timestep, detection)):
+                if variables.outgoing[i].X > .5:
+                    primals.outgoing(timestep, detection, i)
+
+    return primals
+
+
 #
 # Build Gurobi problem consisting only of neighboring timesteps and solve
 # them to obtain a rounded solution.
