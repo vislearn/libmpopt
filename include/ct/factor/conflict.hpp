@@ -3,6 +3,8 @@
 
 namespace ct {
 
+using conflict_primal = index;
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class conflict_factor {
 public:
@@ -68,7 +70,7 @@ protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size() - 1); }
 
   fixed_vector<cost, allocator_type> costs_;
-  index primal_;
+  conflict_primal primal_;
 
   template<typename> friend class transition_messages;
   template<typename> friend class conflict_messages;

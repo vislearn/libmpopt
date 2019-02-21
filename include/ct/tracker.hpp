@@ -273,7 +273,50 @@ public:
     }
 #endif
 
-    cost ub = std::numeric_limits<cost>::infinity();
+    const size_t number_of_detections = std::accumulate(
+      timesteps_.cbegin(), timesteps_.cend(), 0,
+      [](size_t acc, const auto& t) {
+        return acc + t.detections.size();
+      });
+
+    const size_t number_of_conflicts = std::accumulate(
+      timesteps_.cbegin(), timesteps_.cend(), 0,
+      [](size_t acc, const auto& t) {
+        return acc + t.conflicts.size();
+      });
+
+    std::vector<detection_primal> best_detection_primals(number_of_detections);
+    std::vector<conflict_primal> best_conflict_primals(number_of_conflicts);
+    cost best_ub = std::numeric_limits<cost>::infinity();
+
+    auto visit_primal_storage = [&](auto functor) {
+      auto it_detection = best_detection_primals.begin();
+      auto it_conflict = best_conflict_primals.begin();
+      for (const auto& t : timesteps_) {
+        for (auto [factor, _] : t.detections) {
+          assert(it_detection != best_detection_primals.end());
+          functor(it_detection++, factor);
+        }
+        for (auto [factor, _ ] : t.conflicts) {
+          assert(it_conflict != best_conflict_primals.end());
+          functor(it_conflict++, factor);
+        }
+      }
+      assert(it_detection == best_detection_primals.end());
+      assert(it_conflict == best_conflict_primals.end());
+    };
+
+    auto remember_best_primals = [&]() {
+      auto ub = evaluate_primal();
+      if (ub < best_ub) {
+        best_ub = ub;
+        visit_primal_storage([&](auto it, auto* f) { *it = f->primal(); });
+      }
+    };
+
+    auto restore_best_primals = [&] () {
+      visit_primal_storage([&](auto it, auto* f) { f->primal() = *it++; });
+    };
 
     signal_handler h;
     using clock_type = std::chrono::high_resolution_clock;
@@ -287,13 +330,11 @@ public:
 
       reset_primal();
       forward_pass<true>();
-      auto fw_ub = evaluate_primal();
-      ub = std::min(ub, fw_ub);
+      remember_best_primals();
 
       reset_primal();
       backward_pass<true>();
-      auto bw_ub = evaluate_primal();
-      ub = std::min(ub, bw_ub);
+      remember_best_primals();
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
@@ -302,10 +343,12 @@ public:
       iterations_ += config_batch;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
-                << "ub=" << ub << " "
-                << "gap=" << static_cast<float>(100.0 * (ub - lb) / std::abs(lb)) << "% "
+                << "ub=" << best_ub << " "
+                << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
                 << "t=" << seconds.count() << std::endl;
     }
+
+    restore_best_primals();
   }
 
 protected:

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <numeric>
 #include <vector>
 
 #endif

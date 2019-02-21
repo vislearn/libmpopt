@@ -8,6 +8,11 @@ public:
   static constexpr index undecided = std::numeric_limits<index>::max();
   static constexpr index off = undecided - 1;
 
+  detection_primal()
+  : incoming_(undecided)
+  , outgoing_(undecided)
+  { }
+
   detection_primal(const index no_incoming, const index no_outgoing)
   : incoming_(undecided)
   , outgoing_(undecided)
@@ -15,8 +20,7 @@ public:
   , no_incoming_(no_incoming)
   , no_outgoing_(no_outgoing)
 #endif
-  {
-  }
+  { }
 
   void reset()
   {
