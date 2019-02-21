@@ -30,6 +30,7 @@ ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict);
 
 void ct_tracker_run(ct_tracker* t, int max_iterations);
 double ct_tracker_lower_bound(ct_tracker* t);
+double ct_tracker_upper_bound(ct_tracker* t);
 void ct_tracker_forward_step(ct_tracker* t, int timestep);
 void ct_tracker_backward_step(ct_tracker* t, int timestep);
 

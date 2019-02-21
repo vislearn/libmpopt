@@ -17,6 +17,9 @@ class Tracker:
     def lower_bound(self):
         return libct.tracker_lower_bound(self.tracker)
 
+    def upper_bound(self):
+        return libct.tracker_upper_bound(self.tracker)
+
     def run(self, max_iterations=1000):
         libct.tracker_run(self.tracker, max_iterations)
 

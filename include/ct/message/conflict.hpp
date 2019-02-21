@@ -54,7 +54,6 @@ public:
       const auto msg = d.detection->min_detection() * d.weight;
       d.detection->repam_detection(-msg);
       conflict_->repam(i, msg);
-
       ++i;
     }
   }
@@ -70,7 +69,53 @@ public:
       const cost msg = minorant[i][1] - minorant[i][0];
       conflict_->repam(i, -msg);
       d.detection->repam_detection(msg);
+      ++i;
+    }
+  }
 
+  bool is_primal_consistent() const
+  {
+    bool result = true;
+
+    assert(conflict_->primal_ >= 0);
+
+    index i = 0;
+    for (auto& edge : detections_) {
+      if (i == conflict_->primal_)
+        result &= edge.detection->primal_.is_detection_on();
+      else
+        result &= edge.detection->primal_.is_detection_off();
+      ++i;
+    }
+
+    return result;
+  }
+
+  void propagate_primal_to_conflict()
+  {
+    assert(conflict_->primal_ >= 0);
+
+    index i = 0;
+    for (auto& edge : detections_) {
+      if (edge.detection->primal_.is_detection_on())
+        conflict_->primal_ = i;
+      else
+        assert(conflict_->primal_ != i);
+      ++i;
+    }
+  }
+
+  void propagate_primal_to_detections()
+  {
+    assert(conflict_->primal_ >= 0);
+
+    if (conflict_->primal_ >= conflict_->size())
+      return;
+
+    index i = 0;
+    for (auto& edge : detections_) {
+      if (i != conflict_->primal_)
+        edge.detection->primal_.set_detection_off();
       ++i;
     }
   }

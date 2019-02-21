@@ -36,11 +36,41 @@ public:
     costs_[idx] += msg;
   }
 
+  void reset_primal() { primal_ = std::numeric_limits<decltype(primal_)>::max(); }
+
+  cost evaluate_primal() const
+  {
+    assert(primal_ >= 0);
+    if (primal_ < costs_.size())
+      return costs_[primal_];
+    else
+      return std::numeric_limits<cost>::infinity();
+  }
+
+  auto& primal() { return primal_; }
+
+  void round_primal()
+  {
+    if (primal_ >= costs_.size()) {
+      auto min = std::min_element(costs_.cbegin(), costs_.cend());
+      primal_ = min - costs_.cbegin();
+      assert(primal_ >= 0 && primal_ < costs_.size());
+    }
+  }
+
+  void fix_primal()
+  {
+    if (primal_ >= costs_.size())
+      primal_ = costs_.size() - 1;
+  }
+
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size() - 1); }
 
   fixed_vector<cost, allocator_type> costs_;
+  index primal_;
 
+  template<typename> friend class transition_messages;
   template<typename> friend class conflict_messages;
 };
 

@@ -142,8 +142,8 @@ public:
     auto& [to_detection_2, to_messages_2] = timesteps_[timestep_from+1].detections[detection_to_2];
 
     from_messages->set_right_transition(index_from, to_detection_1, index_to_1, to_detection_2, index_to_2);
-    to_messages_1->set_left_transition(index_to_1, from_detection, index_from);
-    to_messages_2->set_left_transition(index_to_2, from_detection, index_from);
+    to_messages_1->set_left_transition(index_to_1, from_detection, index_from, to_detection_2, index_to_2);
+    to_messages_2->set_left_transition(index_to_2, from_detection, index_from, to_detection_1, index_to_1);
   }
 
   void add_conflict_link(const index timestep, const index conflict, const index slot, const index detection, const cost weight)
@@ -177,28 +177,77 @@ public:
     return result;
   }
 
+  cost evaluate_primal() const
+  {
+    const cost inf = std::numeric_limits<cost>::infinity();
+    cost result = 0;
+
+    for (auto& timestep : timesteps_) {
+      for (auto [factor, messages] : timestep.detections) {
+        if (!messages->is_primal_consistent())
+          result += inf;
+        result += factor->evaluate_primal();
+      }
+
+      for (auto [factor, messages] : timestep.conflicts) {
+        if (!messages->is_primal_consistent())
+          result += inf;
+        result += factor->evaluate_primal();
+      }
+    }
+
+    return result;
+  }
+
+  cost upper_bound() const { return evaluate_primal(); }
+
+  void reset_primal()
+  {
+    for (auto& timestep : timesteps_) {
+      for (auto [factor, _] : timestep.detections)
+        factor->reset_primal();
+
+      for (auto [factor, _] : timestep.conflicts)
+        factor->reset_primal();
+    }
+  }
+
+  // This method is only needed for external rounding code.
   template<bool forward>
   void single_step(const index timestep_idx)
   {
     assert(timestep_idx >= 0 && timestep_idx < timesteps_.size());
     const auto& t = timesteps_[timestep_idx];
-    single_step<forward>(t);
+    single_step<forward, false>(t); // Rounding is disabled here.
   }
 
-  template<bool forward>
+  // FIXME: No data locality here!
+  template<bool forward, bool rounding>
   void single_pass()
   {
 #ifndef NDEBUG
     auto lb_before = lower_bound();
 #endif
 
-    // FIXME: No data locality here!
-    if constexpr (forward) {
-      for (auto it = timesteps_.begin(); it != timesteps_.end(); ++it)
-        single_step<forward>(*it);
-    } else {
-      for (auto it = timesteps_.rbegin(); it != timesteps_.rend(); ++it)
-        single_step<forward>(*it);
+    auto runner = [&](auto begin, auto end) {
+      for (auto it = begin; it != end; ++it) {
+        this->single_step<forward, rounding>(*it);
+      }
+    };
+
+    if constexpr (forward)
+      runner(timesteps_.begin(), timesteps_.end());
+    else
+      runner(timesteps_.rbegin(), timesteps_.rend());
+
+    if constexpr (rounding) {
+      for (const auto& timestep : timesteps_) {
+        for (auto [factor, _] : timestep.detections)
+          factor->fix_primal();
+
+        for (auto [factor, _] : timestep.conflicts)
+          factor->fix_primal();
+      }
     }
 
 #ifndef NDEBUG
@@ -207,8 +256,8 @@ public:
 #endif
   }
 
-  void forward_pass() { single_pass<true>(); }
-  void backward_pass() { single_pass<false>(); }
+  template<bool rounding=false> void forward_pass() { single_pass<true, rounding>(); }
+  template<bool rounding=false> void backward_pass() { single_pass<false, rounding>(); }
 
   void run(const int max_batches = 1000 / config_batch)
   {
@@ -224,15 +273,27 @@ public:
     }
 #endif
 
+    cost ub = std::numeric_limits<cost>::infinity();
+
     signal_handler h;
     using clock_type = std::chrono::high_resolution_clock;
     const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      for (int j = 0; j < config_batch; ++j) {
-        forward_pass();
-        backward_pass();
+      for (int j = 0; j < config_batch-1; ++j) {
+        forward_pass<false>();
+        backward_pass<false>();
       }
+
+      reset_primal();
+      forward_pass<true>();
+      auto fw_ub = evaluate_primal();
+      ub = std::min(ub, fw_ub);
+
+      reset_primal();
+      backward_pass<true>();
+      auto bw_ub = evaluate_primal();
+      ub = std::min(ub, bw_ub);
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
@@ -241,6 +302,8 @@ public:
       iterations_ += config_batch;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
+                << "ub=" << ub << " "
+                << "gap=" << static_cast<float>(100.0 * (ub - lb) / std::abs(lb)) << "% "
                 << "t=" << seconds.count() << std::endl;
     }
   }
@@ -251,7 +314,7 @@ protected:
     std::vector<std::tuple<conflict_type*, conflict_messages_type*>> conflicts;
   };
 
-  template<bool forward>
+  template<bool forward, bool rounding>
   void single_step(const timestep& t)
   {
     for (auto [_, messages] : t.conflicts)
@@ -259,6 +322,30 @@ protected:
 
     for (auto [_, messages] : t.conflicts)
       messages->send_message_to_detection();
+
+    if constexpr (rounding) {
+      // FIXME: Pre-allocate scratch space and do not resort to dynamic
+      // memory allocation.
+      auto sorted_detections = t.detections;
+      std::sort(sorted_detections.begin(), sorted_detections.end(),
+        [](auto a, auto b) {
+          return std::get<0>(a)->min_detection() < std::get<0>(b)->min_detection();
+        });
+
+      for (auto [factor, messages] : sorted_detections) {
+        std::array<bool, max_number_of_detection_edges + 1> possible;
+        messages->template get_primal_possibilities<forward>(possible);
+        factor->template round_primal<forward>(possible);
+        messages->template propagate_primal<!forward>();
+
+        // FIXME: Make the other direction explicit and only push specific
+        // messages.
+        for (auto [_, messages] : t.conflicts) {
+          messages->propagate_primal_to_conflict();
+          messages->propagate_primal_to_detections();
+        }
+      }
+    }
 
     for (auto [_, messages] : t.detections)
       messages->template send_messages<forward>();

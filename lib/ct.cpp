@@ -75,6 +75,7 @@ ct_conflict* ct_tracker_get_conflict(ct_tracker* t, int timestep, int conflict)
 
 void ct_tracker_run(ct_tracker* t, int max_iterations) { t->tracker.run(max_iterations); }
 double ct_tracker_lower_bound(ct_tracker* t) { return t->tracker.lower_bound(); }
+double ct_tracker_upper_bound(ct_tracker* t) { return t->tracker.upper_bound(); }
 void ct_tracker_forward_step(ct_tracker* t, int timestep) { t->tracker.single_step<true>(timestep); }
 void ct_tracker_backward_step(ct_tracker* t, int timestep) { t->tracker.single_step<false>(timestep); }
 
