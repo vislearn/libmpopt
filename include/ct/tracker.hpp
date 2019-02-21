@@ -184,13 +184,13 @@ public:
 
     for (auto& timestep : timesteps_) {
       for (auto [factor, messages] : timestep.detections) {
-        if (!messages->is_primal_consistent())
+        if (!messages->check_primal_consistency())
           result += inf;
         result += factor->evaluate_primal();
       }
 
       for (auto [factor, messages] : timestep.conflicts) {
-        if (!messages->is_primal_consistent())
+        if (!messages->check_primal_consistency())
           result += inf;
         result += factor->evaluate_primal();
       }

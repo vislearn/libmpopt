@@ -101,26 +101,40 @@ public:
     }
   }
 
-  bool is_primal_consistent() const
+  consistency check_primal_consistency() const
   {
-    bool result = true;
+    consistency result;
     index idx;
-
-    if (!detection_->primal_.is_incoming_set() || !detection_->primal_.is_outgoing_set())
-      result &= false;
 
     idx = 0;
     for (auto& edge : left_) {
-      result &= (detection_->primal_.incoming() == idx) == (edge.detection1->primal_.outgoing() == edge.index1);
-      //assert(edge.detection2 == nullptr);
+      if (detection_->primal_.is_incoming_set() && edge.detection1->primal_.is_outgoing_set()) {
+        if ((detection_->primal_.incoming() == idx) != (edge.detection1->primal_.outgoing() == edge.index1))
+          result.mark_inconsistent();
+      } else {
+        result.mark_unknown();
+      }
       ++idx;
     }
 
     idx = 0;
     for (auto& edge : right_) {
-      result &= (detection_->primal_.outgoing() == idx) == (edge.detection1->primal_.incoming() == edge.index1);
-      if (edge.detection2 != nullptr)
-        result &= (detection_->primal_.outgoing() == idx) == (edge.detection2->primal_.incoming() == edge.index2);
+      if (detection_->primal_.is_outgoing_set() && edge.detection1->primal_.is_incoming_set()) {
+        if ((detection_->primal_.outgoing() == idx) != (edge.detection1->primal_.incoming() == edge.index1))
+          result.mark_inconsistent();
+      } else {
+        result.mark_unknown();
+      }
+
+      if (edge.detection2 != nullptr) {
+        if (detection_->primal_.is_outgoing_set() && edge.detection2->primal_.is_incoming_set()) {
+          if ((detection_->primal_.outgoing() == idx) != (edge.detection2->primal_.incoming() == edge.index2))
+            result.mark_inconsistent();
+        } else {
+          result.mark_unknown();
+        }
+      }
+
       ++idx;
     }
 

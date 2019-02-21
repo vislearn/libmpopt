@@ -73,18 +73,23 @@ public:
     }
   }
 
-  bool is_primal_consistent() const
+  consistency check_primal_consistency() const
   {
-    bool result = true;
-
-    assert(conflict_->primal_ >= 0);
+    consistency result;
 
     index i = 0;
     for (auto& edge : detections_) {
-      if (i == conflict_->primal_)
-        result &= edge.detection->primal_.is_detection_on();
-      else
-        result &= edge.detection->primal_.is_detection_off();
+      if (conflict_->primal_ < conflict_->costs_.size() && !edge.detection->primal_.is_undecided()) {
+        if (i == conflict_->primal_) {
+          if (!edge.detection->primal_.is_detection_on())
+            result.mark_inconsistent();
+        } else {
+          if (!edge.detection->primal_.is_detection_off())
+            result.mark_inconsistent();
+        }
+      } else {
+        result.mark_unknown();
+      }
       ++i;
     }
 
