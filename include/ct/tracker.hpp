@@ -317,6 +317,20 @@ protected:
   template<bool forward, bool rounding>
   void single_step(const timestep& t)
   {
+    // Checks that all messages are either consistent or unknown but not
+    // inconsitent. This property must be invariant during rounding, so we
+    // verify that it is the case.
+    auto check_messages = [&]() {
+#ifndef NDEBUG
+      for (const auto& timestep : timesteps_) {
+        for (auto [_, messages] : t.detections)
+          assert(messages->check_primal_consistency().is_not_inconsistent());
+        for (auto [_, messages] : t.conflicts)
+          assert(messages->check_primal_consistency().is_not_inconsistent());
+      }
+#endif
+    };
+
     for (auto [_, messages] : t.conflicts)
       messages->send_message_to_conflict();
 
@@ -335,14 +349,19 @@ protected:
       for (auto [factor, messages] : sorted_detections) {
         std::array<bool, max_number_of_detection_edges + 1> possible;
         messages->template get_primal_possibilities<forward>(possible);
+
         factor->template round_primal<forward>(possible);
+        check_messages();
         messages->template propagate_primal<!forward>();
+        check_messages();
 
         // FIXME: Make the other direction explicit and only push specific
         // messages.
         for (auto [_, messages] : t.conflicts) {
           messages->propagate_primal_to_conflict();
+          check_messages();
           messages->propagate_primal_to_detections();
+          check_messages();
         }
       }
     }
