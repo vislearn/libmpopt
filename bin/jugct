@@ -237,7 +237,7 @@ if __name__ == '__main__':
     print('ok')
 
     print('Converting in libct model... ', end='', flush=True)
-    tracker = model.construct_tracker()
+    tracker = ct.construct_tracker(model)
     print('ok, initial lb = {}'.format(tracker.lower_bound()), flush=True)
     tracker.run()
     print('final lower bound = {}'.format(tracker.lower_bound()))
