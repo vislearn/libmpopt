@@ -60,13 +60,12 @@ public:
 
   void send_message_to_detection()
   {
-    std::array<std::array<cost, 2>, max_number_of_conflict_edges> minorant;
-    assert(conflict_->costs_.size() <= minorant.size());
-    uniform_minorant(conflict_->costs_.cbegin(), conflict_->costs_.cend(), minorant.begin(), minorant.end());
+    auto [it1, it2] = least_two_elements(conflict_->costs_.cbegin(), conflict_->costs_.cend());
+    const auto m = 0.5 * (*it1 + *it2);
 
     index i = 0;
     for (auto& d : detections_) {
-      const cost msg = minorant[i][1] - minorant[i][0];
+      const cost msg = conflict_->costs_[i] - m;
       conflict_->repam(i, -msg);
       d.detection->repam_detection(msg);
       ++i;

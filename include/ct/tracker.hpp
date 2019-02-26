@@ -103,7 +103,7 @@ public:
 
   conflict_type* add_conflict(const index timestep, const index conflict, const index number_of_detections)
   {
-    assert(number_of_detections >= 2 && number_of_detections <= max_number_of_conflict_edges);
+    assert(number_of_detections >= 2);
     factor_counter_.new_conflict(timestep, conflict);
 
     auto& conflicts = timesteps_[timestep].conflicts;

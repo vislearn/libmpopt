@@ -10,7 +10,6 @@ using index = unsigned int;
 using short_index = unsigned char;
 
 constexpr index max_number_of_detection_edges = 128;
-constexpr index max_number_of_conflict_edges = 5;
 
 }
 
