@@ -59,7 +59,7 @@ def construct_tracker(model):
             for i, d in enumerate(detections):
                 conflict_count = conflict_counter[d]
                 assert conflict_count >= 1
-                libct.tracker_add_conflict_link(t.tracker, timestep, conflict, i, d, 0.5 / conflict_count)
+                libct.tracker_add_conflict_link(t.tracker, timestep, conflict, i, d, 1.0 / conflict_count)
                 conflict_counter[d] = conflict_count - 1
 
         if __debug__:
