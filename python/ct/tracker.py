@@ -41,7 +41,6 @@ def construct_tracker(model):
                     model.no_outgoing_edges(timestep, detection))
 
             c_det, c_app, c_dis = model._detections[timestep, detection]
-            assert c_det <= 0 and c_app >= 0 and c_dis >= 0
             libct.detection_set_detection_cost(d, c_det)
             libct.detection_set_appearance_cost(d, c_app)
             libct.detection_set_disappearance_cost(d, c_dis)
@@ -70,7 +69,6 @@ def construct_tracker(model):
     for k, v in model._transitions.items():
         timestep, index_from, index_to = k
         slot_left, slot_right, cost = v
-        assert cost >= 0
 
         libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
                 slot_left, cost * .5)
@@ -82,7 +80,6 @@ def construct_tracker(model):
     for k, v in model._divisions.items():
         timestep, index_from, index_to_1, index_to_2 = k
         slot_left, slot_right_1, slot_right_2, cost = v
-        assert cost >= 0
 
         libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
                 slot_left, cost / 3.0)
