@@ -12,14 +12,18 @@ if __name__ == '__main__':
     with ct.utils.smart_open(input_filename, 'rt') as f:
         model, bimap = ct.convert_jug_to_ct(ct.parse_jug_model(f))
     tracker = ct.construct_tracker(model)
-    tracker.run(1)
+    tracker.run()
 
-    r = ct.ExactNeighbourRounding(model, tracker)
-    r.run()
+    rounding = ct.ExactNeighbourRounding(model, tracker)
+    rounding.run()
+    primals = rounding.best_primals
 
     lb = tracker.lower_bound()
-    ub = r.best_primals.evaluate()
+    ub = primals.evaluate()
 
     print('final lb={} ub={} gap={}%'.format(lb,
                                              ub,
                                              100.0 * (ub - lb) / abs(lb)))
+
+    with open('tracking.sol', 'w') as f:
+        ct.format_jug_primals(primals, bimap, f)

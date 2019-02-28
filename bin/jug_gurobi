@@ -12,6 +12,10 @@ if __name__ == '__main__':
     with ct.utils.smart_open(input_filename, 'rt') as f:
         model, bimap = ct.convert_jug_to_ct(ct.parse_jug_model(f))
     tracker = ct.construct_tracker(model)
-    g = ct.Gurobi()
-    g.construct(model, tracker)
-    g.run()
+    gurobi = ct.Gurobi()
+    gurobi.construct(model, tracker)
+    gurobi.run()
+
+    primals = ct.extract_primals_from_gurobi(gurobi)
+    with open('tracking.sol', 'w') as f:
+        ct.format_jug_primals(primals, bimap, f)
