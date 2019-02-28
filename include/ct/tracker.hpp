@@ -89,6 +89,9 @@ public:
       allocator_type a(allocator_);
       d = a.allocate();
       std::allocator_traits<allocator_type>::construct(a, d, number_of_incoming, number_of_outgoing, allocator_); // FIXME: Dtor is never called.
+#ifndef NDEBUG
+      d->set_debug_info(timestep, detection);
+#endif
     }
 
     {

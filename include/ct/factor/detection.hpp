@@ -90,11 +90,23 @@ public:
   , incoming_(number_of_incoming + 1, initial_cost, allocator)
   , outgoing_(number_of_outgoing + 1, initial_cost, allocator)
   , primal_(incoming_.size(), outgoing_.size())
+#ifndef NDEBUG
+  , timestep_(-1)
+  , index_(-1)
+#endif
   {
   }
 
   detection_factor(const detection_factor& other) = delete;
   detection_factor& operator=(const detection_factor& other) = delete;
+
+#ifndef NDEBUG
+  void set_debug_info(index timestep, index idx)
+  {
+    timestep_ = timestep;
+    index_ = idx;
+  }
+#endif
 
   //
   // cost getters
@@ -238,6 +250,10 @@ protected:
   fixed_vector<cost, allocator_type> incoming_;
   fixed_vector<cost, allocator_type> outgoing_;
   detection_primal primal_;
+
+#ifndef NDEBUG
+  index timestep_, index_;
+#endif
 
   template<typename> friend class transition_messages;
   template<typename> friend class conflict_messages;
