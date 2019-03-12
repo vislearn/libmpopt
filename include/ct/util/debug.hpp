@@ -5,7 +5,7 @@ namespace ct {
 namespace dbg {
 
 template<typename T>
-bool are_idential(const T a, const T b)
+bool are_identical(const T a, const T b)
 {
   constexpr T inf = std::numeric_limits<T>::infinity();
 

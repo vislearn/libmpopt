@@ -113,7 +113,7 @@ std::vector<std::array<cost,2>> uniform_minorant_generic(const std::vector<std::
       o += duals[i][i == on];
       n += minorant[i][i == on];
     }
-    assert(dbg::are_idential(o, n));
+    assert(dbg::are_identical(o, n));
   }
 #endif
 
@@ -151,8 +151,8 @@ void uniform_minorant(ITERATOR_IN in_begin, ITERATOR_IN in_end, ITERATOR_OUT out
 
   out_it = out_begin;
   for (auto& x : slow_version) {
-    assert(dbg::are_idential(x[0], (*out_it)[0]));
-    assert(dbg::are_idential(x[1], (*out_it)[1]));
+    assert(dbg::are_identical(x[0], (*out_it)[0]));
+    assert(dbg::are_identical(x[1], (*out_it)[1]));
     ++out_it;
   }
 #endif

@@ -237,7 +237,7 @@ public:
       result = incoming_[primal_.incoming()] + detection_ + outgoing_[primal_.outgoing()];
     else
       result = std::numeric_limits<cost>::infinity();
-    assert(dbg::are_idential(result, evaluate_incoming_primal() + evaluate_detection_primal() + evaluate_outgoing_primal()));
+    assert(dbg::are_identical(result, evaluate_incoming_primal() + evaluate_detection_primal() + evaluate_outgoing_primal()));
     return result;
   }
 
