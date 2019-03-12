@@ -60,7 +60,7 @@ class tracker {
 public:
   using detection_type = detection_factor<ALLOCATOR>;
   using conflict_type = conflict_factor<ALLOCATOR>;
-  using transition_message_type = transition_messages<ALLOCATOR>;
+  using transition_messages_type = transition_messages<ALLOCATOR>;
   using conflict_messages_type = conflict_messages<ALLOCATOR>;
 
   static constexpr int config_batch = 100;
@@ -95,7 +95,7 @@ public:
     }
 
     {
-      using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<transition_message_type>;
+      using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<transition_messages_type>;
       allocator_type a(allocator_);
       t = a.allocate();
       std::allocator_traits<allocator_type>::construct(a, t, d, number_of_incoming, number_of_outgoing, allocator_); // FIXME: Dtor is never caleld.
@@ -356,7 +356,7 @@ public:
 
 protected:
   struct timestep {
-    std::vector<std::tuple<detection_type*, transition_message_type*>> detections;
+    std::vector<std::tuple<detection_type*, transition_messages_type*>> detections;
     std::vector<std::tuple<conflict_type*, conflict_messages_type*>> conflicts;
   };
 
@@ -378,10 +378,10 @@ protected:
     };
 
     for (auto [_, messages] : t.conflicts)
-      messages->send_message_to_conflict();
+      messages->send_messages_to_conflict();
 
     for (auto [_, messages] : t.conflicts)
-      messages->send_message_to_detection();
+      messages->send_messages_to_detection();
 
     if constexpr (rounding) {
       // FIXME: Pre-allocate scratch space and do not resort to dynamic

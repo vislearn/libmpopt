@@ -47,7 +47,7 @@ public:
     return true;
   }
 
-  void send_message_to_conflict()
+  void send_messages_to_conflict()
   {
     index i = 0;
     for (auto& d : detections_) {
@@ -58,7 +58,7 @@ public:
     }
   }
 
-  void send_message_to_detection()
+  void send_messages_to_detection()
   {
     auto [it1, it2] = least_two_elements(conflict_->costs_.cbegin(), conflict_->costs_.cend());
     const auto m = 0.5 * (*it1 + *it2);
