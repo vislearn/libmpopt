@@ -162,15 +162,19 @@ public:
 
   void reset_primal() { primal_.reset(); }
 
-  void fix_primal()
+  cost evaluate_primal()
   {
-    assert(primal_.is_incoming_set() || primal_.is_outgoing_set());
-    if (!primal_.is_incoming_set())
-      primal_.set_incoming(incoming_.size() - 1);
-    if (!primal_.is_outgoing_set())
-      primal_.set_outgoing(outgoing_.size() - 1);
-    assert(primal_.is_incoming_set() && primal_.is_outgoing_set());
+    cost result;
+    if (primal_.is_detection_off())
+      result = 0.0;
+    else if (primal_.is_incoming_set() && primal_.is_outgoing_set())
+      result = incoming_[primal_.incoming()] + detection_ + outgoing_[primal_.outgoing()];
+    else
+      result = std::numeric_limits<cost>::infinity();
+    return result;
   }
+
+  auto& primal() { return primal_; }
 
   template<bool from_left, typename CONTAINER>
   void round_primal(const CONTAINER& active)
@@ -195,19 +199,15 @@ public:
     }
   }
 
-  cost evaluate_primal()
+  void fix_primal()
   {
-    cost result;
-    if (primal_.is_detection_off())
-      result = 0.0;
-    else if (primal_.is_incoming_set() && primal_.is_outgoing_set())
-      result = incoming_[primal_.incoming()] + detection_ + outgoing_[primal_.outgoing()];
-    else
-      result = std::numeric_limits<cost>::infinity();
-    return result;
+    assert(primal_.is_incoming_set() || primal_.is_outgoing_set());
+    if (!primal_.is_incoming_set())
+      primal_.set_incoming(incoming_.size() - 1);
+    if (!primal_.is_outgoing_set())
+      primal_.set_outgoing(outgoing_.size() - 1);
+    assert(primal_.is_incoming_set() && primal_.is_outgoing_set());
   }
-
-  auto& primal() { return primal_; }
 
 protected:
   void assert_incoming(const index idx) const { assert(idx >= 0 && idx < incoming_.size() - 1); }
