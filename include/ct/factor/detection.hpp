@@ -195,39 +195,6 @@ public:
     }
   }
 
-  cost evaluate_incoming_primal()
-  {
-    if (!primal_.is_incoming_set())
-      return std::numeric_limits<cost>::infinity();
-
-    if (primal_.incoming() == detection_primal::off)
-      return 0.0;
-    else
-      return incoming_[primal_.incoming()];
-  }
-
-  cost evaluate_detection_primal()
-  {
-    if (primal_.is_detection_off())
-      return 0.0;
-
-    if (primal_.is_detection_on())
-      return detection_;
-
-    return std::numeric_limits<cost>::infinity();
-  }
-
-  cost evaluate_outgoing_primal()
-  {
-    if (!primal_.is_outgoing_set())
-      return std::numeric_limits<cost>::infinity();
-
-    if (primal_.outgoing() == detection_primal::off)
-      return 0.0;
-    else
-      return outgoing_[primal_.outgoing()];
-  }
-
   cost evaluate_primal()
   {
     cost result;
@@ -237,7 +204,6 @@ public:
       result = incoming_[primal_.incoming()] + detection_ + outgoing_[primal_.outgoing()];
     else
       result = std::numeric_limits<cost>::infinity();
-    assert(dbg::are_identical(result, evaluate_incoming_primal() + evaluate_detection_primal() + evaluate_outgoing_primal()));
     return result;
   }
 
