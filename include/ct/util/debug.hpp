@@ -4,6 +4,8 @@
 namespace ct {
 namespace dbg {
 
+template<typename...> struct get_type_of;
+
 template<typename T>
 bool are_identical(const T a, const T b)
 {
