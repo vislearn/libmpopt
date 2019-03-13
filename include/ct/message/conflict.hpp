@@ -101,10 +101,12 @@ public:
 
     index i = 0;
     for (auto& edge : detections_) {
-      if (edge.detection->primal_.is_detection_on())
+      if (edge.detection->primal_.is_detection_on()) {
+        assert(conflict_->primal_ >= conflict_->size() || conflict_->primal_ == i);
         conflict_->primal_ = i;
-      else
+      } else {
         assert(conflict_->primal_ != i);
+      }
       ++i;
     }
   }
