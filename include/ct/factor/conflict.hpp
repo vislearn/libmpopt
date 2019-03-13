@@ -29,6 +29,13 @@ public:
     timestep_ = timestep;
     index_ = idx;
   }
+
+  std::string dbg_info() const
+  {
+    std::ostringstream s;
+    s << "c(" << timestep_ << ", " << index_ << ")";
+    return s.str();
+  }
 #endif
 
   auto size() const { return costs_.size(); }

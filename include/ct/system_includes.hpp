@@ -10,6 +10,7 @@
 #include <functional>
 #include <iostream>
 #include <numeric>
+#include <sstream>
 #include <vector>
 
 #endif

@@ -106,6 +106,13 @@ public:
     timestep_ = timestep;
     index_ = idx;
   }
+
+  std::string dbg_info() const
+  {
+    std::ostringstream s;
+    s << "d(" << timestep_ << ", " << index_ << ")";
+    return s.str();
+  }
 #endif
 
   //
