@@ -23,6 +23,9 @@ public:
   using base::size;
 };
 
+template<typename T, typename ALLOCATOR>
+using fixed_vector_alloc_gen = fixed_vector<T, typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<T>>;
+
 }
 
 #endif

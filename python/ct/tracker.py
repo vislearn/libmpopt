@@ -32,34 +32,38 @@ class Tracker:
 
 def construct_tracker(model):
     t = Tracker()
+    g = libct.tracker_get_graph(t.tracker)
 
     detection_map = {} # (timestep, detection) -> detection_object
     for timestep in range(model.no_timesteps()):
+        # FIXME: This is not very efficient.
+        conflict_counter = {}
+        conflict_slots = {}
+        for conflict in range(model.no_conflicts(timestep)):
+            detections = model._conflicts[timestep, conflict]
+            for d in detections:
+                conflict_slots[conflict, d] = conflict_counter.get(d, 0)
+                model._inc_dict(conflict_counter, d)
+
         for detection in range(model.no_detections(timestep)):
-            d = libct.tracker_add_detection(t.tracker, timestep, detection,
-                    model.no_incoming_edges(timestep, detection),
-                    model.no_outgoing_edges(timestep, detection))
+            d = libct.graph_add_detection(
+                g, timestep, detection, model.no_incoming_edges(timestep,
+                detection), model.no_outgoing_edges(timestep, detection),
+                conflict_counter.get(detection, 0))
 
             c_det, c_app, c_dis = model._detections[timestep, detection]
             libct.detection_set_detection_cost(d, c_det)
             libct.detection_set_appearance_cost(d, c_app)
             libct.detection_set_disappearance_cost(d, c_dis)
-
             detection_map[timestep, detection] = d
 
-        conflict_counter = {}
         for conflict in range(model.no_conflicts(timestep)):
             detections = model._conflicts[timestep, conflict]
-            for d in detections:
-                model._inc_dict(conflict_counter, d)
-
-        for conflict in range(model.no_conflicts(timestep)):
-            detections = model._conflicts[timestep, conflict]
-            c = libct.tracker_add_conflict(t.tracker, timestep, conflict, len(detections))
+            c = libct.graph_add_conflict(g, timestep, conflict, len(detections))
             for i, d in enumerate(detections):
                 conflict_count = conflict_counter[d]
                 assert conflict_count >= 1
-                libct.tracker_add_conflict_link(t.tracker, timestep, conflict, i, d, 1.0 / conflict_count)
+                libct.graph_add_conflict_link(g, timestep, conflict, i, d, conflict_slots[conflict, d])
                 conflict_counter[d] = conflict_count - 1
 
         if __debug__:
@@ -70,25 +74,18 @@ def construct_tracker(model):
         timestep, index_from, index_to = k
         slot_left, slot_right, cost = v
 
-        libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
-                slot_left, cost * .5)
-        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to],
-                slot_right, cost * .5)
-        libct.tracker_add_transition(t.tracker, timestep, index_from, slot_left,
-                index_to, slot_right)
+        libct.detection_set_outgoing_cost(detection_map[timestep, index_from], slot_left, cost * .5)
+        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to], slot_right, cost * .5)
+        libct.graph_add_transition(g, timestep, index_from, slot_left, index_to, slot_right)
 
     for k, v in model._divisions.items():
         timestep, index_from, index_to_1, index_to_2 = k
         slot_left, slot_right_1, slot_right_2, cost = v
 
-        libct.detection_set_outgoing_cost(detection_map[timestep, index_from],
-                slot_left, cost / 3.0)
-        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to_1],
-                slot_right_1, cost / 3.0)
-        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to_2],
-                slot_right_2, cost / 3.0)
-        libct.tracker_add_division(t.tracker, timestep, index_from, slot_left,
-                index_to_1, slot_right_1, index_to_2, slot_right_2)
+        libct.detection_set_outgoing_cost(detection_map[timestep, index_from], slot_left, cost / 3.0)
+        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to_1], slot_right_1, cost / 3.0)
+        libct.detection_set_incoming_cost(detection_map[timestep + 1, index_to_2], slot_right_2, cost / 3.0)
+        libct.graph_add_division(g, timestep, index_from, slot_left, index_to_1, slot_right_1, index_to_2, slot_right_2)
 
     libct.tracker_finalize(t.tracker)
 

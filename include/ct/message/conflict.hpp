@@ -3,132 +3,108 @@
 
 namespace ct {
 
-template<typename DETECTION>
-struct conflict_message_storage {
-  conflict_message_storage()
-  : detection(nullptr)
-  , weight(-1)
-  { }
+struct conflict_messages {
 
-  DETECTION* detection;
-  cost weight;
-
-  bool is_prepared() const
+  template<typename CONFLICT_NODE>
+  static void send_messages_to_conflict(const CONFLICT_NODE& node)
   {
-    return detection != nullptr && weight >= 0 && weight <= 1;
-  }
-};
+    index slot = 0;
+    for (const auto& edge : node.detections) {
+      auto& c = node.conflict;
+      auto& d = edge.node->detection;
 
-template<typename ALLOCATOR = std::allocator<cost>>
-class conflict_messages {
-public:
-  using conflict_type = conflict_factor<ALLOCATOR>;
-  using detection_type = detection_factor<ALLOCATOR>;
-  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<conflict_message_storage<detection_type>>;
-
-  conflict_messages(conflict_type* conflict, const index number_of_detections, const ALLOCATOR& allocator = ALLOCATOR())
-  : conflict_(conflict)
-  , detections_(number_of_detections, allocator)
-  { }
-
-  void add_link(const index slot, detection_type* detection, const cost weight)
-  {
-    assert(!detections_[slot].is_prepared());
-    detections_[slot].detection = detection;
-    detections_[slot].weight = weight;
-  }
-
-  bool is_prepared() const
-  {
-    for (auto& d : detections_)
-      if (! d.is_prepared())
-        return false;
-
-    return true;
-  }
-
-  void send_messages_to_conflict()
-  {
-    index i = 0;
-    for (auto& d : detections_) {
-      const auto msg = d.detection->min_detection() * d.weight;
-      d.detection->repam_detection(-msg);
-      conflict_->repam(i, msg);
-      ++i;
+      const cost weight = 1.0d / (edge.node->conflicts.size() - edge.slot);
+      const auto msg = d.min_detection() * weight;
+      d.repam_detection(-msg);
+      c.repam(slot, msg);
+      ++slot;
     }
   }
 
-  void send_messages_to_detection()
+  template<typename CONFLICT_NODE>
+  static void send_messages_to_detection(const CONFLICT_NODE& node)
   {
-    auto [it1, it2] = least_two_elements(conflict_->costs_.cbegin(), conflict_->costs_.cend());
+    auto& c = node.conflict;
+    auto [it1, it2] = least_two_elements(c.costs_.cbegin(), c.costs_.cend());
     const auto m = 0.5 * (*it1 + *it2);
 
-    index i = 0;
-    for (auto& d : detections_) {
-      const cost msg = conflict_->costs_[i] - m;
-      conflict_->repam(i, -msg);
-      d.detection->repam_detection(msg);
-      ++i;
+    index slot = 0;
+    for (const auto& edge : node.detections) {
+      auto& d = edge.node->detection;
+
+      const cost msg = c.costs_[slot] - m;
+      c.repam(slot, -msg);
+      d.repam_detection(msg);
+      ++slot;
     }
   }
 
-  consistency check_primal_consistency() const
+  template<typename CONFLICT_NODE>
+  static consistency check_primal_consistency(const CONFLICT_NODE& node)
   {
     consistency result;
 
-    index i = 0;
-    for (auto& edge : detections_) {
-      if (conflict_->primal_ < conflict_->costs_.size() && !edge.detection->primal_.is_undecided()) {
-        if (i == conflict_->primal_) {
-          if (!edge.detection->primal_.is_detection_on())
+    index slot = 0;
+    for (const auto& edge : node.detections) {
+      const auto& c = node.conflict;
+      const auto& d = edge.node->detection;
+
+      if (c.primal_ < c.costs_.size() && !d.primal_.is_undecided()) {
+        if (slot == c.primal_) {
+          if (!d.primal_.is_detection_on())
             result.mark_inconsistent();
         } else {
-          if (!edge.detection->primal_.is_detection_off())
+          if (!d.primal_.is_detection_off())
             result.mark_inconsistent();
         }
       } else {
         result.mark_unknown();
       }
-      ++i;
+      ++slot;
     }
 
     return result;
   }
 
-  void propagate_primal_to_conflict()
+  template<typename CONFLICT_NODE>
+  static void propagate_primal_to_conflict(const CONFLICT_NODE& node)
   {
-    assert(conflict_->primal_ >= 0);
+    auto& c = node.conflict;
+    assert(c.primal_ >= 0);
 
-    index i = 0;
-    for (auto& edge : detections_) {
-      if (edge.detection->primal_.is_detection_on()) {
-        assert(conflict_->primal_ >= conflict_->size() || conflict_->primal_ == i);
-        conflict_->primal_ = i;
+    index slot = 0;
+    for (const auto& edge : node.detections) {
+      const auto& d = edge.node->detection;
+
+      if (d.primal_.is_detection_on()) {
+        assert(c.primal_ >= c.size() || c.primal_ == slot);
+        c.primal_ = slot;
       } else {
-        assert(conflict_->primal_ != i);
+        assert(c.primal_ != slot);
       }
-      ++i;
+      ++slot;
     }
   }
 
-  void propagate_primal_to_detections()
+  template<typename CONFLICT_NODE>
+  static void propagate_primal_to_detections(const CONFLICT_NODE& node)
   {
-    assert(conflict_->primal_ >= 0);
+    const auto& c = node.conflict;
+    assert(c.primal_ >= 0);
 
-    if (conflict_->primal_ >= conflict_->size())
+    if (c.primal_ >= c.size())
       return;
 
-    index i = 0;
-    for (auto& edge : detections_) {
-      if (i != conflict_->primal_)
-        edge.detection->primal_.set_detection_off();
-      ++i;
+    index slot = 0;
+    for (const auto& edge : node.detections) {
+      auto& d = edge.node->detection;
+
+      if (slot != c.primal_)
+        d.primal_.set_detection_off();
+      ++slot;
     }
   }
 
-protected:
-  conflict_type* conflict_;
-  fixed_vector<conflict_message_storage<detection_type>, allocator_type> detections_;
 };
 
 }

@@ -8,11 +8,11 @@ class Model:
         self._detections = {}        # (timestep, index) -> (detection_cost, appearance_cost, disappearance_cost)
         self._no_detections = {}     # timestep -> count
 
-        self._conflicts = {}         # (timestep, index) -> [detection_index]
+        self._conflicts = {}         # (timestep, index) -> [(detection_index, slot)]
         self._no_conflicts = {}      # timestep -> count
 
-        self._transitions = {}       # (timestep, index_from, index_to) -> (out_idx, in_idx, cost)
-        self._divisions = {}         # (timestep, index_from, index_to_1, index_to_2) -> (out_idx, in_idx_1, in_idx_2, cost)
+        self._transitions = {}       # (timestep, index_from, index_to) -> (out_slot, in_slot, cost)
+        self._divisions = {}         # (timestep, index_from, index_to_1, index_to_2) -> (out_slot, in_slot_1, in_slot_2, cost)
         self._no_incoming_edges = {} # (timestep, index) -> count
         self._no_outgoing_edges = {} # (timestep, index) -> count
 

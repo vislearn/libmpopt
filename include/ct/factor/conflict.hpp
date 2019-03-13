@@ -8,7 +8,7 @@ using conflict_primal = index;
 template<typename ALLOCATOR = std::allocator<cost>>
 class conflict_factor {
 public:
-  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<cost>;
+  using allocator_type = ALLOCATOR;
   static constexpr cost initial_cost = 0.0;
 
   conflict_factor(index number_of_detections, const ALLOCATOR& allocator = ALLOCATOR())
@@ -69,6 +69,7 @@ public:
   }
 
   auto& primal() { return primal_; }
+  const auto& primal() const { return primal_; }
 
   void round_primal()
   {
@@ -88,15 +89,15 @@ public:
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size() - 1); }
 
-  fixed_vector<cost, allocator_type> costs_;
+  fixed_vector_alloc_gen<cost, ALLOCATOR> costs_;
   conflict_primal primal_;
 
 #ifndef NDEBUG
   index timestep_, index_;
 #endif
 
-  template<typename> friend class transition_messages;
-  template<typename> friend class conflict_messages;
+  friend struct transition_messages;
+  friend struct conflict_messages;
 };
 
 }

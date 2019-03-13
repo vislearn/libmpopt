@@ -5,6 +5,7 @@ namespace ct {
 
 using cost = double;
 constexpr const cost epsilon = 1e-8;
+static_assert(std::numeric_limits<cost>::has_infinity);
 
 using index = unsigned int;
 using short_index = unsigned char;

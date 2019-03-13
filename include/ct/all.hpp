@@ -16,6 +16,7 @@
 #include <ct/message/consistency.hpp>
 #include <ct/message/transition.hpp>
 #include <ct/message/conflict.hpp>
+#include <ct/graph.hpp>
 
 #include <ct/tracker.hpp>
 

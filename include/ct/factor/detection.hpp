@@ -82,7 +82,7 @@ protected:
 template<typename ALLOCATOR = std::allocator<cost>>
 class detection_factor {
 public:
-  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<cost>;
+  using allocator_type = ALLOCATOR;
   static constexpr cost initial_cost = std::numeric_limits<cost>::signaling_NaN();
 
   detection_factor(index number_of_incoming, index number_of_outgoing, const ALLOCATOR& allocator = ALLOCATOR())
@@ -135,7 +135,13 @@ public:
   void set_incoming_cost(index idx, cost c) { assert_incoming(idx); incoming_[idx] = c; }
   void set_outgoing_cost(index idx, cost c) { assert_outgoing(idx); outgoing_[idx] = c; }
 
-  bool is_prepared() const { return true; } // FIXME: Check if costs have been initialized.
+  bool is_prepared() const
+  {
+    bool result = detection_ != initial_cost;
+    for (const auto& x : incoming_) { result &= x != initial_cost; }
+    for (const auto& x : outgoing_) { result &= x != initial_cost; }
+    return result;
+  }
 
   //
   // factor specific logic
@@ -169,7 +175,7 @@ public:
 
   void reset_primal() { primal_.reset(); }
 
-  cost evaluate_primal()
+  cost evaluate_primal() const
   {
     cost result;
     if (primal_.is_detection_off())
@@ -182,6 +188,7 @@ public:
   }
 
   auto& primal() { return primal_; }
+  const auto& primal() const { return primal_; }
 
   template<bool from_left, typename CONTAINER>
   void round_primal(const CONTAINER& active)
@@ -220,16 +227,16 @@ protected:
   void assert_incoming(const index idx) const { assert(idx >= 0 && idx < incoming_.size() - 1); }
   void assert_outgoing(const index idx) const { assert(idx >= 0 && idx < outgoing_.size() - 1); }
   cost detection_;
-  fixed_vector<cost, allocator_type> incoming_;
-  fixed_vector<cost, allocator_type> outgoing_;
+  fixed_vector_alloc_gen<cost, ALLOCATOR> incoming_;
+  fixed_vector_alloc_gen<cost, ALLOCATOR> outgoing_;
   detection_primal primal_;
 
 #ifndef NDEBUG
   index timestep_, index_;
 #endif
 
-  template<typename> friend class transition_messages;
-  template<typename> friend class conflict_messages;
+  friend struct transition_messages;
+  friend struct conflict_messages;
 };
 
 }

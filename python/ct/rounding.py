@@ -103,10 +103,11 @@ def copy_primals(primals):
 
 
 def extract_primals_from_tracker(model, tracker):
+    g = libct.tracker_get_graph(tracker.tracker)
     primals = Primals(model)
     for timestep in range(model.no_timesteps()):
         for detection in range(model.no_detections(timestep)):
-            factor = libct.tracker_get_detection(tracker.tracker, timestep, detection)
+            factor = libct.graph_get_detection(g, timestep, detection)
             incoming_primal = libct.detection_get_incoming_primal(factor)
             outgoing_primal = libct.detection_get_outgoing_primal(factor)
 

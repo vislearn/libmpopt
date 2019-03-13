@@ -3,242 +3,169 @@
 
 namespace ct {
 
-// FIXME: For non-divisions we waste some space here.
-// FIXME: Left transitions can never be divisions, so we waste always space. Get rid of this!
-template<typename DETECTION>
-struct transition_storage {
-  transition_storage()
-  : detection1(nullptr)
-  , detection2(nullptr)
-  { }
+struct transition_messages {
 
-  DETECTION* detection1;
-  DETECTION* detection2;
-  index index1, index2;
-
-  bool is_prepared() const
+  template<bool to_right, typename DETECTION_NODE>
+  static void send_messages(const DETECTION_NODE& node)
   {
-    if (detection2 != nullptr && detection1 == nullptr)
-      return false;
+    auto& here = node.detection;
+    using detection_type = typename DETECTION_NODE::detection_type;
 
-    return detection1 != nullptr;
-  }
+    const auto min_other_side   = to_right ? here.min_incoming()
+                                           : here.min_outgoing();
+    const auto& costs_this_side = to_right ? here.outgoing_
+                                           : here.incoming_;
+    const auto cost_nirvana     = to_right ? here.disappearance()
+                                           : here.appearance();
 
-  bool is_division() const
-  {
-    assert(detection1 != nullptr);
-    return detection2 != nullptr;
-  }
-};
-
-template<typename ALLOCATOR = std::allocator<cost>>
-class transition_messages {
-public:
-  using detection_type = detection_factor<ALLOCATOR>;
-  using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<transition_storage<detection_type>>;
-
-  transition_messages(detection_type* detection, const index number_of_left, const index number_of_right, const ALLOCATOR& allocator)
-  : detection_(detection)
-  , left_(number_of_left, allocator)
-  , right_(number_of_right, allocator)
-  { }
-
-  void set_left_transition(index index_this, detection_type* other1, index index_other1, detection_type* other2 = nullptr, index index_other2 = 0)
-  {
-    set_transition(left_, index_this, other1, index_other1, other2, index_other2);
-  }
-
-  void set_right_transition(index index_this, detection_type* other1, index index_other1, detection_type* other2 = nullptr, index index_other2 = 0)
-  {
-    set_transition(right_, index_this, other1, index_other1, other2, index_other2);
-  }
-
-  bool is_prepared() const
-  {
-    auto helper = [](auto& vec) {
-      for (auto& x : vec)
-        if (!x.is_prepared())
-          return false;
-      return true;
-    };
-
-    return helper(left_) && helper(right_);
-  }
-
-  template<bool to_right>
-  void send_messages()
-  {
-    const auto min_other_side   = to_right ? detection_->min_incoming()
-                                           : detection_->min_outgoing();
-    const auto& costs_this_side = to_right ? detection_->outgoing_
-                                           : detection_->incoming_;
-    const auto cost_nirvana     = to_right ? detection_->disappearance()
-                                           : detection_->appearance();
-
-    const auto constant = detection_->detection() + min_other_side;
+    const auto constant = here.detection() + min_other_side;
     const auto [first_minimum, second_minimum] = least_two_values(costs_this_side.begin(), costs_this_side.end() - 1);
 
     const auto set_to = std::min(constant + std::min(second_minimum, cost_nirvana), 0.0);
 
-    index idx = 0;
-    for (auto& edge : (to_right ? right_ : left_)) {
-      const auto slot_cost   = to_right ? detection_->outgoing(idx)
-                                        : detection_->incoming(idx);
+    index slot = 0;
+    for (const auto& edge : (to_right ? node.outgoing : node.incoming)) {
+      const auto slot_cost   = to_right ? here.outgoing(slot)
+                                        : here.incoming(slot);
       const auto repam_this  = to_right ? &detection_type::repam_outgoing
                                         : &detection_type::repam_incoming;
       const auto repam_other = to_right ? &detection_type::repam_incoming
                                         : &detection_type::repam_outgoing;
 
       auto msg = constant + slot_cost - set_to;
-      (detection_->*repam_this)(idx, -msg);
+      (here.*repam_this)(slot, -msg);
       if (edge.is_division() && to_right) {
-        (edge.detection1->*repam_other)(edge.index1, .5 * msg);
-        (edge.detection2->*repam_other)(edge.index2, .5 * msg);
+        (edge.node1->detection.*repam_other)(edge.slot1, .5 * msg);
+        (edge.node2->detection.*repam_other)(edge.slot2, .5 * msg);
       } else {
-        (edge.detection1->*repam_other)(edge.index1, msg);
+        (edge.node1->detection.*repam_other)(edge.slot1, msg);
       }
-      ++idx;
+      ++slot;
     }
   }
 
-  consistency check_primal_consistency() const
+  template<typename DETECTION_NODE>
+  static consistency check_primal_consistency(const DETECTION_NODE& node)
   {
-    consistency result;
-    index idx;
+    const auto& here = node.detection;
 
-    idx = 0;
-    for (auto& edge : left_) {
-      if (detection_->primal_.is_incoming_set() && edge.detection1->primal_.is_outgoing_set()) {
-        if ((detection_->primal_.incoming() == idx) != (edge.detection1->primal_.outgoing() == edge.index1))
+    consistency result;
+    index slot;
+
+    slot = 0;
+    for (const auto& edge : node.incoming) {
+      const auto& there1 = edge.node1->detection;
+      if (here.primal_.is_incoming_set() && there1.primal_.is_outgoing_set()) {
+        if ((here.primal_.incoming() == slot) != (there1.primal_.outgoing() == edge.slot1))
           result.mark_inconsistent();
       } else {
         result.mark_unknown();
       }
-      ++idx;
+      ++slot;
     }
 
-    idx = 0;
-    for (auto& edge : right_) {
-      if (detection_->primal_.is_outgoing_set() && edge.detection1->primal_.is_incoming_set()) {
-        if ((detection_->primal_.outgoing() == idx) != (edge.detection1->primal_.incoming() == edge.index1))
+    slot = 0;
+    for (auto& edge : node.outgoing) {
+      const auto& there1 = edge.node1->detection;
+      if (here.primal_.is_outgoing_set() && there1.primal_.is_incoming_set()) {
+        if ((here.primal_.outgoing() == slot) != (there1.primal_.incoming() == edge.slot1))
           result.mark_inconsistent();
       } else {
         result.mark_unknown();
       }
 
-      if (edge.detection2 != nullptr) {
-        if (detection_->primal_.is_outgoing_set() && edge.detection2->primal_.is_incoming_set()) {
-          if ((detection_->primal_.outgoing() == idx) != (edge.detection2->primal_.incoming() == edge.index2))
+      if (edge.node2 != nullptr) {
+        const auto& there2 = edge.node2->detection;
+        if (here.primal_.is_outgoing_set() && there2.primal_.is_incoming_set()) {
+          if ((here.primal_.outgoing() == slot) != (there2.primal_.incoming() == edge.slot2))
             result.mark_inconsistent();
         } else {
           result.mark_unknown();
         }
       }
 
-      ++idx;
+      ++slot;
     }
 
     return result;
   }
 
-  template<bool to_right>
-  void propagate_primal()
+  template<bool to_right, typename DETECTION_NODE>
+  static void propagate_primal(const DETECTION_NODE& node)
   {
-    if (detection_->primal_.is_detection_off())
+    const auto& here = node.detection;
+
+    if (here.primal_.is_detection_off())
       return;
 
     if constexpr (to_right) {
-      assert(detection_->primal_.is_outgoing_set());
-      if (detection_->primal_.outgoing() < detection_->outgoing_.size() - 1) {
-        auto& edge = right_[detection_->primal_.outgoing()];
+      assert(here.primal_.is_outgoing_set());
+      if (here.primal_.outgoing() < here.outgoing_.size() - 1) {
+        const auto& edge = node.outgoing[here.primal_.outgoing()];
 
-        edge.detection1->primal_.set_incoming(edge.index1);
-        if (edge.detection2 != nullptr)
-          edge.detection2->primal_.set_incoming(edge.index2);
+        edge.node1->detection.primal_.set_incoming(edge.slot1);
+        if (edge.node2 != nullptr)
+          edge.node2->detection.primal_.set_incoming(edge.slot2);
       }
     } else {
-      assert(detection_->primal_.is_incoming_set());
-      if (detection_->primal_.incoming() < detection_->incoming_.size() - 1){
-        auto& edge = left_[detection_->primal_.incoming()];
+      assert(here.primal_.is_incoming_set());
+      if (here.primal_.incoming() < here.incoming_.size() - 1){
+        const auto& edge = node.incoming[here.primal_.incoming()];
 
-        edge.detection1->primal_.set_outgoing(edge.index1);
-        if (edge.detection2 != nullptr)
-          edge.detection2->primal_.set_incoming(edge.index2);
+        edge.node1->detection.primal_.set_outgoing(edge.slot1);
+        if (edge.node2 != nullptr)
+          edge.node2->detection.primal_.set_incoming(edge.slot2);
       }
     }
   }
 
-  template<bool from_left, typename CONTAINER>
-  void get_primal_possibilities(CONTAINER& out)
+  template<bool from_left, typename DETECTION_NODE, typename CONTAINER>
+  static void get_primal_possibilities(const DETECTION_NODE& node, CONTAINER& out)
   {
     out.fill(true);
 
-    auto get_edges = [&]() -> auto& {
+    auto get_primal = [&](const auto& factor) {
       if constexpr (from_left)
-        return left_;
+        return factor.primal_.outgoing();
       else
-        return right_;
+        return factor.primal_.incoming();
     };
 
-    auto get_primal = [&](const auto* factor) {
+    auto get_primal2 = [&](const auto& factor) {
       if constexpr (from_left)
-        return factor->primal_.outgoing();
+        return factor.primal_.incoming();
       else
-        return factor->primal_.incoming();
-    };
-
-    auto get_primal2 = [&](const auto* factor) {
-      if constexpr (from_left)
-        return factor->primal_.incoming();
-      else
-        return factor->primal_.outgoing();
+        return factor.primal_.outgoing();
     };
 
     auto it = out.begin();
-    for (auto& edge : get_edges()) {
+    for (const auto& edge : (from_left ? node.incoming : node.outgoing)) {
       assert(it != out.end());
 
-      auto helper = [&](const auto* factor, auto index, auto primal_getter) {
+      auto helper = [&](const auto& factor, auto slot, auto primal_getter) {
         const auto p = primal_getter(factor);
-        if (p != detection_primal::undecided && p != index)
+        if (p != detection_primal::undecided && p != slot)
           *it = false;
 
-        if (p == index) {
+        if (p == slot) {
           bool current = *it;
           out.fill(false);
           *it = current;
         }
       };
 
-      helper(edge.detection1, edge.index1, get_primal);
-      if (edge.detection2 != nullptr)
+      helper(edge.node1->detection, edge.slot1, get_primal);
+      if (edge.node2 != nullptr)
         if constexpr (from_left)
-          helper(edge.detection2, edge.index2, get_primal2);
+          helper(edge.node2->detection, edge.slot2, get_primal2);
         else
-          helper(edge.detection2, edge.index2, get_primal);
+          helper(edge.node2->detection, edge.slot2, get_primal);
       ++it;
     }
 
     assert(std::find(out.cbegin(), out.cend(), true) != out.cend());
   }
 
-protected:
-  template<typename CONTAINER>
-  static void set_transition(CONTAINER& container, index index_this, detection_type* other1, index index_other1, detection_type* other2 = nullptr, index index_other2 = 0)
-  {
-    auto& edge = container[index_this];
-    assert(edge.detection1 == nullptr);
-    assert(edge.detection2 == nullptr);
-
-    edge.detection1 = other1;
-    edge.index1 = index_other1;
-
-    edge.detection2 = other2;
-    edge.index2 = index_other2;
-  }
-
-  detection_type* detection_; // FIXME: Get rid of this pointer.
-  fixed_vector<transition_storage<detection_type>, allocator_type> left_, right_;
 };
 
 }

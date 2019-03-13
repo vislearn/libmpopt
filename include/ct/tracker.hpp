@@ -3,181 +3,34 @@
 
 namespace ct {
 
-class factor_counter {
-public:
-#ifndef NDEBUG
-  factor_counter()
-  : timestep_(0)
-  , detection_(0)
-  , conflict_(0)
-  { }
-#endif
-
-  void new_detection(const index timestep, const index detection)
-  {
-#ifndef NDEBUG
-    if (timestep_ != timestep)
-      advance_timestep();
-
-    assert(timestep_ == timestep);
-    assert(conflict_ == 0);
-    assert(detection_ == detection);
-    ++detection_;
-#endif
-  }
-
-  void new_conflict(const index timestep, const index conflict)
-  {
-#ifndef NDEBUG
-    if (timestep_ != timestep)
-      advance_timestep();
-
-    assert(timestep_ == timestep);
-    assert(conflict_ == conflict);
-    ++conflict_;
-#endif
-  }
-
-protected:
-  void advance_timestep()
-  {
-#ifndef NDEBUG
-    ++timestep_;
-    detection_ = 0;
-    conflict_ = 0;
-#endif
-  }
-
-#ifndef NDEBUG
-  index timestep_;
-  index detection_;
-  index conflict_;
-#endif
-};
-
 template<typename ALLOCATOR = std::allocator<cost>>
 class tracker {
 public:
-  using detection_type = detection_factor<ALLOCATOR>;
-  using conflict_type = conflict_factor<ALLOCATOR>;
-  using transition_messages_type = transition_messages<ALLOCATOR>;
-  using conflict_messages_type = conflict_messages<ALLOCATOR>;
+  using allocator_type = ALLOCATOR;
+  using graph_type = graph<allocator_type>;
+  using detection_type = typename graph_type::detection_type;
+  using conflict_type = typename graph_type::conflict_type;
+  using timestep_type = typename graph_type::timestep_type;
 
   static constexpr int config_batch = 100;
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
-  : allocator_(allocator)
+  : graph_(allocator)
   , iterations_(0)
   { }
 
-  detection_type* add_detection(const index timestep, const index detection, const index number_of_incoming, const index number_of_outgoing)
-  {
-    assert(number_of_incoming >= 0 && number_of_incoming <= max_number_of_detection_edges);
-    assert(number_of_outgoing >= 0 && number_of_outgoing <= max_number_of_detection_edges);
-    factor_counter_.new_detection(timestep, detection);
-
-    if (timestep >= timesteps_.size())
-      timesteps_.resize(timestep + 1);
-    auto& detections = timesteps_[timestep].detections;
-
-    if (detection >= detections.size())
-      detections.resize(detection + 1);
-    auto& [d, t] = detections[detection];
-
-    {
-      using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<detection_type>;
-      allocator_type a(allocator_);
-      d = a.allocate();
-      std::allocator_traits<allocator_type>::construct(a, d, number_of_incoming, number_of_outgoing, allocator_); // FIXME: Dtor is never called.
-#ifndef NDEBUG
-      d->set_debug_info(timestep, detection);
-#endif
-    }
-
-    {
-      using allocator_type = typename std::allocator_traits<ALLOCATOR>::template rebind_alloc<transition_messages_type>;
-      allocator_type a(allocator_);
-      t = a.allocate();
-      std::allocator_traits<allocator_type>::construct(a, t, d, number_of_incoming, number_of_outgoing, allocator_); // FIXME: Dtor is never caleld.
-    }
-
-    return d;
-  }
-
-  conflict_type* add_conflict(const index timestep, const index conflict, const index number_of_detections)
-  {
-    assert(number_of_detections >= 2);
-    factor_counter_.new_conflict(timestep, conflict);
-
-    auto& conflicts = timesteps_[timestep].conflicts;
-    if (conflict >= conflicts.size())
-      conflicts.resize(conflict + 1);
-    auto& [c, m] = conflicts[conflict];
-
-    {
-      typename ALLOCATOR::template rebind<conflict_type>::other a(allocator_);
-      c = a.allocate();
-      ::new (c) conflict_type(number_of_detections, allocator_); // FIXME: Dtor is never called.
-#ifndef NDEBUG
-      c->set_debug_info(timestep, conflict);
-#endif
-    }
-
-    {
-      typename ALLOCATOR::template rebind<conflict_messages_type>::other a(allocator_);
-      m = a.allocate();
-      ::new (m) conflict_messages_type(c, number_of_detections, allocator_); // FIXME: Dtor is never called.
-    }
-
-    return c;
-  }
-
-  void add_transition(const index timestep_from, const index detection_from, const index index_from, const index detection_to, const index index_to)
-  {
-    auto& [from_detection, from_messages] = timesteps_[timestep_from].detections[detection_from];
-    auto& [to_detection, to_messages] = timesteps_[timestep_from+1].detections[detection_to];
-
-    from_messages->set_right_transition(index_from, to_detection, index_to);
-    to_messages->set_left_transition(index_to, from_detection, index_from);
-  }
-
-  void add_division(const index timestep_from, const index detection_from, const index index_from, const index detection_to_1, const index index_to_1, const index detection_to_2, const index index_to_2)
-  {
-    auto& [from_detection, from_messages] = timesteps_[timestep_from].detections[detection_from];
-    auto& [to_detection_1, to_messages_1] = timesteps_[timestep_from+1].detections[detection_to_1];
-    auto& [to_detection_2, to_messages_2] = timesteps_[timestep_from+1].detections[detection_to_2];
-
-    from_messages->set_right_transition(index_from, to_detection_1, index_to_1, to_detection_2, index_to_2);
-    to_messages_1->set_left_transition(index_to_1, from_detection, index_from, to_detection_2, index_to_2);
-    to_messages_2->set_left_transition(index_to_2, from_detection, index_from, to_detection_1, index_to_1);
-  }
-
-  void add_conflict_link(const index timestep, const index conflict, const index slot, const index detection, const cost weight)
-  {
-    auto [d, _1] = timesteps_[timestep].detections[detection];
-    auto [_2, m] = timesteps_[timestep].conflicts[conflict];
-    m->add_link(slot, d, weight);
-  }
-
-  detection_type* detection(const index timestep, const index detection)
-  {
-    return std::get<0>(timesteps_[timestep].detections[detection]);
-  }
-
-  conflict_type* conflict(const index timestep, const index conflict)
-  {
-    return std::get<0>(timesteps_[timestep].conflicts[conflict]);
-  }
+  auto& get_graph() { return graph_; }
+  const auto& get_graph() const { return graph_; }
 
   cost lower_bound() const
   {
     cost result = 0;
-    for (auto& timestep : timesteps_) {
-      for (auto [factor, _] : timestep.detections)
-        result += factor->lower_bound();
+    for (const auto& timestep : graph_.timesteps()) {
+      for (const auto* node : timestep.detections)
+        result += node->detection.lower_bound();
 
-      for (auto [factor, _] : timestep.conflicts)
-        result += factor->lower_bound();
+      for (const auto* node : timestep.conflicts)
+        result += node->conflict.lower_bound();
     }
 
     return result;
@@ -188,17 +41,17 @@ public:
     const cost inf = std::numeric_limits<cost>::infinity();
     cost result = 0;
 
-    for (auto& timestep : timesteps_) {
-      for (auto [factor, messages] : timestep.detections) {
-        if (!messages->check_primal_consistency())
+    for (const auto& timestep : graph_.timesteps()) {
+      for (const auto* node : timestep.detections) {
+        if (!transition_messages::check_primal_consistency(*node))
           result += inf;
-        result += factor->evaluate_primal();
+        result += node->detection.evaluate_primal();
       }
 
-      for (auto [factor, messages] : timestep.conflicts) {
-        if (!messages->check_primal_consistency())
+      for (const auto* node : timestep.conflicts) {
+        if (!conflict_messages::check_primal_consistency(*node))
           result += inf;
-        result += factor->evaluate_primal();
+        result += node->conflict.evaluate_primal();
       }
     }
 
@@ -209,12 +62,12 @@ public:
 
   void reset_primal()
   {
-    for (auto& timestep : timesteps_) {
-      for (auto [factor, _] : timestep.detections)
-        factor->reset_primal();
+    for (const auto& timestep : graph_.timesteps()) {
+      for (const auto* node : timestep.detections)
+        node->detection.reset_primal();
 
-      for (auto [factor, _] : timestep.conflicts)
-        factor->reset_primal();
+      for (const auto* node : timestep.conflicts)
+        node->conflict.reset_primal();
     }
   }
 
@@ -222,12 +75,11 @@ public:
   template<bool forward>
   void single_step(const index timestep_idx)
   {
-    assert(timestep_idx >= 0 && timestep_idx < timesteps_.size());
-    const auto& t = timesteps_[timestep_idx];
-    single_step<forward, false>(t); // Rounding is disabled here.
+    const auto& timesteps = graph_.timesteps();
+    assert(timestep_idx >= 0 && timestep_idx < timesteps.size());
+    single_step<forward, false>(timesteps[timestep_idx]); // Rounding is disabled here.
   }
 
-  // FIXME: No data locality here!
   template<bool forward, bool rounding>
   void single_pass()
   {
@@ -241,18 +93,19 @@ public:
       }
     };
 
+    const auto& timesteps = graph_.timesteps();
     if constexpr (forward)
-      runner(timesteps_.begin(), timesteps_.end());
+      runner(timesteps.begin(), timesteps.end());
     else
-      runner(timesteps_.rbegin(), timesteps_.rend());
+      runner(timesteps.rbegin(), timesteps.rend());
 
     if constexpr (rounding) {
-      for (const auto& timestep : timesteps_) {
-        for (auto [factor, _] : timestep.detections)
-          factor->fix_primal();
+      for (const auto& timestep : timesteps) {
+        for (const auto* node : timestep.detections)
+          node->detection.fix_primal();
 
-        for (auto [factor, _] : timestep.conflicts)
-          factor->fix_primal();
+        for (const auto* node : timestep.conflicts)
+          node->conflict.fix_primal();
       }
     }
 
@@ -267,45 +120,24 @@ public:
 
   void run(const int max_batches = 1000 / config_batch)
   {
-#ifndef NDEBUG
-    auto assert_prepared = [](auto& vec) {
-      for (auto [factor, messages] : vec)
-        assert(factor->is_prepared() && messages->is_prepared());
-    };
+    assert(graph_.is_prepared());
+    const auto& timesteps = graph_.timesteps();
 
-    for (auto& timestep : timesteps_) {
-      assert_prepared(timestep.detections);
-      assert_prepared(timestep.conflicts);
-    }
-#endif
-
-    const size_t number_of_detections = std::accumulate(
-      timesteps_.cbegin(), timesteps_.cend(), 0,
-      [](size_t acc, const auto& t) {
-        return acc + t.detections.size();
-      });
-
-    const size_t number_of_conflicts = std::accumulate(
-      timesteps_.cbegin(), timesteps_.cend(), 0,
-      [](size_t acc, const auto& t) {
-        return acc + t.conflicts.size();
-      });
-
-    std::vector<detection_primal> best_detection_primals(number_of_detections);
-    std::vector<conflict_primal> best_conflict_primals(number_of_conflicts);
+    std::vector<detection_primal> best_detection_primals(graph_.number_of_detections());
+    std::vector<conflict_primal> best_conflict_primals(graph_.number_of_conflicts());
     cost best_ub = std::numeric_limits<cost>::infinity();
 
     auto visit_primal_storage = [&](auto functor) {
       auto it_detection = best_detection_primals.begin();
       auto it_conflict = best_conflict_primals.begin();
-      for (const auto& t : timesteps_) {
-        for (auto [factor, _] : t.detections) {
+      for (const auto& t : timesteps) {
+        for (const auto* node : t.detections) {
           assert(it_detection != best_detection_primals.end());
-          functor(it_detection++, factor);
+          functor(it_detection++, node->detection);
         }
-        for (auto [factor, _ ] : t.conflicts) {
+        for (const auto* node : t.conflicts) {
           assert(it_conflict != best_conflict_primals.end());
-          functor(it_conflict++, factor);
+          functor(it_conflict++, node->conflict);
         }
       }
       assert(it_detection == best_detection_primals.end());
@@ -316,12 +148,12 @@ public:
       auto ub = evaluate_primal();
       if (ub < best_ub) {
         best_ub = ub;
-        visit_primal_storage([&](auto it, auto* f) { *it = f->primal(); });
+        visit_primal_storage([&](auto it, const auto& f) { *it = f.primal(); });
       }
     };
 
     auto restore_best_primals = [&] () {
-      visit_primal_storage([&](auto it, auto* f) { f->primal() = *it++; });
+      visit_primal_storage([&](auto it, auto& f) { f.primal() = *it++; });
     };
 
     signal_handler h;
@@ -358,69 +190,76 @@ public:
   }
 
 protected:
-  struct timestep {
-    std::vector<std::tuple<detection_type*, transition_messages_type*>> detections;
-    std::vector<std::tuple<conflict_type*, conflict_messages_type*>> conflicts;
-  };
-
   template<bool forward, bool rounding>
-  void single_step(const timestep& t)
+  void single_step(const timestep_type& t)
   {
     // Checks that all messages are either consistent or unknown but not
     // inconsitent. This property must be invariant during rounding, so we
     // verify that it is the case.
     auto check_messages = [&]() {
 #ifndef NDEBUG
-      for (const auto& timestep : timesteps_) {
-        for (auto [_, messages] : t.detections)
-          assert(messages->check_primal_consistency().is_not_inconsistent());
-        for (auto [_, messages] : t.conflicts)
-          assert(messages->check_primal_consistency().is_not_inconsistent());
+      for (const auto& timestep : graph_.timesteps()) {
+        for (const auto* node : t.detections)
+          assert(transition_messages::check_primal_consistency(*node).is_not_inconsistent());
+        for (const auto* node : t.conflicts)
+          assert(conflict_messages::check_primal_consistency(*node).is_not_inconsistent());
       }
 #endif
     };
 
-    for (auto [_, messages] : t.conflicts)
-      messages->send_messages_to_conflict();
+    for (const auto* node : t.conflicts)
+      conflict_messages::send_messages_to_conflict(*node);
 
-    for (auto [_, messages] : t.conflicts)
-      messages->send_messages_to_detection();
+    for (const auto* node : t.conflicts)
+      conflict_messages::send_messages_to_detection(*node);
 
     if constexpr (rounding) {
       // FIXME: Pre-allocate scratch space and do not resort to dynamic
       // memory allocation.
-      auto sorted_detections = t.detections;
+      std::vector<typename graph_type::detection_node_type*> sorted_detections(t.detections.cbegin(), t.detections.cend());
       std::sort(sorted_detections.begin(), sorted_detections.end(),
-        [](auto a, auto b) {
-          return std::get<0>(a)->min_detection() < std::get<0>(b)->min_detection();
+        [](const auto* a, const auto* b) {
+          const auto va = a->detection.min_detection();
+          const auto vb = b->detection.min_detection();
+          return va < vb;
         });
 
-      for (auto [factor, messages] : sorted_detections) {
+      for (const auto* node : sorted_detections) {
         std::array<bool, max_number_of_detection_edges + 1> possible;
-        messages->template get_primal_possibilities<forward>(possible);
+        transition_messages::get_primal_possibilities<forward>(*node, possible);
 
-        factor->template round_primal<forward>(possible);
-        check_messages();
-        messages->template propagate_primal<!forward>();
-        check_messages();
+        node->detection.template round_primal<forward>(possible); check_messages();
+        transition_messages::propagate_primal<!forward>(*node); check_messages();
 
-        // FIXME: Make the other direction explicit and only push specific
-        // messages.
-        for (auto [_, messages] : t.conflicts) {
-          messages->propagate_primal_to_conflict();
-          check_messages();
-          messages->propagate_primal_to_detections();
-          check_messages();
+        auto propagate_conflicts = [&](auto* detection_node) {
+          for (const auto& edge : detection_node->conflicts) {
+            conflict_messages::propagate_primal_to_conflict(*edge.node); check_messages();
+            conflict_messages::propagate_primal_to_detections(*edge.node); check_messages();
+          }
+        };
+
+        // We only have to propagate the current active node to the conflicts
+        // as this is the only node which can have changed in this iteration.
+        // There is only one caveat: In the forward pass the incoming
+        // `edge.node2` points to the sibling cell in the *current* timestep
+        // and the incoming primal of this node could have been altered.
+        propagate_conflicts(node);
+        if constexpr (forward) {
+          const index p = node->detection.primal().incoming();
+          if (p < node->incoming.size()) {
+            const auto& edge = node->incoming[p];
+            if (edge.is_division())
+              propagate_conflicts(edge.node2);
+          }
         }
       }
     }
 
-    for (auto [_, messages] : t.detections)
-      messages->template send_messages<forward>();
+    for (const auto* node : t.detections)
+      transition_messages::send_messages<forward>(*node);
   }
 
-  const ALLOCATOR allocator_;
-  std::vector<timestep> timesteps_; // FIXME: Use flat allocator
+  graph_type graph_;
   factor_counter factor_counter_;
   int iterations_;
 };
