@@ -118,6 +118,9 @@ public:
       typename ALLOCATOR::template rebind<conflict_type>::other a(allocator_);
       c = a.allocate();
       ::new (c) conflict_type(number_of_detections, allocator_); // FIXME: Dtor is never called.
+#ifndef NDEBUG
+      c->set_debug_info(timestep, conflict);
+#endif
     }
 
     {

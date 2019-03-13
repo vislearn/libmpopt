@@ -13,11 +13,23 @@ public:
 
   conflict_factor(index number_of_detections, const ALLOCATOR& allocator = ALLOCATOR())
   : costs_(number_of_detections + 1, initial_cost, allocator)
+#ifndef NDEBUG
+  , timestep_(-1)
+  , index_(-1)
+#endif
   {
   }
 
   conflict_factor(const conflict_factor& other) = delete;
   conflict_factor& operator=(const conflict_factor& other) = delete;
+
+#ifndef NDEBUG
+  void set_debug_info(index timestep, index idx)
+  {
+    timestep_ = timestep;
+    index_ = idx;
+  }
+#endif
 
   auto size() const { return costs_.size(); }
 
@@ -71,6 +83,10 @@ protected:
 
   fixed_vector<cost, allocator_type> costs_;
   conflict_primal primal_;
+
+#ifndef NDEBUG
+  index timestep_, index_;
+#endif
 
   template<typename> friend class transition_messages;
   template<typename> friend class conflict_messages;
