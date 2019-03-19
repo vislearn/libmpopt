@@ -5,9 +5,24 @@ namespace ct {
 
 struct conflict_messages {
 
+#ifndef NDEBUG
+  template<typename CONFLICT_NODE>
+  static cost local_lower_bound(const CONFLICT_NODE& node)
+  {
+    cost result = node.conflict.lower_bound();
+    for (const auto& edge: node.detections)
+      result += edge.node->detection.lower_bound();
+    return result;
+  }
+#endif
+
   template<typename CONFLICT_NODE>
   static void send_messages_to_conflict(const CONFLICT_NODE& node)
   {
+#ifndef NDEBUG
+    const cost lb_before = local_lower_bound(node);
+#endif
+
     index slot = 0;
     for (const auto& edge : node.detections) {
       auto& c = node.conflict;
@@ -19,11 +34,20 @@ struct conflict_messages {
       c.repam(slot, msg);
       ++slot;
     }
+
+#ifndef NDEBUG
+    const cost lb_after = local_lower_bound(node);
+    assert(lb_before <= lb_after + epsilon);
+#endif
   }
 
   template<typename CONFLICT_NODE>
   static void send_messages_to_detection(const CONFLICT_NODE& node)
   {
+#ifndef NDEBUG
+    const cost lb_before = local_lower_bound(node);
+#endif
+
     auto& c = node.conflict;
     auto [it1, it2] = least_two_elements(c.costs_.cbegin(), c.costs_.cend());
     const auto m = 0.5 * (*it1 + *it2);
@@ -37,6 +61,11 @@ struct conflict_messages {
       d.repam_detection(msg);
       ++slot;
     }
+
+#ifndef NDEBUG
+    const cost lb_after = local_lower_bound(node);
+    assert(lb_before <= lb_after + epsilon);
+#endif
   }
 
   template<typename CONFLICT_NODE>

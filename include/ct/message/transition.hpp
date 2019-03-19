@@ -11,6 +11,16 @@ struct transition_messages {
     auto& here = node.detection;
     using detection_type = typename DETECTION_NODE::detection_type;
 
+#ifndef NDEBUG
+    auto local_lower_bound = [&](const auto& edge) {
+      cost result = here.lower_bound();
+      result += edge.node1->detection.lower_bound();
+      if (edge.is_division() && to_right)
+        result += edge.node2->detection.lower_bound();
+      return result;
+    };
+#endif
+
     const auto min_other_side   = to_right ? here.min_incoming()
                                            : here.min_outgoing();
     const auto& costs_this_side = to_right ? here.outgoing_
@@ -32,6 +42,9 @@ struct transition_messages {
       const auto repam_other = to_right ? &detection_type::repam_incoming
                                         : &detection_type::repam_outgoing;
 
+#ifndef NDEBUG
+      const cost lb_before = local_lower_bound(edge);
+#endif
       auto msg = constant + slot_cost - set_to;
       (here.*repam_this)(slot, -msg);
       if (edge.is_division() && to_right) {
@@ -40,6 +53,12 @@ struct transition_messages {
       } else {
         (edge.node1->detection.*repam_other)(edge.slot1, msg);
       }
+
+#ifndef NDEBUG
+      const auto lb_after = local_lower_bound(edge);
+      assert(lb_before <= lb_after + epsilon);
+#endif
+
       ++slot;
     }
   }
