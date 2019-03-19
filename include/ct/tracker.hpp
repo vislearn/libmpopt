@@ -193,20 +193,6 @@ protected:
   template<bool forward, bool rounding>
   void single_step(const timestep_type& t)
   {
-    // Checks that all messages are either consistent or unknown but not
-    // inconsitent. This property must be invariant during rounding, so we
-    // verify that it is the case.
-    auto check_messages = [&]() {
-#ifndef NDEBUG
-      for (const auto& timestep : graph_.timesteps()) {
-        for (const auto* node : t.detections)
-          assert(transition_messages::check_primal_consistency(*node).is_not_inconsistent());
-        for (const auto* node : t.conflicts)
-          assert(conflict_messages::check_primal_consistency(*node).is_not_inconsistent());
-      }
-#endif
-    };
-
     for (const auto* node : t.conflicts)
       conflict_messages::send_messages_to_conflict(*node);
 
@@ -225,6 +211,17 @@ protected:
         });
 
       for (const auto* node : sorted_detections) {
+        // Checks that all messages are either consistent or unknown but not
+        // inconsitent. This property must be invariant during rounding, so we
+        // verify that it is the case.
+        auto check_messages = [&]() {
+#ifndef NDEBUG
+          assert(transition_messages::check_primal_consistency(*node).is_not_inconsistent());
+          for (const auto& edge : node->conflicts)
+            assert(conflict_messages::check_primal_consistency(*edge.node).is_not_inconsistent());
+#endif
+        };
+
         std::array<bool, max_number_of_detection_edges + 1> possible;
         transition_messages::get_primal_possibilities<forward>(*node, possible);
 
