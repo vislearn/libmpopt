@@ -24,7 +24,7 @@ struct transition_messages {
     const auto set_to = std::min(constant + std::min(second_minimum, cost_nirvana), 0.0);
 
     index slot = 0;
-    for (const auto& edge : (to_right ? node.outgoing : node.incoming)) {
+    for (const auto& edge : node.template transitions<to_right>()) {
       const auto slot_cost   = to_right ? here.outgoing(slot)
                                         : here.incoming(slot);
       const auto repam_this  = to_right ? &detection_type::repam_outgoing
@@ -139,7 +139,7 @@ struct transition_messages {
     };
 
     auto it = out.begin();
-    for (const auto& edge : (from_left ? node.incoming : node.outgoing)) {
+    for (const auto& edge : node.template transitions<!from_left>()) {
       assert(it != out.end());
 
       auto helper = [&](const auto& factor, auto slot, auto primal_getter) {

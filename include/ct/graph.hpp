@@ -130,6 +130,12 @@ struct detection_node {
   , conflicts(number_of_conflicts, allocator)
   { }
 
+  template<bool to_right>
+  auto& transitions() const
+  {
+    return to_right ? outgoing : incoming;
+  }
+
   bool is_prepared() const
   {
     bool result = detection.is_prepared();
