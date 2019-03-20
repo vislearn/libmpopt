@@ -80,12 +80,6 @@ public:
     }
   }
 
-  void fix_primal()
-  {
-    if (primal_ >= costs_.size())
-      primal_ = costs_.size() - 1;
-  }
-
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size() - 1); }
 

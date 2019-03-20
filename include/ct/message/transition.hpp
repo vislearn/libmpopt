@@ -93,7 +93,7 @@ struct transition_messages {
         result.mark_unknown();
       }
 
-      if (edge.node2 != nullptr) {
+      if (edge.is_division()) {
         const auto& there2 = edge.node2->detection;
         if (here.primal_.is_outgoing_set() && there2.primal_.is_incoming_set()) {
           if ((here.primal_.outgoing() == slot) != (there2.primal_.incoming() == edge.slot2))
@@ -123,8 +123,18 @@ struct transition_messages {
         const auto& edge = node.outgoing[here.primal_.outgoing()];
 
         edge.node1->detection.primal_.set_incoming(edge.slot1);
-        if (edge.node2 != nullptr)
+        for (const auto& conflict_edge : edge.node1->conflicts) {
+          conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
+          conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+        }
+
+        if (edge.is_division()) {
           edge.node2->detection.primal_.set_incoming(edge.slot2);
+          for (const auto& conflict_edge : edge.node2->conflicts) {
+            conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
+            conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+          }
+        }
       }
     } else {
       assert(here.primal_.is_incoming_set());
@@ -132,8 +142,18 @@ struct transition_messages {
         const auto& edge = node.incoming[here.primal_.incoming()];
 
         edge.node1->detection.primal_.set_outgoing(edge.slot1);
-        if (edge.node2 != nullptr)
+        for (const auto& conflict_edge : edge.node1->conflicts) {
+          conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
+          conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+        }
+
+        if (edge.is_division()) {
           edge.node2->detection.primal_.set_incoming(edge.slot2);
+          for (const auto& conflict_edge : edge.node2->conflicts) {
+            conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
+            conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+          }
+        }
       }
     }
   }
@@ -174,7 +194,7 @@ struct transition_messages {
       };
 
       helper(edge.node1->detection, edge.slot1, get_primal);
-      if (edge.node2 != nullptr)
+      if (edge.is_division())
         if constexpr (from_left)
           helper(edge.node2->detection, edge.slot2, get_primal2);
         else

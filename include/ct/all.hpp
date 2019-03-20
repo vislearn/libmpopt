@@ -14,8 +14,8 @@
 #include <ct/factor/detection.hpp>
 #include <ct/factor/conflict.hpp>
 #include <ct/message/consistency.hpp>
-#include <ct/message/transition.hpp>
 #include <ct/message/conflict.hpp>
+#include <ct/message/transition.hpp>
 #include <ct/graph.hpp>
 
 #include <ct/tracker.hpp>

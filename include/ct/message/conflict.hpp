@@ -101,6 +101,7 @@ struct conflict_messages {
     auto& c = node.conflict;
     assert(c.primal_ >= 0);
 
+    bool all_off = true;
     index slot = 0;
     for (const auto& edge : node.detections) {
       const auto& d = edge.node->detection;
@@ -111,8 +112,15 @@ struct conflict_messages {
       } else {
         assert(c.primal_ != slot);
       }
+
+      if (!d.primal_.is_detection_off())
+        all_off = false;
+
       ++slot;
     }
+
+    if (all_off)
+      c.primal_ = c.size() - 1;
   }
 
   template<typename CONFLICT_NODE>

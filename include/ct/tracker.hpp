@@ -99,15 +99,10 @@ public:
     else
       runner(timesteps.rbegin(), timesteps.rend());
 
-    if constexpr (rounding) {
-      for (const auto& timestep : timesteps) {
+    if constexpr (rounding)
+      for (const auto& timestep : timesteps)
         for (const auto* node : timestep.detections)
           node->detection.fix_primal();
-
-        for (const auto* node : timestep.conflicts)
-          node->conflict.fix_primal();
-      }
-    }
 
 #ifndef NDEBUG
     auto lb_after = lower_bound();
@@ -227,27 +222,9 @@ protected:
 
         node->detection.template round_primal<forward>(possible); check_messages();
         transition_messages::propagate_primal<!forward>(*node); check_messages();
-
-        auto propagate_conflicts = [&](auto* detection_node) {
-          for (const auto& edge : detection_node->conflicts) {
-            conflict_messages::propagate_primal_to_conflict(*edge.node); check_messages();
-            conflict_messages::propagate_primal_to_detections(*edge.node); check_messages();
-          }
-        };
-
-        // We only have to propagate the current active node to the conflicts
-        // as this is the only node which can have changed in this iteration.
-        // There is only one caveat: In the forward pass the incoming
-        // `edge.node2` points to the sibling cell in the *current* timestep
-        // and the incoming primal of this node could have been altered.
-        propagate_conflicts(node);
-        if constexpr (forward) {
-          const index p = node->detection.primal().incoming();
-          if (p < node->incoming.size()) {
-            const auto& edge = node->incoming[p];
-            if (edge.is_division())
-              propagate_conflicts(edge.node2);
-          }
+        for (const auto& edge : node->conflicts) {
+          conflict_messages::propagate_primal_to_conflict(*edge.node); check_messages();
+          conflict_messages::propagate_primal_to_detections(*edge.node); check_messages();
         }
       }
     }
