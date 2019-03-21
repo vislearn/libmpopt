@@ -34,7 +34,8 @@ class Gurobi:
         This method will create variables/coefficients/constraints for the
         detection and all incoming/outgoing slots.
         """
-        factor = libct.tracker_get_detection(self._tracker.tracker, timestep, detection)
+        graph = libct.tracker_get_graph(self._tracker.tracker)
+        factor = libct.graph_get_detection(graph, timestep, detection)
 
         v_incoming = []
         for i in range(self._model.no_incoming_edges(timestep, detection)):
@@ -85,7 +86,8 @@ class Gurobi:
         This method will create variables/coefficients/constraints for the
         conflict factor.
         """
-        factor = libct.tracker_get_conflict(self._tracker.tracker, timestep, conflict)
+        graph = libct.tracker_get_graph(self._tracker.tracker)
+        factor = libct.graph_get_conflict(graph, timestep, conflict)
         detections = self._model._conflicts[timestep, conflict]
 
         v_conflict = []
@@ -192,10 +194,11 @@ class Gurobi:
         called, and (3) the full model was built.
         """
         assert self._timesteps is None
+        graph = libct.tracker_get_graph(self._tracker.tracker)
 
         for t in range(self._model.no_timesteps()):
             for d in range(self._model.no_detections(t)):
-                factor = libct.tracker_get_detection(self._tracker.tracker, t, d)
+                factor = libct.graph_get_detection(graph, t, d)
                 variables = self._detections[t, d]
 
                 on_cost = variables.detection.RC
@@ -213,7 +216,7 @@ class Gurobi:
                 libct.detection_set_disappearance_cost(factor, variables.outgoing[-1].RC)
 
             for c in range(self._model.no_conflicts(t)):
-                factor = libct.tracker_get_conflict(self._tracker.tracker, t, c)
+                factor = libct.graph_get_conflict(graph, t, c)
                 variables = self._conflicts[t, c]
                 detections = self._model._conflicts[t, c]
 
