@@ -3,7 +3,31 @@
 
 namespace ct {
 
-using conflict_primal = index;
+class conflict_primal {
+public:
+  static constexpr index undecided = std::numeric_limits<index>::max();
+
+  conflict_primal()
+  : index_(undecided)
+  { }
+
+  void reset() { index_ = undecided; }
+
+  void set(index i)
+  {
+    assert(index_ == undecided || index_ == i);
+    index_ = i;
+  }
+
+  index get() const { return index_; }
+
+  bool is_undecided() const { return index_ == undecided; }
+  bool is_set() const { return index_ != undecided; }
+
+protected:
+  index index_;
+};
+
 
 template<typename ALLOCATOR = std::allocator<cost>>
 class conflict_factor {
@@ -57,13 +81,12 @@ public:
     costs_[idx] += msg;
   }
 
-  void reset_primal() { primal_ = std::numeric_limits<decltype(primal_)>::max(); }
+  void reset_primal() { primal_.reset(); }
 
   cost evaluate_primal() const
   {
-    assert(primal_ >= 0);
-    if (primal_ < costs_.size())
-      return costs_[primal_];
+    if (primal_.is_set())
+      return costs_[primal_.get()];
     else
       return std::numeric_limits<cost>::infinity();
   }
@@ -73,10 +96,9 @@ public:
 
   void round_primal()
   {
-    if (primal_ >= costs_.size()) {
+    if (primal_.is_undecided()) {
       auto min = std::min_element(costs_.cbegin(), costs_.cend());
-      primal_ = min - costs_.cbegin();
-      assert(primal_ >= 0 && primal_ < costs_.size());
+      primal_.set(min - costs_.cbegin());
     }
   }
 

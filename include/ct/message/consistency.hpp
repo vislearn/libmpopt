@@ -34,6 +34,7 @@ public:
   bool is_unknown() const { return value_ == unknown; }
 
   bool is_consistent() const { return value_ == consistent; }
+  bool is_inconsistent() const { return value_ == inconsistent; }
   bool is_not_inconsistent() const { return value_ != inconsistent; }
 
   operator bool() const { return is_consistent(); }

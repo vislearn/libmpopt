@@ -125,7 +125,7 @@ int ct_detection_get_outgoing_primal(ct_detection* d)
 
 void ct_conflict_set_cost(ct_conflict* c, int idx, double cost) { from_conflict(c)->conflict.set(idx, cost); }
 double ct_conflict_get_cost(ct_conflict* c, int idx) { return from_conflict(c)->conflict.get(idx); }
-int ct_conflict_get_primal(ct_conflict* c) { return from_conflict(c)->conflict.primal(); }
+int ct_conflict_get_primal(ct_conflict* c) { return from_conflict(c)->conflict.primal().get(); }
 
 }
 

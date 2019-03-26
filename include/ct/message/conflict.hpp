@@ -23,9 +23,9 @@ struct conflict_messages {
     const cost lb_before = local_lower_bound(node);
 #endif
 
+    auto& c = node.conflict;
     index slot = 0;
     for (const auto& edge : node.detections) {
-      auto& c = node.conflict;
       auto& d = edge.node->detection;
 
       const cost weight = 1.0d / (edge.node->conflicts.size() - edge.slot);
@@ -78,12 +78,12 @@ struct conflict_messages {
       const auto& c = node.conflict;
       const auto& d = edge.node->detection;
 
-      if (c.primal_ < c.costs_.size() && !d.primal_.is_undecided()) {
-        if (slot == c.primal_) {
-          if (!d.primal_.is_detection_on())
+      if (c.primal().is_set() && !d.primal().is_undecided()) {
+        if (slot == c.primal().get()) {
+          if (!d.primal().is_detection_on())
             result.mark_inconsistent();
         } else {
-          if (!d.primal_.is_detection_off())
+          if (!d.primal().is_detection_off())
             result.mark_inconsistent();
         }
       } else {
@@ -99,19 +99,16 @@ struct conflict_messages {
   static void propagate_primal_to_conflict(const CONFLICT_NODE& node)
   {
     auto& c = node.conflict;
-    assert(c.primal_ >= 0);
 
     bool all_off = true;
     index slot = 0;
     for (const auto& edge : node.detections) {
       const auto& d = edge.node->detection;
 
-      if (d.primal_.is_detection_on()) {
-        assert(c.primal_ >= c.size() || c.primal_ == slot);
-        c.primal_ = slot;
-      } else {
-        assert(c.primal_ != slot);
-      }
+      if (d.primal_.is_detection_on())
+        c.primal_.set(slot);
+      else
+        assert(c.primal_.get() != slot);
 
       if (!d.primal_.is_detection_off())
         all_off = false;
@@ -120,23 +117,22 @@ struct conflict_messages {
     }
 
     if (all_off)
-      c.primal_ = c.size() - 1;
+      c.primal_.set(c.size() - 1);
   }
 
   template<typename CONFLICT_NODE>
   static void propagate_primal_to_detections(const CONFLICT_NODE& node)
   {
     const auto& c = node.conflict;
-    assert(c.primal_ >= 0);
 
-    if (c.primal_ >= c.size())
+    if (c.primal_.is_undecided())
       return;
 
     index slot = 0;
     for (const auto& edge : node.detections) {
       auto& d = edge.node->detection;
 
-      if (slot != c.primal_)
+      if (slot != c.primal_.get())
         d.primal_.set_detection_off();
       ++slot;
     }

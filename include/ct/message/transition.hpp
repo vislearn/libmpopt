@@ -69,41 +69,59 @@ struct transition_messages {
     const auto& here = node.detection;
 
     consistency result;
-    index slot;
 
-    slot = 0;
-    for (const auto& edge : node.incoming) {
-      const auto& there1 = edge.node1->detection;
-      if (here.primal_.is_incoming_set() && there1.primal_.is_outgoing_set()) {
-        if ((here.primal_.incoming() == slot) != (there1.primal_.outgoing() == edge.slot1))
-          result.mark_inconsistent();
-      } else {
-        result.mark_unknown();
-      }
-      ++slot;
-    }
+    if (here.primal().is_incoming_set()) {
+      const auto p = here.primal().incoming();
+      if (p < here.incoming_.size() - 1) {
+        const auto& edge = node.incoming[p];
 
-    slot = 0;
-    for (auto& edge : node.outgoing) {
-      const auto& there1 = edge.node1->detection;
-      if (here.primal_.is_outgoing_set() && there1.primal_.is_incoming_set()) {
-        if ((here.primal_.outgoing() == slot) != (there1.primal_.incoming() == edge.slot1))
-          result.mark_inconsistent();
-      } else {
-        result.mark_unknown();
-      }
-
-      if (edge.is_division()) {
-        const auto& there2 = edge.node2->detection;
-        if (here.primal_.is_outgoing_set() && there2.primal_.is_incoming_set()) {
-          if ((here.primal_.outgoing() == slot) != (there2.primal_.incoming() == edge.slot2))
+        const auto& there1 = edge.node1->detection;
+        if (there1.primal().is_outgoing_set()) {
+          if (there1.primal().outgoing() != edge.slot1)
             result.mark_inconsistent();
         } else {
           result.mark_unknown();
         }
-      }
 
-      ++slot;
+        if (edge.is_division()) {
+          const auto& there2 = edge.node2->detection;
+          if (there2.primal().is_incoming_set()) {
+            if (there2.primal().incoming() != edge.slot2)
+              result.mark_inconsistent();
+          } else {
+            result.mark_unknown();
+          }
+        }
+      }
+    } else {
+      result.mark_unknown();
+    }
+
+    if (node.detection.primal().is_outgoing_set()) {
+      const auto p = here.primal().outgoing();
+      if (p < here.outgoing_.size() - 1) {
+        const auto& edge = node.outgoing[p];
+
+        const auto& there1 = edge.node1->detection;
+        if (there1.primal().is_incoming_set()) {
+          if (there1.primal().incoming() != edge.slot1)
+            result.mark_inconsistent();
+        } else {
+          result.mark_unknown();
+        }
+
+        if (edge.is_division()) {
+          const auto& there2 = edge.node2->detection;
+          if (there2.primal().is_incoming_set()) {
+            if (there2.primal().incoming() != edge.slot2)
+              result.mark_inconsistent();
+          } else {
+            result.mark_unknown();
+          }
+        }
+      }
+    } else {
+      result.mark_unknown();
     }
 
     return result;
@@ -114,22 +132,22 @@ struct transition_messages {
   {
     const auto& here = node.detection;
 
-    if (here.primal_.is_detection_off())
+    if (here.primal().is_detection_off())
       return;
 
     if constexpr (to_right) {
-      assert(here.primal_.is_outgoing_set());
-      if (here.primal_.outgoing() < here.outgoing_.size() - 1) {
-        const auto& edge = node.outgoing[here.primal_.outgoing()];
+      assert(here.primal().is_outgoing_set());
+      if (here.primal().outgoing() < here.outgoing_.size() - 1) {
+        const auto& edge = node.outgoing[here.primal().outgoing()];
 
-        edge.node1->detection.primal_.set_incoming(edge.slot1);
+        edge.node1->detection.primal().set_incoming(edge.slot1);
         for (const auto& conflict_edge : edge.node1->conflicts) {
           conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
           conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
         }
 
         if (edge.is_division()) {
-          edge.node2->detection.primal_.set_incoming(edge.slot2);
+          edge.node2->detection.primal().set_incoming(edge.slot2);
           for (const auto& conflict_edge : edge.node2->conflicts) {
             conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
             conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
@@ -137,18 +155,18 @@ struct transition_messages {
         }
       }
     } else {
-      assert(here.primal_.is_incoming_set());
-      if (here.primal_.incoming() < here.incoming_.size() - 1){
-        const auto& edge = node.incoming[here.primal_.incoming()];
+      assert(here.primal().is_incoming_set());
+      if (here.primal().incoming() < here.incoming_.size() - 1){
+        const auto& edge = node.incoming[here.primal().incoming()];
 
-        edge.node1->detection.primal_.set_outgoing(edge.slot1);
+        edge.node1->detection.primal().set_outgoing(edge.slot1);
         for (const auto& conflict_edge : edge.node1->conflicts) {
           conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
           conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
         }
 
         if (edge.is_division()) {
-          edge.node2->detection.primal_.set_incoming(edge.slot2);
+          edge.node2->detection.primal().set_incoming(edge.slot2);
           for (const auto& conflict_edge : edge.node2->conflicts) {
             conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
             conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
