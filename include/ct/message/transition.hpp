@@ -184,16 +184,16 @@ struct transition_messages {
 
     auto get_primal = [&](const auto& factor) {
       if constexpr (from_left)
-        return factor.primal_.outgoing();
+        return factor.primal().outgoing();
       else
-        return factor.primal_.incoming();
+        return factor.primal().incoming();
     };
 
     auto get_primal2 = [&](const auto& factor) {
       if constexpr (from_left)
-        return factor.primal_.incoming();
+        return factor.primal().incoming();
       else
-        return factor.primal_.outgoing();
+        return factor.primal().outgoing();
     };
 
     auto it = out.begin();

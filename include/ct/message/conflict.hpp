@@ -105,19 +105,19 @@ struct conflict_messages {
     for (const auto& edge : node.detections) {
       const auto& d = edge.node->detection;
 
-      if (d.primal_.is_detection_on())
-        c.primal_.set(slot);
+      if (d.primal().is_detection_on())
+        c.primal().set(slot);
       else
-        assert(c.primal_.get() != slot);
+        assert(c.primal().get() != slot);
 
-      if (!d.primal_.is_detection_off())
+      if (!d.primal().is_detection_off())
         all_off = false;
 
       ++slot;
     }
 
     if (all_off)
-      c.primal_.set(c.size() - 1);
+      c.primal().set(c.size() - 1);
   }
 
   template<typename CONFLICT_NODE>
@@ -125,15 +125,15 @@ struct conflict_messages {
   {
     const auto& c = node.conflict;
 
-    if (c.primal_.is_undecided())
+    if (c.primal().is_undecided())
       return;
 
     index slot = 0;
     for (const auto& edge : node.detections) {
       auto& d = edge.node->detection;
 
-      if (slot != c.primal_.get())
-        d.primal_.set_detection_off();
+      if (slot != c.primal().get())
+        d.primal().set_detection_off();
       ++slot;
     }
   }
