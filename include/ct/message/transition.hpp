@@ -31,7 +31,8 @@ struct transition_messages {
     const auto constant = here.detection() + min_other_side;
     const auto [first_minimum, second_minimum] = least_two_values(costs_this_side.begin(), costs_this_side.end() - 1);
 
-    const auto set_to = std::min(constant + std::min(second_minimum, cost_nirvana), 0.0);
+    const auto real_second_minimum = std::min(second_minimum, cost_nirvana);
+    const auto set_to = std::min(constant + (first_minimum + real_second_minimum) * 0.5, 0.0);
 
     index slot = 0;
     for (const auto& edge : node.template transitions<to_right>()) {

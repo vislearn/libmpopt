@@ -50,7 +50,7 @@ struct conflict_messages {
 
     auto& c = node.conflict;
     auto [it1, it2] = least_two_elements(c.costs_.cbegin(), c.costs_.cend());
-    const auto m = 0.5 * (*it1 + *it2);
+    const auto m = std::min(0.5 * (*it1 + *it2), 0.0);
 
     index slot = 0;
     for (const auto& edge : node.detections) {
