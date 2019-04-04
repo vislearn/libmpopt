@@ -18,6 +18,7 @@
 #include <ct/message/transition.hpp>
 #include <ct/graph.hpp>
 
+#include <ct/subsolver/conflict.hpp>
 #include <ct/tracker.hpp>
 
 #endif

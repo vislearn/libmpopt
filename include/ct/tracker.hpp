@@ -195,6 +195,41 @@ protected:
       conflict_messages::send_messages_to_detection(*node);
 
     if constexpr (rounding) {
+      std::vector<cost> original;
+      for (const auto* node : t.detections)
+        original.push_back(node->detection.detection());
+
+#if 1
+      for (const auto* node : t.conflicts) {
+        for (size_t i = 0; i < node->detections.size(); ++i) {
+          node->detections[i].node->detection.repam_detection(node->conflict.get(i));
+        }
+      }
+#endif
+
+#if 0
+      for (const auto* node : t.detections)
+        if (node->detection.min_detection() > 0)
+          node->detection.primal().set_detection_off();
+#endif
+
+      conflict_subsolver2<graph_type> subsolver(gurobi_env_);
+      for (const auto* node : t.detections)
+        subsolver.add_detection(node);
+      for (const auto* node : t.conflicts)
+        subsolver.add_conflict(node);
+
+      subsolver.optimize();
+      for (const auto* node : t.detections)
+        if (!subsolver.assignment(node))
+          node->detection.primal().set_detection_off();
+
+      auto it = original.cbegin();
+#if 0
+      for (const auto* node : t.detections)
+        node->detection.set_detection_cost(*it++);
+#endif
+
       // FIXME: Pre-allocate scratch space and do not resort to dynamic
       // memory allocation.
       std::vector<typename graph_type::detection_node_type*> sorted_detections(t.detections.cbegin(), t.detections.cend());
@@ -204,6 +239,17 @@ protected:
           const auto vb = b->detection.min_detection();
           return va < vb;
         });
+
+#if 0
+      it = original.cbegin();
+      for (const auto* node : t.detections)
+        node->detection.set_detection_cost(*it++);
+      for (const auto* node : t.conflicts) {
+        for (size_t i = 0; i < node->detections.size(); ++i) {
+          node->detections[i].node->detection.repam_detection(node->conflict.get(i));
+        }
+      }
+#endif
 
       for (const auto* node : sorted_detections) {
         // Checks that all messages are either consistent or unknown but not
@@ -227,6 +273,10 @@ protected:
           conflict_messages::propagate_primal_to_detections(*edge.node); check_messages();
         }
       }
+
+      it = original.cbegin();
+      for (const auto* node : t.detections)
+        node->detection.set_detection_cost(*it++);
     }
 
     for (const auto* node : t.detections)
@@ -236,6 +286,7 @@ protected:
   graph_type graph_;
   factor_counter factor_counter_;
   int iterations_;
+  GRBEnv gurobi_env_;
 };
 
 }
