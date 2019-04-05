@@ -4,14 +4,12 @@ import distutils.sysconfig
 import os
 import sys
 
-cmake_install_prefix = os.getenv('CMAKE_INSTALL_PREFIX', '')
-
 sitelib = distutils.sysconfig.get_python_lib(
-    prefix=cmake_install_prefix,
+    prefix='',
     plat_specific=False)
 
 sitearch = distutils.sysconfig.get_python_lib(
-    prefix=cmake_install_prefix,
+    prefix='',
     plat_specific=True)
 
 if __name__ == '__main__':

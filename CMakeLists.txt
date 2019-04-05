@@ -36,40 +36,47 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # installations prefix, but we really would like to have it relative to
 # ${CMAKE_INSTALL_PREFIX} :-/
 
-set(ENV{CMAKE_INSTALL_PREFIX} ${CMAKE_INSTALL_PREFIX})
-
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitelib
-    OUTPUT_VARIABLE Python3_SITELIB
+    OUTPUT_VARIABLE Python3_RELATIVE_SITELIB
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitearch
-    OUTPUT_VARIABLE Python3_SITEARCH
+    OUTPUT_VARIABLE Python3_RELATIVE_SITEARCH
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
 find_package(SWIG REQUIRED)
 include(UseSWIG)
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set_source_files_properties(swig/ct.i PROPERTIES DEPENDS include/ct/ct.h)
-swig_add_library(libct_swig TYPE SHARED
+swig_add_library(libct_swig_py
+    TYPE SHARED
     LANGUAGE python
-    SOURCES swig/ct.i)
-set_target_properties(libct_swig PROPERTIES OUTPUT_NAME libct)
-target_include_directories(libct_swig PUBLIC ${Python3_INCLUDE_DIRS})
-target_link_libraries(libct_swig PUBLIC libct_static ${Python3_LIBRARIES})
+    SOURCES swig/ct.i
+    NO_PROXY)
+set_target_properties(libct_swig_py PROPERTIES
+    OUTPUT_NAME libct
+    LIBRARY_OUTPUT_DIRECTORY libct_swig_py)
+target_include_directories(libct_swig_py PUBLIC ${Python3_INCLUDE_DIRS})
+target_link_libraries(libct_swig_py PUBLIC libct_static ${Python3_LIBRARIES})
 
 # This should be handled in FindSWIG.cmake if LANGUAGE is set to Python.
 # TODO: File upstream bug/PR.
 if(APPLE)
-    set_target_properties(libct_swig PROPERTIES SUFFIX .so)
+    set_target_properties(libct_swig_py PROPERTIES SUFFIX .so)
 endif()
 
-install(PROGRAMS bin/ct_test bin/jug_ct bin/jug_ct_2ts bin/jug_gurobi DESTINATION bin)
-
 install(DIRECTORY python/ct
-    DESTINATION "${Python3_SITELIB}")
+    DESTINATION "${Python3_RELATIVE_SITELIB}")
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/_libct.so"
-              "${CMAKE_CURRENT_BINARY_DIR}/libct.py"
-    DESTINATION "${Python3_SITEARCH}/ct")
+install(TARGETS libct_swig_py
+    DESTINATION "${Python3_RELATIVE_SITEARCH}/ct")
 
-install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${Python3_SITELIB}\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${CMAKE_INSTALL_PREFIX}/${Python3_RELATIVE_SITELIB}\")")
+
+#
+# Executables
+#
+
+install(PROGRAMS bin/ct_test bin/jug_ct bin/jug_ct_2ts bin/jug_gurobi
+    DESTINATION bin)
+

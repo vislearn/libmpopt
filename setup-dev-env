@@ -14,7 +14,7 @@ ninja install
 py_sitelib="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitelib)"
 py_sitearch="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitearch)"
 
-export PYTHONPATH="${py_sitelib}:${py_sitearch}${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${install_dir}/${py_sitelib}:${install_dir}/${py_sitearch}${PYTHONPATH:+:${PYTHONPATH}}"
 export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export PATH="${install_dir}/bin:${PATH:+:${PATH}}"
 ${SHELL}
