@@ -136,6 +136,16 @@ struct detection_node {
     return to_right ? outgoing : incoming;
   }
 
+  template<bool to_right, typename FUNCTOR>
+  void traverse_transitions(FUNCTOR f) const
+  {
+    index slot = 0;
+    for (const auto& edge : transitions<to_right>()) {
+      f(edge, slot);
+      ++slot;
+    }
+  }
+
   bool is_prepared() const
   {
     bool result = detection.is_prepared();
@@ -182,6 +192,16 @@ struct conflict_node {
   : conflict(number_of_detections, allocator)
   , detections(number_of_detections, allocator)
   { }
+
+  template<typename FUNCTOR>
+  void traverse_detections(FUNCTOR f) const
+  {
+    index slot = 0;
+    for (const auto& edge : detections) {
+      f(edge, slot);
+      ++slot;
+    }
+  }
 
   bool is_prepared() const
   {

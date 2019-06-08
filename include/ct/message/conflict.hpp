@@ -24,16 +24,13 @@ struct conflict_messages {
 #endif
 
     auto& c = node.conflict;
-    index slot = 0;
-    for (const auto& edge : node.detections) {
+    node.traverse_detections([&](auto& edge, auto slot) {
       auto& d = edge.node->detection;
-
       const cost weight = 1.0d / (edge.node->conflicts.size() - edge.slot);
       const auto msg = d.min_detection() * weight;
       d.repam_detection(-msg);
       c.repam(slot, msg);
-      ++slot;
-    }
+    });
 
 #ifndef NDEBUG
     const cost lb_after = local_lower_bound(node);
@@ -52,15 +49,12 @@ struct conflict_messages {
     auto [it1, it2] = least_two_elements(c.costs_.cbegin(), c.costs_.cend());
     const auto m = std::min(0.5 * (*it1 + *it2), 0.0);
 
-    index slot = 0;
-    for (const auto& edge : node.detections) {
+    node.traverse_detections([&](auto& edge, auto slot) {
       auto& d = edge.node->detection;
-
       const cost msg = c.costs_[slot] - m;
       c.repam(slot, -msg);
       d.repam_detection(msg);
-      ++slot;
-    }
+    });
 
 #ifndef NDEBUG
     const cost lb_after = local_lower_bound(node);
@@ -73,8 +67,7 @@ struct conflict_messages {
   {
     consistency result;
 
-    index slot = 0;
-    for (const auto& edge : node.detections) {
+    node.traverse_detections([&](auto& edge, auto slot) {
       const auto& c = node.conflict;
       const auto& d = edge.node->detection;
 
@@ -89,8 +82,7 @@ struct conflict_messages {
       } else {
         result.mark_unknown();
       }
-      ++slot;
-    }
+    });
 
     return result;
   }
@@ -101,8 +93,7 @@ struct conflict_messages {
     auto& c = node.conflict;
 
     bool all_off = true;
-    index slot = 0;
-    for (const auto& edge : node.detections) {
+    node.traverse_detections([&](auto& edge, auto slot) {
       const auto& d = edge.node->detection;
 
       if (d.primal().is_detection_on())
@@ -112,9 +103,7 @@ struct conflict_messages {
 
       if (!d.primal().is_detection_off())
         all_off = false;
-
-      ++slot;
-    }
+    });
 
     if (all_off)
       c.primal().set(c.size() - 1);
@@ -128,14 +117,12 @@ struct conflict_messages {
     if (c.primal().is_undecided())
       return;
 
-    index slot = 0;
-    for (const auto& edge : node.detections) {
+    node.traverse_detections([&](auto& edge, auto slot) {
       auto& d = edge.node->detection;
 
       if (slot != c.primal().get())
         d.primal().set_detection_off();
-      ++slot;
-    }
+    });
   }
 
 };

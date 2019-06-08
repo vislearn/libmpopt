@@ -34,8 +34,7 @@ struct transition_messages {
     const auto real_second_minimum = std::min(second_minimum, cost_nirvana);
     const auto set_to = std::min(constant + (first_minimum + real_second_minimum) * 0.5, 0.0);
 
-    index slot = 0;
-    for (const auto& edge : node.template transitions<to_right>()) {
+    node.template traverse_transitions<to_right>([&](auto& edge, auto slot) {
       const auto slot_cost   = to_right ? here.outgoing(slot)
                                         : here.incoming(slot);
       const auto repam_this  = to_right ? &detection_type::repam_outgoing
@@ -59,9 +58,7 @@ struct transition_messages {
       const auto lb_after = local_lower_bound(edge);
       assert(lb_before <= lb_after + epsilon);
 #endif
-
-      ++slot;
-    }
+    });
   }
 
   template<typename DETECTION_NODE>
