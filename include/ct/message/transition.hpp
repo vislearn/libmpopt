@@ -186,6 +186,7 @@ struct transition_messages {
         return factor.primal().incoming();
     };
 
+    [[maybe_unused]]
     auto get_primal2 = [&](const auto& factor) {
       if constexpr (from_left)
         return factor.primal().incoming();
@@ -210,11 +211,12 @@ struct transition_messages {
       };
 
       helper(edge.node1->detection, edge.slot1, get_primal);
-      if (edge.is_division())
+      if (edge.is_division()) {
         if constexpr (from_left)
           helper(edge.node2->detection, edge.slot2, get_primal2);
         else
           helper(edge.node2->detection, edge.slot2, get_primal);
+      }
       ++it;
     }
 

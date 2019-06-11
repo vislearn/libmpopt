@@ -46,7 +46,7 @@ public:
 
   void set_detection_off()
   {
-    assert(is_detection_off() || incoming_ == undecided && outgoing_ == undecided);
+    assert(is_detection_off() || (incoming_ == undecided && outgoing_ == undecided));
     incoming_ = off;
     outgoing_ = off;
     check_consistency();
@@ -193,8 +193,8 @@ public:
   template<bool from_left, typename CONTAINER>
   void round_primal(const CONTAINER& active)
   {
-    if ( from_left && primal_.is_incoming_set() ||
-        !from_left && primal_.is_outgoing_set())
+    if ((from_left && primal_.is_incoming_set()) ||
+        (!from_left && primal_.is_outgoing_set()))
       return;
 
     cost opposite_side = from_left ? min_outgoing()
