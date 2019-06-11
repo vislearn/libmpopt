@@ -61,8 +61,8 @@ struct transition_messages {
     });
   }
 
-  template <bool to_right, typename DETECTION_NODE>
-  static consistency check_primal_consistency(const DETECTION_NODE& node, index slot)
+  template<bool to_right, typename DETECTION_NODE>
+  static consistency check_primal_consistency_impl(const DETECTION_NODE& node, index slot)
   {
     consistency result;
     const auto& here = node.detection;
@@ -81,9 +81,12 @@ struct transition_messages {
     // consistency.
 
     const auto& there1 = edge.node1->detection;
-    if (there1.primal().template is_transition_set<!to_right>())
+    if (there1.primal().template is_transition_set<!to_right>()) {
       if ((p == slot) != (there1.primal().template transition<!to_right>() == edge.slot1))
         result.mark_inconsistent();
+    } else {
+      result.mark_unknown();
+    }
 
     // The following looks weird, but is in fact correct. The state of
     // `to_right` does not matter, we always check the `incoming` arc of
@@ -94,12 +97,36 @@ struct transition_messages {
     // the very same time step (so the "sibling" of `node`).
     if (edge.is_division()) {
       const auto& there2 = edge.node2->detection;
-      if (there2.primal().is_incoming_set())
+      if (there2.primal().is_incoming_set()) {
         if ((p == slot) != (there2.primal().incoming() == edge.slot2))
           result.mark_inconsistent();
+      } else {
+        result.mark_unknown();
+      }
     }
 
     return result;
+  }
+
+  template<bool to_right, typename DETECTION_NODE>
+  static consistency check_primal_consistency(const DETECTION_NODE& node, index slot)
+  {
+    consistency this_side = check_primal_consistency_impl<to_right>(node, slot);
+
+#ifndef NDEBUG
+    assert(slot >= 0 && slot < node.template transitions<to_right>().size());
+    const auto& edge = node.template transitions<to_right>()[slot];
+
+    consistency other_side1 = check_primal_consistency_impl<!to_right>(*edge.node1, edge.slot1);
+    assert(this_side == other_side1);
+
+    if (edge.is_division()) {
+      consistency other_side2 = check_primal_consistency_impl<false>(*edge.node2, edge.slot2);
+      assert(this_side == other_side2);
+    }
+#endif
+
+    return this_side;
   }
 
   template<typename DETECTION_NODE>
