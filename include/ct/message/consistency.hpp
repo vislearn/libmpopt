@@ -39,6 +39,15 @@ public:
 
   operator bool() const { return is_consistent(); }
 
+  void merge(const consistency& other)
+  {
+    switch (other.value_) {
+      case consistent:                        break;
+      case inconsistent: mark_inconsistent(); break;
+      case unknown:      mark_unknown();      break;
+    }
+  }
+
 protected:
   value value_;
 };

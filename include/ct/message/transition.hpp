@@ -61,66 +61,59 @@ struct transition_messages {
     });
   }
 
+  template <bool to_right, typename DETECTION_NODE>
+  static consistency check_primal_consistency(const DETECTION_NODE& node, index slot)
+  {
+    consistency result;
+    const auto& here = node.detection;
+
+    if (!here.primal().template is_transition_set<to_right>()) {
+      result.mark_unknown();
+      return result;
+    }
+
+    const auto p = here.primal().template transition<to_right>();
+    assert(slot >= 0 && slot < node.template transitions<to_right>().size());
+    const auto& edge = node.template transitions<to_right>()[slot];
+
+    // We do not mark the current node as `unknown` if the other side is
+    // currently unset. This mirrors the implementation for the conflict
+    // consistency.
+
+    const auto& there1 = edge.node1->detection;
+    if (there1.primal().template is_transition_set<!to_right>())
+      if ((p == slot) != (there1.primal().template transition<!to_right>() == edge.slot1))
+        result.mark_inconsistent();
+
+    // The following looks weird, but is in fact correct. The state of
+    // `to_right` does not matter, we always check the `incoming` arc of
+    // the second connected factor. With `to_right == true` this is the
+    // normal behavior and is also done for `there1` in the same fashion.
+    //
+    // For `to_right == false` the second connected factor is a factor of
+    // the very same time step (so the "sibling" of `node`).
+    if (edge.is_division()) {
+      const auto& there2 = edge.node2->detection;
+      if (there2.primal().is_incoming_set())
+        if ((p == slot) != (there2.primal().incoming() == edge.slot2))
+          result.mark_inconsistent();
+    }
+
+    return result;
+  }
+
   template<typename DETECTION_NODE>
   static consistency check_primal_consistency(const DETECTION_NODE& node)
   {
-    const auto& here = node.detection;
-
     consistency result;
 
-    if (here.primal().is_incoming_set()) {
-      const auto p = here.primal().incoming();
-      if (p < here.incoming_.size() - 1) {
-        const auto& edge = node.incoming[p];
+    node.template traverse_transitions<false>([&](const auto& edge, auto slot) {
+      result.merge(check_primal_consistency<false>(node, slot));
+    });
 
-        const auto& there1 = edge.node1->detection;
-        if (there1.primal().is_outgoing_set()) {
-          if (there1.primal().outgoing() != edge.slot1)
-            result.mark_inconsistent();
-        } else {
-          result.mark_unknown();
-        }
-
-        if (edge.is_division()) {
-          const auto& there2 = edge.node2->detection;
-          if (there2.primal().is_incoming_set()) {
-            if (there2.primal().incoming() != edge.slot2)
-              result.mark_inconsistent();
-          } else {
-            result.mark_unknown();
-          }
-        }
-      }
-    } else {
-      result.mark_unknown();
-    }
-
-    if (node.detection.primal().is_outgoing_set()) {
-      const auto p = here.primal().outgoing();
-      if (p < here.outgoing_.size() - 1) {
-        const auto& edge = node.outgoing[p];
-
-        const auto& there1 = edge.node1->detection;
-        if (there1.primal().is_incoming_set()) {
-          if (there1.primal().incoming() != edge.slot1)
-            result.mark_inconsistent();
-        } else {
-          result.mark_unknown();
-        }
-
-        if (edge.is_division()) {
-          const auto& there2 = edge.node2->detection;
-          if (there2.primal().is_incoming_set()) {
-            if (there2.primal().incoming() != edge.slot2)
-              result.mark_inconsistent();
-          } else {
-            result.mark_unknown();
-          }
-        }
-      }
-    } else {
-      result.mark_unknown();
-    }
+    node.template traverse_transitions<true>([&](const auto& edge, auto slot) {
+      result.merge(check_primal_consistency<true>(node, slot));
+    });
 
     return result;
   }

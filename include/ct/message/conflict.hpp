@@ -63,25 +63,36 @@ struct conflict_messages {
   }
 
   template<typename CONFLICT_NODE>
+  static consistency check_primal_consistency(const CONFLICT_NODE& node, index slot)
+  {
+    assert(slot >= 0 && slot < node.detections.size());
+    consistency result;
+
+    const auto& c = node.conflict;
+    const auto& d = node.detections[slot].node->detection;
+
+    if (c.primal().is_set() && !d.primal().is_undecided()) {
+      if (slot == c.primal().get()) {
+        if (!d.primal().is_detection_on())
+          result.mark_inconsistent();
+      } else {
+        if (!d.primal().is_detection_off())
+          result.mark_inconsistent();
+      }
+    } else {
+      result.mark_unknown();
+    }
+
+    return result;
+  }
+
+  template<typename CONFLICT_NODE>
   static consistency check_primal_consistency(const CONFLICT_NODE& node)
   {
     consistency result;
 
     node.traverse_detections([&](auto& edge, auto slot) {
-      const auto& c = node.conflict;
-      const auto& d = edge.node->detection;
-
-      if (c.primal().is_set() && !d.primal().is_undecided()) {
-        if (slot == c.primal().get()) {
-          if (!d.primal().is_detection_on())
-            result.mark_inconsistent();
-        } else {
-          if (!d.primal().is_detection_off())
-            result.mark_inconsistent();
-        }
-      } else {
-        result.mark_unknown();
-      }
+      result.merge(check_primal_consistency(node, slot));
     });
 
     return result;
