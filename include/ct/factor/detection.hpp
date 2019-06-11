@@ -58,8 +58,26 @@ public:
   bool is_detection_off() const { check_consistency(); return incoming_ == off && outgoing_ == off; }
   bool is_detection_on() const { return (is_incoming_set() || is_outgoing_set()) && !is_detection_off(); }
 
+  template<bool to_right>
+  bool is_transition_set() const
+  {
+    if constexpr (to_right)
+      return is_outgoing_set();
+    else
+      return is_incoming_set();
+  }
+
   index incoming() const { check_consistency(); return incoming_; }
   index outgoing() const { check_consistency(); return outgoing_; }
+
+  template<bool to_right>
+  index transition() const
+  {
+    if constexpr (to_right)
+      return outgoing();
+    else
+      return incoming();
+  }
 
 protected:
   void check_consistency() const
