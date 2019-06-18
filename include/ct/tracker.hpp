@@ -199,19 +199,11 @@ protected:
       for (const auto* node : t.detections)
         original.push_back(node->detection.detection());
 
-#if 1
       for (const auto* node : t.conflicts) {
         for (size_t i = 0; i < node->detections.size(); ++i) {
           node->detections[i].node->detection.repam_detection(node->conflict.get(i));
         }
       }
-#endif
-
-#if 0
-      for (const auto* node : t.detections)
-        if (node->detection.min_detection() > 0)
-          node->detection.primal().set_detection_off();
-#endif
 
       conflict_subsolver2<graph_type> subsolver(gurobi_env_);
       for (const auto* node : t.detections)
@@ -225,10 +217,6 @@ protected:
           node->detection.primal().set_detection_off();
 
       auto it = original.cbegin();
-#if 0
-      for (const auto* node : t.detections)
-        node->detection.set_detection_cost(*it++);
-#endif
 
       // FIXME: Pre-allocate scratch space and do not resort to dynamic
       // memory allocation.
@@ -239,17 +227,6 @@ protected:
           const auto vb = b->detection.min_detection();
           return va < vb;
         });
-
-#if 0
-      it = original.cbegin();
-      for (const auto* node : t.detections)
-        node->detection.set_detection_cost(*it++);
-      for (const auto* node : t.conflicts) {
-        for (size_t i = 0; i < node->detections.size(); ++i) {
-          node->detections[i].node->detection.repam_detection(node->conflict.get(i));
-        }
-      }
-#endif
 
       for (const auto* node : sorted_detections) {
         // Checks that all messages are either consistent or unknown but not
