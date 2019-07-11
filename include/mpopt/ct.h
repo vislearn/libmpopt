@@ -1,5 +1,5 @@
-#ifndef LIBMPOPT_CT_LIBCT_H
-#define LIBMPOPT_CT_LIBCT_H
+#ifndef LIBMPOPT_CT_H
+#define LIBMPOPT_CT_H
 
 #ifdef __cplusplus
 extern "C" {

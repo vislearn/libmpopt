@@ -1,6 +1,7 @@
-#ifndef LIBCT_FACTOR_CONFLICT_HPP
-#define LIBCT_FACTOR_CONFLICT_HPP
+#ifndef LIBMPOPT_CT_CONFLICT_FACTOR_HPP
+#define LIBMPOPT_CT_CONFLICT_FACTOR_HPP
 
+namespace mpopt {
 namespace ct {
 
 class conflict_primal {
@@ -116,6 +117,7 @@ protected:
   friend struct conflict_messages;
 };
 
+}
 }
 
 #endif

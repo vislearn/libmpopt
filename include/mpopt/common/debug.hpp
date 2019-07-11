@@ -1,7 +1,7 @@
-#ifndef LIBCT_UTIL_DEBUG_HPP
-#define LIBCT_UTIL_DEBUG_HPP
+#ifndef LIBMPOPT_COMMON_DEBUG_HPP
+#define LIBMPOPT_COMMON_DEBUG_HPP
 
-namespace ct {
+namespace mpopt {
 namespace dbg {
 
 template<typename...> struct get_type_of;

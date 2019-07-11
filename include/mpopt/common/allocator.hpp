@@ -1,7 +1,7 @@
-#ifndef LIBCT_UTIL_ALLOCATOR_HPP
-#define LIBCT_UTIL_ALLOCATOR_HPP
+#ifndef LIBMPOPT_COMMON_ALLOCATOR_HPP
+#define LIBMPOPT_COMMON_ALLOCATOR_HPP
 
-namespace ct {
+namespace mpopt {
 
 class memory_block {
 public:

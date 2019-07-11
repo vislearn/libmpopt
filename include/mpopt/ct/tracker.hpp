@@ -1,6 +1,7 @@
 #ifndef LIBMPOPT_CT_TRACKER_HPP
 #define LIBMPOPT_CT_TRACKER_HPP
 
+namespace mpopt {
 namespace ct {
 
 template<typename ALLOCATOR = std::allocator<cost>>
@@ -266,6 +267,7 @@ protected:
   GRBEnv gurobi_env_;
 };
 
+}
 }
 
 #endif

@@ -1,6 +1,7 @@
-#ifndef LIBCT_MESSAGE_TRANSITION_HPP
-#define LIBCT_MESSAGE_TRANSITION_HPP
+#ifndef LIBMPOPT_CT_TRANSITION_MESSAGES_HPP
+#define LIBMPOPT_CT_TRANSITION_MESSAGES_HPP
 
+namespace mpopt {
 namespace ct {
 
 struct transition_messages {
@@ -245,6 +246,7 @@ struct transition_messages {
 
 };
 
+}
 }
 
 #endif

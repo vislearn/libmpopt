@@ -39,8 +39,6 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/pyt
 find_package(SWIG REQUIRED)
 include(UseSWIG)
 
-install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${CMAKE_INSTALL_PREFIX}/${Python3_RELATIVE_SITELIB}\")")
-
 #
 # cell tracking library
 #
@@ -64,7 +62,7 @@ install(DIRECTORY include/mpopt/ct DESTINATION include/mpopt)
 # cell tracking Python bindings
 #
 
-set_source_files_properties(swig/ct.i PROPERTIES DEPENDS include/mpopt/ct/ct.h)
+set_source_files_properties(swig/ct.i PROPERTIES DEPENDS include/mpopt/ct.h)
 swig_add_library(libmpopt_ct_swig_py
   TYPE SHARED
   LANGUAGE python
@@ -94,5 +92,11 @@ install(TARGETS libmpopt_ct_swig_py
 
 install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi
   DESTINATION bin)
+
+#
+# Bytecompile Python code
+#
+
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${CMAKE_INSTALL_PREFIX}/${Python3_RELATIVE_SITELIB}/mpopt\")")
 
 # vim: ts=8 sts=2 sw=2 et:

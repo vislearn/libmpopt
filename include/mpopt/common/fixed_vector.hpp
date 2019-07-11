@@ -1,7 +1,7 @@
-#ifndef LIBCT_UTIL_FIXED_VECTOR_HPP
-#define LIBCT_UTIL_FIXED_VECTOR_HPP
+#ifndef LIBMPOPT_COMMON_FIXED_VECTOR_HPP
+#define LIBMPOPT_COMMON_FIXED_VECTOR_HPP
 
-namespace ct {
+namespace mpopt {
 
 template<typename T, typename ALLOCATOR = std::allocator<T>>
 class fixed_vector : protected std::vector<T, ALLOCATOR> {

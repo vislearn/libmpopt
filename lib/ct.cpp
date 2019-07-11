@@ -1,14 +1,14 @@
-#include <mpopt/ct/all.hpp>
-#include <mpopt/ct/ct.h>
+#include <mpopt/ct.hpp>
+#include <mpopt/ct.h>
 
-using allocator_type = ct::block_allocator<ct::cost>;
-using tracker_type = ct::tracker<allocator_type>;
-using graph_type = ct::graph<allocator_type>;
-using detection_type = ct::detection_node<allocator_type>;
-using conflict_type = ct::conflict_node<allocator_type>;
+using allocator_type = mpopt::block_allocator<mpopt::cost>;
+using tracker_type = mpopt::ct::tracker<allocator_type>;
+using graph_type = mpopt::ct::graph<allocator_type>;
+using detection_type = mpopt::ct::detection_node<allocator_type>;
+using conflict_type = mpopt::ct::conflict_node<allocator_type>;
 
 struct mpopt_ct_tracker_t {
-  ct::memory_block memory;
+  mpopt::memory_block memory;
   allocator_type allocator;
   tracker_type tracker;
 
@@ -104,7 +104,7 @@ double mpopt_ct_detection_get_outgoing_cost(mpopt_ct_detection* d, int idx) { re
 int mpopt_ct_detection_get_incoming_primal(mpopt_ct_detection* d)
 {
   auto p = from_detection(d)->detection.primal().incoming();
-  if (p == ct::detection_primal::undecided || p == ct::detection_primal::off)
+  if (p == mpopt::ct::detection_primal::undecided || p == mpopt::ct::detection_primal::off)
     return -1;
   else
     return p;
@@ -113,7 +113,7 @@ int mpopt_ct_detection_get_incoming_primal(mpopt_ct_detection* d)
 int mpopt_ct_detection_get_outgoing_primal(mpopt_ct_detection* d)
 {
   auto p = from_detection(d)->detection.primal().outgoing();
-  if (p == ct::detection_primal::undecided || p == ct::detection_primal::off)
+  if (p == mpopt::ct::detection_primal::undecided || p == mpopt::ct::detection_primal::off)
     return -1;
   else
     return p;

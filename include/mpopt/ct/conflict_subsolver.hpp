@@ -1,6 +1,7 @@
-#ifndef LIBCT_SUBSOLVER_CONFLICT_HPP
-#define LIBCT_SUBSOLVER_CONFLICT_HPP
+#ifndef LIBMPOPT_CT_CONFLICT_SUBSOLVER_HPP
+#define LIBMPOPT_CT_CONFLICT_SUBSOLVER_HPP
 
+namespace mpopt {
 namespace ct {
 
 class conflict_subsolver {
@@ -203,6 +204,7 @@ private:
   std::map<const detection_node_type*, GRBVar> factor_to_variable_;
 };
 
+}
 }
 
 #endif

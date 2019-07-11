@@ -1,7 +1,10 @@
 #ifndef LIBMPOPT_CT_GRAPH_HPP
 #define LIBMPOPT_CT_GRAPH_HPP
 
+namespace mpopt {
 namespace ct {
+
+constexpr index max_number_of_detection_edges = 128;
 
 class factor_counter {
 public:
@@ -395,6 +398,7 @@ protected:
   std::vector<timestep_type> timesteps_;
 };
 
+}
 }
 
 #endif

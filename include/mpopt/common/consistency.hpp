@@ -1,7 +1,7 @@
-#ifndef LIBCT_MESSAGE_CONSISTENCY_HPP
-#define LIBCT_MESSAGE_CONSISTENCY_HPP
+#ifndef LIBMPOPT_COMMON_CONSISTENCY_HPP
+#define LIBMPOPT_COMMON_CONSISTENCY_HPP
 
-namespace ct {
+namespace mpopt {
 
 struct consistency {
 public:

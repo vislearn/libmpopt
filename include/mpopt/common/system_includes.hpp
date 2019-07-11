@@ -1,5 +1,5 @@
-#ifndef LIBCT_SYSTEM_INCLUDES_HPP
-#define LIBCT_SYSTEM_INCLUDES_HPP
+#ifndef LIBMPOPT_COMMON_SYSTEM_INCLUDES_HPP
+#define LIBMPOPT_COMMON_SYSTEM_INCLUDES_HPP
 
 #include <algorithm>
 #include <cassert>

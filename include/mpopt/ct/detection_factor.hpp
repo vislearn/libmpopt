@@ -1,6 +1,7 @@
-#ifndef LIBCT_FACTOR_DETECTION_HPP
-#define LIBCT_FACTOR_DETECTION_HPP
+#ifndef LIBMPOPT_CT_DETECTION_FACTOR_HPP
+#define LIBMPOPT_CT_DETECTION_FACTOR_HPP
 
+namespace mpopt {
 namespace ct {
 
 class detection_primal {
@@ -257,6 +258,7 @@ protected:
   friend struct conflict_messages;
 };
 
+}
 }
 
 #endif

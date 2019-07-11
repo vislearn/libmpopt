@@ -1,6 +1,7 @@
-#ifndef LIBCT_MESSAGE_CONFLICT_HPP
-#define LIBCT_MESSAGE_CONFLICT_HPP
+#ifndef LIBMPOPT_CT_CONFLICT_MESSAGES_HPP
+#define LIBMPOPT_CT_CONFLICT_MESSAGES_HPP
 
+namespace mpopt {
 namespace ct {
 
 struct conflict_messages {
@@ -138,6 +139,7 @@ struct conflict_messages {
 
 };
 
+}
 }
 
 #endif
