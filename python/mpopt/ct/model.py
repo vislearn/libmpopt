@@ -1,5 +1,4 @@
 from .tracker import Tracker
-from . import libct
 
 
 class Model:

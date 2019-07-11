@@ -1,5 +1,5 @@
-#ifndef LIBCT_TRACKER_HPP
-#define LIBCT_TRACKER_HPP
+#ifndef LIBMPOPT_CT_TRACKER_HPP
+#define LIBMPOPT_CT_TRACKER_HPP
 
 namespace ct {
 

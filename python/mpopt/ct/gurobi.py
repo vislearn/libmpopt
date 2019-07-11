@@ -1,7 +1,7 @@
 import gurobipy
 from collections import namedtuple
 
-from . import libct
+from . import libmpopt_ct as lib
 
 
 class Gurobi:
@@ -34,28 +34,28 @@ class Gurobi:
         This method will create variables/coefficients/constraints for the
         detection and all incoming/outgoing slots.
         """
-        graph = libct.tracker_get_graph(self._tracker.tracker)
-        factor = libct.graph_get_detection(graph, timestep, detection)
+        graph = lib.tracker_get_graph(self._tracker.tracker)
+        factor = lib.graph_get_detection(graph, timestep, detection)
 
         v_incoming = []
         for i in range(self._model.no_incoming_edges(timestep, detection)):
-            v = self._add_gurobi_variable(libct.detection_get_incoming_cost(factor, i))
+            v = self._add_gurobi_variable(lib.detection_get_incoming_cost(factor, i))
             v.VarName = 'incoming_{}_{}_{}'.format(timestep, detection, i)
             v_incoming.append(v)
-        v = self._add_gurobi_variable(libct.detection_get_appearance_cost(factor))
+        v = self._add_gurobi_variable(lib.detection_get_appearance_cost(factor))
         v.VarName = 'appearance_{}_{}'.format(timestep, detection)
         v_incoming.append(v)
 
         v_outgoing = []
         for i in range(self._model.no_outgoing_edges(timestep, detection)):
-            v = self._add_gurobi_variable(libct.detection_get_outgoing_cost(factor, i))
+            v = self._add_gurobi_variable(lib.detection_get_outgoing_cost(factor, i))
             v.VarName = 'outgoing_{}_{}_{}'.format(timestep, detection, i)
             v_outgoing.append(v)
-        v = self._add_gurobi_variable(libct.detection_get_disappearance_cost(factor))
+        v = self._add_gurobi_variable(lib.detection_get_disappearance_cost(factor))
         v.VarName = 'disappearance_{}_{}'.format(timestep, detection)
         v_outgoing.append(v)
 
-        v = self._add_gurobi_variable(libct.detection_get_detection_cost(factor))
+        v = self._add_gurobi_variable(lib.detection_get_detection_cost(factor))
         v.VarName = 'detection_{}_{}'.format(timestep, detection)
         self._gurobi.addConstr(sum(v_incoming) == v)
         self._gurobi.addConstr(sum(v_outgoing) == v)
@@ -86,13 +86,13 @@ class Gurobi:
         This method will create variables/coefficients/constraints for the
         conflict factor.
         """
-        graph = libct.tracker_get_graph(self._tracker.tracker)
-        factor = libct.graph_get_conflict(graph, timestep, conflict)
+        graph = lib.tracker_get_graph(self._tracker.tracker)
+        factor = lib.graph_get_conflict(graph, timestep, conflict)
         detections = self._model._conflicts[timestep, conflict]
 
         v_conflict = []
         for detection in range(len(detections)):
-            v = self._add_gurobi_variable(libct.conflict_get_cost(factor, detection))
+            v = self._add_gurobi_variable(lib.conflict_get_cost(factor, detection))
             v.VarName = 'conflict_{}_{}_{}'.format(timestep, conflict, detection)
             v_conflict.append(v)
         v = self._add_gurobi_variable()
@@ -194,34 +194,34 @@ class Gurobi:
         called, and (3) the full model was built.
         """
         assert self._timesteps is None
-        graph = libct.tracker_get_graph(self._tracker.tracker)
+        graph = lib.tracker_get_graph(self._tracker.tracker)
 
         for t in range(self._model.no_timesteps()):
             for d in range(self._model.no_detections(t)):
-                factor = libct.graph_get_detection(graph, t, d)
+                factor = lib.graph_get_detection(graph, t, d)
                 variables = self._detections[t, d]
 
                 on_cost = variables.detection.RC
                 off_cost = variables.detection_slack.RC
-                libct.detection_set_detection_cost(factor, on_cost - off_cost)
+                lib.detection_set_detection_cost(factor, on_cost - off_cost)
 
                 assert len(variables.incoming) == self._model.no_incoming_edges(t, d) + 1
                 for i in range(self._model.no_incoming_edges(t, d)):
-                    libct.detection_set_incoming_cost(factor, i, variables.incoming[i].RC)
-                libct.detection_set_appearance_cost(factor, variables.incoming[-1].RC)
+                    lib.detection_set_incoming_cost(factor, i, variables.incoming[i].RC)
+                lib.detection_set_appearance_cost(factor, variables.incoming[-1].RC)
 
                 assert len(variables.outgoing) == self._model.no_outgoing_edges(t, d) + 1
                 for i in range(self._model.no_outgoing_edges(t, d)):
-                    libct.detection_set_outgoing_cost(factor, i, variables.outgoing[i].RC)
-                libct.detection_set_disappearance_cost(factor, variables.outgoing[-1].RC)
+                    lib.detection_set_outgoing_cost(factor, i, variables.outgoing[i].RC)
+                lib.detection_set_disappearance_cost(factor, variables.outgoing[-1].RC)
 
             for c in range(self._model.no_conflicts(t)):
-                factor = libct.graph_get_conflict(graph, t, c)
+                factor = lib.graph_get_conflict(graph, t, c)
                 variables = self._conflicts[t, c]
                 detections = self._model._conflicts[t, c]
 
                 assert len(detections) + 1 == len(variables)
                 for i in range(len(detections)):
-                    libct.conflict_set_cost(factor, i, variables[i].RC - variables[-1].RC)
+                    lib.conflict_set_cost(factor, i, variables[i].RC - variables[-1].RC)
 
         assert abs(self._gurobi.ObjBound - self._tracker.lower_bound()) < 1e-4

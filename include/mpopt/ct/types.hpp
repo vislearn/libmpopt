@@ -1,5 +1,5 @@
-#ifndef LIBCT_TYPES_HPP
-#define LIBCT_TYPES_HPP
+#ifndef LIBMPOPT_CT_TYPES_HPP
+#define LIBMPOPT_CT_TYPES_HPP
 
 namespace ct {
 

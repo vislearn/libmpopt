@@ -3,8 +3,7 @@
 import sys
 import random
 
-import ct
-import ct.utils
+from mpopt import ct
 
 
 def random_cost():

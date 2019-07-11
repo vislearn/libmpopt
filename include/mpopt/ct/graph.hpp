@@ -1,5 +1,5 @@
-#ifndef LIBCT_GRAPH_HPP
-#define LIBCT_GRAPH_HPP
+#ifndef LIBMPOPT_CT_GRAPH_HPP
+#define LIBMPOPT_CT_GRAPH_HPP
 
 namespace ct {
 

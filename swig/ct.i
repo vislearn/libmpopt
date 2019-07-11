@@ -1,7 +1,7 @@
-%module libct
+%module libmpopt_ct
 %{
-  #include <ct/ct.h>
+  #include <mpopt/ct/ct.h>
 %}
 
-%rename ("%(strip:[ct_])s") "";
-%include <ct/ct.h>
+%rename ("%(strip:[mpopt_ct_])s") "";
+%include <mpopt/ct/ct.h>

@@ -1,7 +1,7 @@
 import copy
 import itertools
 
-from . import libct
+from . import libmpopt_ct as lib
 from .gurobi import Gurobi
 
 #
@@ -103,13 +103,13 @@ def copy_primals(primals):
 
 
 def extract_primals_from_tracker(model, tracker):
-    g = libct.tracker_get_graph(tracker.tracker)
+    g = lib.tracker_get_graph(tracker.tracker)
     primals = Primals(model)
     for timestep in range(model.no_timesteps()):
         for detection in range(model.no_detections(timestep)):
-            factor = libct.graph_get_detection(g, timestep, detection)
-            incoming_primal = libct.detection_get_incoming_primal(factor)
-            outgoing_primal = libct.detection_get_outgoing_primal(factor)
+            factor = lib.graph_get_detection(g, timestep, detection)
+            incoming_primal = lib.detection_get_incoming_primal(factor)
+            outgoing_primal = lib.detection_get_outgoing_primal(factor)
 
             assert (incoming_primal == -1) == (outgoing_primal == -1)
             primals.detection(timestep, detection, (incoming_primal != -1) and (outgoing_primal != -1))
