@@ -40,58 +40,57 @@ find_package(SWIG REQUIRED)
 include(UseSWIG)
 
 #
-# cell tracking library
+# native libraries
 #
 
 find_package(GUROBI REQUIRED)
 
-add_library(libmpopt_ct_shared SHARED lib/ct.cpp)
-add_library(libmpopt_ct_static STATIC lib/ct.cpp)
-foreach(target libmpopt_ct_shared libmpopt_ct_static)
-  target_include_directories(${target} PUBLIC ${GUROBI_INCLUDE_DIRS})
-  target_link_libraries(${target} PUBLIC ${GUROBI_LIBRARIES})
+foreach(sublibrary gm ct)
+  foreach(kind shared static)
+    set(target libmpopt_${sublibrary}_${kind})
+    string(TOUPPER ${kind} KIND)
+    add_library(${target} ${KIND} lib/${sublibrary}.cpp)
+    target_include_directories(${target} PUBLIC ${GUROBI_INCLUDE_DIRS})
+    target_link_libraries(${target} PUBLIC ${GUROBI_LIBRARIES})
+    set_target_properties(${target} PROPERTIES
+      OUTPUT_NAME mpopt_${sublibrary}
+      POSITION_INDEPENDENT_CODE ON
+      VERSION "${MPOPT_VERSION_STRING}")
+    install(TARGETS ${target} DESTINATION lib)
+  endforeach()
 endforeach()
-set_target_properties(libmpopt_ct_shared libmpopt_ct_static PROPERTIES
-  OUTPUT_NAME mpopt_ct
-  POSITION_INDEPENDENT_CODE ON
-  VERSION "${MPOPT_VERSION_STRING}")
-install(TARGETS libmpopt_ct_shared libmpopt_ct_static DESTINATION lib)
-install(DIRECTORY include/mpopt/ct DESTINATION include/mpopt)
+
+install(DIRECTORY include/mpopt DESTINATION include)
 
 #
-# cell tracking Python bindings
+# Python bindings
 #
 
-set_source_files_properties(swig/ct.i PROPERTIES DEPENDS include/mpopt/ct.h)
-swig_add_library(libmpopt_ct_swig_py
-  TYPE SHARED
-  LANGUAGE python
-  SOURCES swig/ct.i
-  NO_PROXY)
-set_target_properties(libmpopt_ct_swig_py PROPERTIES
-  OUTPUT_NAME libmpopt_ct
-  LIBRARY_OUTPUT_DIRECTORY libmpopt_ct_swig_py)
-target_include_directories(libmpopt_ct_swig_py PUBLIC ${Python3_INCLUDE_DIRS})
-target_link_libraries(libmpopt_ct_swig_py PUBLIC libmpopt_ct_static ${Python3_LIBRARIES})
+foreach(sublibrary gm ct)
+  set_source_files_properties(swig/${sublibrary}.i PROPERTIES DEPENDS include/mpopt/${sublibrary}.h)
+  set(target libmpopt_${sublibrary}_swig_py)
+  swig_add_library(${target}
+    TYPE SHARED
+    LANGUAGE python
+    SOURCES swig/${sublibrary}.i
+    NO_PROXY)
+  set_target_properties(${target} PROPERTIES
+    OUTPUT_NAME libmpopt_${sublibrary}
+    LIBRARY_OUTPUT_DIRECTORY ${target})
+  target_include_directories(${target} PUBLIC ${Python3_INCLUDE_DIRS})
+  target_link_libraries(${target} PUBLIC libmpopt_${sublibrary}_static ${Python3_LIBRARIES})
 
-# This should be handled in FindSWIG.cmake if LANGUAGE is set to Python.
-# TODO: File upstream bug/PR.
-if(APPLE)
-  set_target_properties(libmpopt_ct_swig_py PROPERTIES SUFFIX .so)
-endif()
+  # This should be handled in FindSWIG.cmake if LANGUAGE is set to Python.
+  # TODO: File upstream bug/PR.
+  if(APPLE)
+    set_target_properties(${target} PROPERTIES SUFFIX .so)
+  endif()
 
-install(DIRECTORY python/mpopt/ct
-  DESTINATION "${Python3_RELATIVE_SITELIB}/mpopt")
+  install(TARGETS ${target} DESTINATION "${Python3_RELATIVE_SITEARCH}/mpopt/${sublibrary}")
+endforeach()
 
-install(TARGETS libmpopt_ct_swig_py
-  DESTINATION "${Python3_RELATIVE_SITEARCH}/mpopt/ct")
-
-#
-# cell tracking executables
-#
-
-install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi
-  DESTINATION bin)
+install(DIRECTORY python/mpopt DESTINATION "${Python3_RELATIVE_SITELIB}")
+install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi bin/gm_uai DESTINATION bin)
 
 #
 # Bytecompile Python code

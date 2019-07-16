@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import sys
+
+from mpopt import gm
+from mpopt import utils
+
+
+if __name__ == '__main__':
+    input_filename, = sys.argv[1:]
+    with utils.smart_open(input_filename, 'rt') as f:
+        model = gm.parse_uai_file(f)
+    solver = gm.construct_solver(model)
+    print(solver.lower_bound())
+    solver.run()

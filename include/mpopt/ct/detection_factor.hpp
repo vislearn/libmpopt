@@ -156,9 +156,9 @@ public:
 
   bool is_prepared() const
   {
-    bool result = detection_ != initial_cost;
-    for (const auto& x : incoming_) { result &= x != initial_cost; }
-    for (const auto& x : outgoing_) { result &= x != initial_cost; }
+    bool result = !std::isnan(detection_);
+    for (const auto& x : incoming_) { result = result && !std::isnan(x); }
+    for (const auto& x : outgoing_) { result = result && !std::isnan(x); }
     return result;
   }
 

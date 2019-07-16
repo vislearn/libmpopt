@@ -3,7 +3,7 @@
 import sys
 
 from mpopt import ct
-from mpopt.ct import utils
+from mpopt import utils
 
 
 if __name__ == '__main__':

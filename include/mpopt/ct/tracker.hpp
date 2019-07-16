@@ -13,8 +13,6 @@ public:
   using conflict_type = typename graph_type::conflict_type;
   using timestep_type = typename graph_type::timestep_type;
 
-  static constexpr int config_batch = 100;
-
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
   , iterations_(0)
@@ -25,6 +23,7 @@ public:
 
   cost lower_bound() const
   {
+    assert(graph_.is_prepared());
     cost result = 0;
     for (const auto& timestep : graph_.timesteps()) {
       for (const auto* node : timestep.detections)
@@ -39,6 +38,7 @@ public:
 
   cost evaluate_primal() const
   {
+    assert(graph_.is_prepared());
     const cost inf = std::numeric_limits<cost>::infinity();
     cost result = 0;
 
@@ -114,7 +114,7 @@ public:
   template<bool rounding=false> void forward_pass() { single_pass<true, rounding>(); }
   template<bool rounding=false> void backward_pass() { single_pass<false, rounding>(); }
 
-  void run(const int max_batches = 1000 / config_batch)
+  void run(const int max_batches = 1000 / batch_size)
   {
     assert(graph_.is_prepared());
     const auto& timesteps = graph_.timesteps();
@@ -157,7 +157,7 @@ public:
     const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      for (int j = 0; j < config_batch-1; ++j) {
+      for (int j = 0; j < batch_size-1; ++j) {
         forward_pass<false>();
         backward_pass<false>();
       }
@@ -174,7 +174,7 @@ public:
       const std::chrono::duration<double> seconds = clock_now - clock_start;
 
       const auto lb = lower_bound();
-      iterations_ += config_batch;
+      iterations_ += batch_size;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
                 << "ub=" << best_ub << " "
@@ -262,7 +262,6 @@ protected:
   }
 
   graph_type graph_;
-  factor_counter factor_counter_;
   int iterations_;
   GRBEnv gurobi_env_;
 };

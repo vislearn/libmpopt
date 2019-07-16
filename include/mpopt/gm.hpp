@@ -9,6 +9,11 @@
 #include <mpopt/common/fixed_vector.hpp>
 #include <mpopt/common/signal_handler.hpp>
 
+#include <mpopt/gm/unary_factor.hpp>
+#include <mpopt/gm/pairwise_factor.hpp>
+#include <mpopt/gm/graph.hpp>
+#include <mpopt/gm/solver.hpp>
+
 #endif
 
 /* vim: set ts=8 sts=2 sw=2 et ft=cpp: */
