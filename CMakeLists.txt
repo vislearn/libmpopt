@@ -45,7 +45,7 @@ include(UseSWIG)
 
 find_package(GUROBI REQUIRED)
 
-foreach(sublibrary gm ct)
+foreach(sublibrary ct gm qap)
   foreach(kind shared static)
     set(target libmpopt_${sublibrary}_${kind})
     string(TOUPPER ${kind} KIND)
@@ -66,7 +66,7 @@ install(DIRECTORY include/mpopt DESTINATION include)
 # Python bindings
 #
 
-foreach(sublibrary gm ct)
+foreach(sublibrary ct gm qap)
   set_source_files_properties(swig/${sublibrary}.i PROPERTIES DEPENDS include/mpopt/${sublibrary}.h)
   set(target libmpopt_${sublibrary}_swig_py)
   swig_add_library(${target}
