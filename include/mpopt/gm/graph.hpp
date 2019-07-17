@@ -15,8 +15,8 @@ struct unary_node {
   using pairwise_node_type = pairwise_node<allocator_type>;
 
   mutable unary_factor<allocator_type> unary;
-  fixed_vector_alloc_gen<pairwise_node_type*, allocator_type> forward;
-  fixed_vector_alloc_gen<pairwise_node_type*, allocator_type> backward;
+  fixed_vector_alloc_gen<const pairwise_node_type*, allocator_type> forward;
+  fixed_vector_alloc_gen<const pairwise_node_type*, allocator_type> backward;
 
   unary_node(index number_of_labels, index number_of_forward, index number_of_backward, const allocator_type& allocator)
   : unary(number_of_labels, allocator)

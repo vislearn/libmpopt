@@ -46,6 +46,13 @@ public:
   void set(const index idx, cost c) { assert_index(idx); costs_[idx] = c; }
   cost get(const index idx) { assert_index(idx); return costs_[idx]; }
 
+  cost normalize()
+  {
+    const auto lb = lower_bound();
+    for (auto& x : costs_) x -= lb;
+    return lb;
+  }
+
   cost lower_bound() const
   {
     return *std::min_element(costs_.begin(), costs_.end());
@@ -85,6 +92,8 @@ protected:
 #ifndef NDEBUG
   index index_;
 #endif
+
+  friend struct messages;
 };
 
 }

@@ -69,6 +69,33 @@ public:
     return *std::min_element(costs_.begin(), costs_.end());
   }
 
+  cost min_marginal0(const index idx0) const
+  {
+    cost minimum = std::numeric_limits<cost>::infinity();
+    for (index idx1 = 0; idx1 < no_labels1_; ++idx1) {
+      minimum = std::min(minimum, costs_[to_linear(idx0, idx1)]);
+    }
+    return minimum;
+  }
+
+  cost min_marginal1(const index idx1) const
+  {
+    cost minimum = std::numeric_limits<cost>::infinity();
+    for (index idx0 = 0; idx0 < no_labels0_; ++idx0) {
+      minimum = std::min(minimum, costs_[to_linear(idx0, idx1)]);
+    }
+    return minimum;
+  }
+
+  template<bool right>
+  cost min_marginal(const index idx) const
+  {
+    if constexpr (right)
+      return min_marginal1(idx);
+    else
+      return min_marginal0(idx);
+  }
+
   void repam0(const index idx0, const cost msg)
   {
     for (index idx1 = 0; idx1 < no_labels1_; ++idx1) {
@@ -87,13 +114,13 @@ public:
     }
   }
 
-  template<bool left>
+  template<bool right>
   void repam(const index idx, const cost msg)
   {
-    if constexpr (left)
-      repam0(idx, msg);
-    else
+    if constexpr (right)
       repam1(idx, msg);
+    else
+      repam0(idx, msg);
   }
 
   void reset_primal() { primal_ = primal_unset; }
@@ -138,6 +165,8 @@ protected:
 #ifndef NDEBUG
   index index0_, index1_;
 #endif
+
+  friend struct messages;
 };
 
 }
