@@ -6,15 +6,20 @@ build_dir=$(mktemp -d)
 install_dir=$(mktemp -d)
 trap 'rm -rf "${build_dir}" "${install_dir}"' EXIT
 
+custom_sitelib="${install_dir}/lib/python/site-packages"
+export PYTHONPATH="${custom_sitelib}${PYTHONPATH:+:${PYTHONPATH}}"
+export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="${install_dir}/bin:${PATH:+:${PATH}}"
+
 cd "${build_dir}"
-cmake -GNinja -DCMAKE_INSTALL_PREFIX="${install_dir}" -DCMAKE_BUILD_TYPE=Debug "${source_dir}"
+cmake \
+	-GNinja \
+	-DCMAKE_INSTALL_PREFIX="${install_dir}" \
+	-DSUPERSEDE_PYTHON_SITELIB="${custom_sitelib}" \
+	-DCMAKE_BUILD_TYPE=Debug \
+	"${source_dir}"
+
 ninja
 ninja install
 
-py_sitelib="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitelib)"
-py_sitearch="$(env CMAKE_INSTALL_PREFIX="${install_dir}" "${source_dir}"/python_sitelib_helper sitearch)"
-
-export PYTHONPATH="${install_dir}/${py_sitelib}:${install_dir}/${py_sitearch}${PYTHONPATH:+:${PYTHONPATH}}"
-export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-export PATH="${install_dir}/bin:${PATH:+:${PATH}}"
 ${SHELL}

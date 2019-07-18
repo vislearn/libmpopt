@@ -23,18 +23,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
-
-# We can't use Python3_SITELIB and _SITEARCH here, as it contains the
-# installations prefix, but we really would like to have it relative to
-# ${CMAKE_INSTALL_PREFIX} :-/
-
-execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitelib
-  OUTPUT_VARIABLE Python3_RELATIVE_SITELIB
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
-
-execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/python_sitelib_helper" sitearch
-  OUTPUT_VARIABLE Python3_RELATIVE_SITEARCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE)
+set(SUPERSEDE_PYTHON_SITELIB "" CACHE PATH "Force installation of Python3 module to a different directory.")
+if(NOT "${SUPERSEDE_PYTHON_SITELIB}" STREQUAL "")
+  set(Python3_SITELIB "${SUPERSEDE_PYTHON_SITELIB}")
+  set(Python3_SITEARCH "${SUPERSEDE_PYTHON_SITELIB}")
+endif()
 
 find_package(SWIG REQUIRED)
 include(UseSWIG)
@@ -86,16 +79,16 @@ foreach(sublibrary ct gm qap)
     set_target_properties(${target} PROPERTIES SUFFIX .so)
   endif()
 
-  install(TARGETS ${target} DESTINATION "${Python3_RELATIVE_SITEARCH}/mpopt/${sublibrary}")
+  install(TARGETS ${target} DESTINATION "${Python3_SITEARCH}/mpopt/${sublibrary}")
 endforeach()
 
-install(DIRECTORY python/mpopt DESTINATION "${Python3_RELATIVE_SITELIB}")
+install(DIRECTORY python/mpopt DESTINATION "${Python3_SITELIB}")
 install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi bin/gm_uai DESTINATION bin)
 
 #
 # Bytecompile Python code
 #
 
-install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${CMAKE_INSTALL_PREFIX}/${Python3_RELATIVE_SITELIB}/mpopt\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${Python3_SITELIB}/mpopt\")")
 
 # vim: ts=8 sts=2 sw=2 et:
