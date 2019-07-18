@@ -15,6 +15,8 @@ public:
   : costs_(number_of_labels0 * number_of_labels1, initial_cost, allocator)
   , no_labels0_(number_of_labels0)
   , no_labels1_(number_of_labels1)
+  , primal0_(primal_unset)
+  , primal1_(primal_unset)
 #ifndef NDEBUG
   , index0_(-1)
   , index1_(-1)
@@ -123,24 +125,29 @@ public:
       repam0(idx, msg);
   }
 
-  void reset_primal() { primal_ = primal_unset; }
+  void reset_primal() { primal0_ = primal_unset; primal1_ = primal_unset; }
 
   cost evaluate_primal() const
   {
-    if (primal_ != primal_unset)
-      return costs_[primal_];
+    if (primal0_ != primal_unset && primal1_ != primal_unset)
+      return costs_[to_linear(primal0_, primal1_)];
     else
       return std::numeric_limits<cost>::infinity();
   }
 
-  auto& primal() { return primal_; }
-  const auto& primal() const { return primal_; }
-
-  void round_primal()
+  void round_independently()
   {
-    auto min = std::min_element(costs_.cbegin(), costs_.cend());
-    primal_ = min - costs_.cbegin();
+    auto it = std::min_element(costs_.cbegin(), costs_.cend());
+    auto linear_idx = it - costs_.cbegin();
+    assert(linear_idx >= 0 && linear_idx < costs_.size());
+
+    const auto indices = to_nonlinear(linear_idx);
+    primal0_ = std::get<0>(indices);
+    primal1_ = std::get<1>(indices);
   }
+
+  auto primal() { return std::tuple(primal0_, primal1_); }
+  const auto primal() const { return std::tie(primal0_, primal1_); }
 
 protected:
   void assert_index(const index idx0, const index idx1) const
@@ -158,8 +165,18 @@ protected:
     return result;
   }
 
+  std::tuple<index, index> to_nonlinear(const index idx) const
+  {
+    assert(idx >= 0 && idx < costs_.size());
+    const index idx0 = idx / no_labels1_;
+    const index idx1 = idx - idx0;
+    assert(idx0 >= 0 && idx0 < no_labels0_);
+    assert(idx1 >= 0 && idx1 < no_labels1_);
+    return std::tuple(idx0, idx1);
+  }
+
   fixed_vector_alloc_gen<cost, ALLOCATOR> costs_;
-  index primal_;
+  index primal0_, primal1_;
   index no_labels0_, no_labels1_;
 
 #ifndef NDEBUG

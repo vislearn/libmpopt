@@ -74,14 +74,15 @@ public:
       return std::numeric_limits<cost>::infinity();
   }
 
+  void round_independently()
+  {
+    auto it = std::min_element(costs_.cbegin(), costs_.cend());
+    primal_ = it - costs_.cbegin();
+    assert(primal_ >= 0 && primal_ < costs_.size());
+  }
+
   auto& primal() { return primal_; }
   const auto& primal() const { return primal_; }
-
-  void round_primal()
-  {
-    auto min = std::min_element(costs_.cbegin(), costs_.cend());
-    primal_ = min - costs_.cbegin();
-  }
 
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size()); }
