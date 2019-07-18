@@ -36,11 +36,15 @@ public:
   cost evaluate_primal() const
   {
     assert(graph_.is_prepared());
-    const cost inf = std::numeric_limits<cost>::infinity();
-    cost result = inf;
+    cost result = constant_;
 
-    // TODO: Implement this.
-    assert(false);
+    // FIXME: Check that primals are really consistent!
+
+    for (const auto* node : graph_.unaries())
+      result += node->unary.evaluate_primal();
+
+    for (const auto* node : graph_.pairwise())
+      result += node->pairwise.evaluate_primal();
 
     return result;
   }
@@ -59,6 +63,7 @@ public:
   void run(const int max_batches = 1000 / batch_size)
   {
     assert(graph_.is_prepared());
+    cost best_ub = std::numeric_limits<cost>::infinity();
 
     signal_handler h;
     using clock_type = std::chrono::high_resolution_clock;
@@ -70,8 +75,13 @@ public:
         backward_pass<false>();
       }
 
+      reset_primal();
       forward_pass<true>();
+      best_ub = std::min(best_ub, evaluate_primal());
+
+      reset_primal();
       backward_pass<true>();
+      best_ub = std::min(best_ub, evaluate_primal());
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
@@ -80,6 +90,8 @@ public:
       iterations_ += batch_size;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
+                << "ub=" << best_ub << " "
+                << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
                 << "t=" << seconds.count() << std::endl;
     }
   }
@@ -96,6 +108,30 @@ protected:
       for (auto it = begin; it != end; ++it) {
         messages::receive<forward>(*it);
         constant_ += (*it)->unary.normalize();
+
+        if constexpr (rounding) {
+          index best_label;
+          cost best_value = std::numeric_limits<cost>::infinity();
+          for (index i = 0; i < (*it)->unary.size(); ++i) {
+            cost current = (*it)->unary.get(i);
+            for (auto* edge : (*it)->template edges<!forward>()) {
+              const index j = std::get<forward ? 0 : 1>(edge->pairwise.primal());
+              assert(j != decltype(edge->pairwise)::primal_unset);
+              if constexpr (forward)
+                current += edge->pairwise.get(j, i);
+              else
+                current += edge->pairwise.get(i, j);
+            }
+
+            if (current < best_value) {
+              best_value = current;
+              best_label = i;
+            }
+          }
+          (*it)->unary.primal() = best_label;
+          messages::propagate_primals(*it);
+        }
+
         messages::send<forward>(*it);
       }
     };
