@@ -1,3 +1,3 @@
 from .model import Model
-from .uai import parse_uai_file
-from .solver import Solver, construct_solver
+from .dd import parse_dd_model
+from .solver import Solver, construct_gm_solver
