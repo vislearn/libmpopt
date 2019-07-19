@@ -9,7 +9,7 @@ trap 'rm -rf "${build_dir}" "${install_dir}"' EXIT
 custom_sitelib="${install_dir}/lib/python/site-packages"
 export PYTHONPATH="${custom_sitelib}${PYTHONPATH:+:${PYTHONPATH}}"
 export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-export PATH="${install_dir}/bin:${PATH:+:${PATH}}"
+export PATH="${install_dir}/bin${PATH:+:${PATH}}"
 
 cd "${build_dir}"
 cmake \
