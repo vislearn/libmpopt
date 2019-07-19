@@ -47,10 +47,10 @@ struct messages {
         value += edge->pairwise.get(forward ? j : i, forward ? i : j);
       }
 
-      if (value < std::get<0>(best))
+      if (value < std::get<1>(best))
         best = {i, value};
     }
-    unary_node->unary.primal() = std::get<1>(best);
+    unary_node->unary.primal() = std::get<0>(best);
   }
 
   template<typename UNARY_NODE>
