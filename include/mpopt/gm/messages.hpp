@@ -35,8 +35,26 @@ struct messages {
     }
   }
 
+  template<bool forward, typename UNARY_NODE>
+  static void trws_style_rounding(const UNARY_NODE* unary_node)
+  {
+    std::tuple<index, cost> best(0, std::numeric_limits<cost>::infinity());
+    for (index i = 0; i < unary_node->unary.size(); ++i) {
+      cost value = unary_node->unary.get(i);
+      for (auto* edge : unary_node->template edges<!forward>()) {
+        const index j = std::get<forward ? 0 : 1>(edge->pairwise.primal());
+        assert(j != decltype(edge->pairwise)::primal_unset);
+        value += edge->pairwise.get(forward ? j : i, forward ? i : j);
+      }
+
+      if (value < std::get<0>(best))
+        best = {i, value};
+    }
+    unary_node->unary.primal() = std::get<1>(best);
+  }
+
   template<typename UNARY_NODE>
-  static void propagate_primals(const UNARY_NODE* unary_node)
+  static void propagate_primal(const UNARY_NODE* unary_node)
   {
     assert(unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset);
     index primal = unary_node->unary.primal();

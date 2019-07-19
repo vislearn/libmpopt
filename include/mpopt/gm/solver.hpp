@@ -110,26 +110,8 @@ protected:
         constant_ += (*it)->unary.normalize();
 
         if constexpr (rounding) {
-          index best_label;
-          cost best_value = std::numeric_limits<cost>::infinity();
-          for (index i = 0; i < (*it)->unary.size(); ++i) {
-            cost current = (*it)->unary.get(i);
-            for (auto* edge : (*it)->template edges<!forward>()) {
-              const index j = std::get<forward ? 0 : 1>(edge->pairwise.primal());
-              assert(j != decltype(edge->pairwise)::primal_unset);
-              if constexpr (forward)
-                current += edge->pairwise.get(j, i);
-              else
-                current += edge->pairwise.get(i, j);
-            }
-
-            if (current < best_value) {
-              best_value = current;
-              best_label = i;
-            }
-          }
-          (*it)->unary.primal() = best_label;
-          messages::propagate_primals(*it);
+          messages::trws_style_rounding<forward>(*it);
+          messages::propagate_primal(*it);
         }
 
         messages::send<forward>(*it);
