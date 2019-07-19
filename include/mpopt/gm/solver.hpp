@@ -36,15 +36,20 @@ public:
   cost evaluate_primal() const
   {
     assert(graph_.is_prepared());
+    const cost inf = std::numeric_limits<cost>::infinity();
     cost result = constant_;
 
-    // FIXME: Check that primals are really consistent!
-
-    for (const auto* node : graph_.unaries())
+    for (const auto* node : graph_.unaries()) {
+      if (!messages::check_unary_primal_consistency(node))
+        result += inf;
       result += node->unary.evaluate_primal();
+    }
 
-    for (const auto* node : graph_.pairwise())
+    for (const auto* node : graph_.pairwise()) {
+      if (!messages::check_pairwise_primal_consistency(node))
+        result += inf;
       result += node->pairwise.evaluate_primal();
+    }
 
     return result;
   }

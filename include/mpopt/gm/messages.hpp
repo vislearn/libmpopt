@@ -54,6 +54,62 @@ struct messages {
   }
 
   template<typename UNARY_NODE>
+  static consistency check_unary_primal_consistency(const UNARY_NODE* unary_node)
+  {
+    constexpr auto un_unset = decltype(unary_node->unary)::primal_unset;
+    constexpr auto pw_unset = decltype(unary_node->forward[0]->pairwise)::primal_unset;
+
+    consistency result;
+    if (unary_node->unary.primal() == un_unset) {
+      result.mark_unknown();
+      return result;
+    }
+
+    for (const auto* pairwise_node : unary_node->forward) {
+      if (pairwise_node->pairwise.primal0_ == pw_unset)
+        result.mark_unknown();
+      else if (unary_node->unary.primal() != pairwise_node->pairwise.primal0_)
+        result.mark_inconsistent();
+    }
+
+    for (const auto* pairwise_node : unary_node->backward) {
+      if (pairwise_node->pairwise.primal1_ == pw_unset)
+        result.mark_unknown();
+      else if (unary_node->unary.primal() != pairwise_node->pairwise.primal1_)
+        result.mark_inconsistent();
+    }
+
+    return result;
+  }
+
+  template<typename PAIRWISE_NODE>
+  static consistency check_pairwise_primal_consistency(const PAIRWISE_NODE* pairwise_node)
+  {
+    constexpr auto pw_unset = decltype(pairwise_node->pairwise)::primal_unset;
+    constexpr auto un_unset = decltype(pairwise_node->unary0->unary)::primal_unset;
+
+    consistency result;
+    if (pairwise_node->pairwise.primal0_ == pw_unset ||
+        pairwise_node->pairwise.primal1_ == pw_unset)
+    {
+      result.mark_unknown();
+      return result;
+    }
+
+    if (pairwise_node->unary0->unary.primal_ == un_unset)
+      result.mark_unknown();
+    else if (pairwise_node->unary0->unary.primal_ != pairwise_node->pairwise.primal0_)
+      result.mark_inconsistent();
+
+    if (pairwise_node->unary1->unary.primal_ == un_unset)
+      result.mark_unknown();
+    else if (pairwise_node->unary1->unary.primal_ != pairwise_node->pairwise.primal1_)
+      result.mark_inconsistent();
+
+    return result;
+  }
+
+  template<typename UNARY_NODE>
   static void propagate_primal(const UNARY_NODE* unary_node)
   {
     assert(unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset);
