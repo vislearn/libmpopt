@@ -23,6 +23,9 @@ class Solver:
     def run(self, max_iterations=1000):
         lib.solver_run(self.solver, max_iterations)
 
+    def solve_ilp(self):
+        lib.solver_solve_ilp(self.solver)
+
 
 def construct_solver(model):
     s = Solver()

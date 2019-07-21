@@ -101,6 +101,26 @@ public:
     }
   }
 
+  void solve_ilp()
+  {
+    reset_primal();
+
+    GRBEnv env;
+    gurobi_model_builder<allocator_type> builder(env);
+    builder.set_constant(constant_);
+
+    for (const auto* node : graph_.unaries())
+      builder.add_factor(*node);
+
+    for (const auto* node : graph_.pairwise())
+      builder.add_factor(*node);
+
+    builder.finalize();
+    builder.optimize();
+    builder.update_primals();
+    std::cout << "final objective: " << evaluate_primal() << std::endl;
+  }
+
 protected:
 
   template<bool rounding> void forward_pass() { single_pass<true, rounding>(); }

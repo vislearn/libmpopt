@@ -185,6 +185,8 @@ protected:
 #endif
 
   friend struct messages;
+  template<typename> friend class gurobi_model_builder; // FIXME: Get rid of this.
+  template<typename> friend class gurobi_pairwise_factor;
 };
 
 }

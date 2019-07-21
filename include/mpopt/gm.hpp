@@ -13,6 +13,7 @@
 #include <mpopt/gm/unary_factor.hpp>
 #include <mpopt/gm/pairwise_factor.hpp>
 #include <mpopt/gm/graph.hpp>
+#include <mpopt/gm/gurobi.hpp>
 #include <mpopt/gm/messages.hpp>
 #include <mpopt/gm/solver.hpp>
 
