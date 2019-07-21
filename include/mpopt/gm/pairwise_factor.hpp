@@ -169,9 +169,10 @@ protected:
   {
     assert(idx >= 0 && idx < costs_.size());
     const index idx0 = idx / no_labels1_;
-    const index idx1 = idx - idx0;
+    const index idx1 = idx % no_labels1_;
     assert(idx0 >= 0 && idx0 < no_labels0_);
     assert(idx1 >= 0 && idx1 < no_labels1_);
+    assert(to_linear(idx0, idx1) == idx);
     return std::tuple(idx0, idx1);
   }
 
