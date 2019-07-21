@@ -110,10 +110,10 @@ public:
     builder.set_constant(constant_);
 
     for (const auto* node : graph_.unaries())
-      builder.add_factor(*node);
+      builder.add_factor(node);
 
     for (const auto* node : graph_.pairwise())
-      builder.add_factor(*node);
+      builder.add_factor(node);
 
     builder.finalize();
     builder.optimize();

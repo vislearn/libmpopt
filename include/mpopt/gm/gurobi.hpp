@@ -107,20 +107,22 @@ public:
     model_.set(GRB_DoubleAttr_ObjCon, constant);
   }
 
-  void add_factor(const unary_node_type& node)
+  void add_factor(const unary_node_type* node)
   {
+    assert(node != nullptr);
     assert(!finalized_);
     // TODO: Do we really want this check? We already use try_emplace.
-    assert(unaries_.find(&node) == unaries_.end());
-    unaries_.try_emplace(&node, node.unary, model_);
+    assert(unaries_.find(node) == unaries_.end());
+    unaries_.try_emplace(node, node->unary, model_);
   }
 
-  void add_factor(const pairwise_node_type& node)
+  void add_factor(const pairwise_node_type* node)
   {
+    assert(node != nullptr);
     assert(!finalized_);
     // TODO: Do we really want this check? We already use try_emplace.
-    assert(pairwise_.find(&node) == pairwise_.end());
-    pairwise_.try_emplace(&node, node.pairwise, model_);
+    assert(pairwise_.find(node) == pairwise_.end());
+    pairwise_.try_emplace(node, node->pairwise, model_);
   }
 
   void finalize()
@@ -156,9 +158,9 @@ protected:
   {
     for (auto it = pairwise_.begin(); it != pairwise_.end(); ++it) {
       if (unaries_.find(it->first->unary0) == unaries_.end())
-        add_factor(*it->first->unary0);
+        add_factor(it->first->unary0);
       if (unaries_.find(it->first->unary1) == unaries_.end())
-        add_factor(*it->first->unary1);
+        add_factor(it->first->unary1);
     }
   }
 
