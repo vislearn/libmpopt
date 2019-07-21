@@ -20,7 +20,7 @@ public:
       std::cout << "[mem] ctor: size=" << size_ << " -> result=" << result << std::endl;
 #endif
       if (result == static_cast<void*>(0))
-        size_ /= 2;
+        size_ -= size_512mib;
       else
         memory_ = static_cast<char*>(result);
     }
