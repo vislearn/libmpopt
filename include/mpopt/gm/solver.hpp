@@ -121,6 +121,65 @@ public:
     std::cout << "final objective: " << evaluate_primal() << std::endl;
   }
 
+  void execute_combilp()
+  {
+    reset_primal();
+    for (auto* unary_node : graph_.unaries()) {
+      for (auto* pairwise_node : unary_node->backward)
+        pairwise_node->pairwise.round_independently();
+      messages::receive<true>(unary_node);
+      unary_node->unary.round_independently();
+      messages::send<true>(unary_node);
+    }
+    backward_pass<false>();
+
+    GRBEnv env;
+    sac_detector sac(graph_);
+    sac.update();
+
+    // FIXME: The current implementation of CombiLP is still faulty.
+    //
+    // The old implementation of CombiLP was purely working unary nodes. We
+    // should compare to the old results and only count the unary factors. As
+    // we handle pairwise terms separately the behaviour might have also
+    // changed. This has to get verified.
+    //
+    // The other problem is that the current reparametrization has basically
+    // moved all the relevant costs to the end of the structures (so
+    // potentially out of the ILP). This is obviously a problem that has to get
+    // fixed.
+    //
+    // Apart from that, it should be working.
+
+    int iterations = 0;
+    while (true) {
+      const auto [inconsistent, total] = sac.get_stats();
+      std::cout << "== CombiLP iteration " << (iterations+1) << " (inconsistency: " << inconsistent << "/" << total << ")" << std::endl;
+
+      gurobi_model_builder<allocator_type> builder(env);
+      for (const auto* node : graph_.unaries())
+        if (!sac.get(node))
+          builder.add_factor(node);
+
+      for (const auto* node : graph_.pairwise())
+        if (!sac.get(node))
+          builder.add_factor(node);
+
+      builder.finalize();
+      builder.optimize();
+      builder.update_primals();
+
+      sac_detector sac2(graph_);
+      sac2.update();
+      sac.merge(sac2);
+
+      if (std::get<0>(sac2.get_stats()) == 0)
+        break;
+
+      ++iterations;
+    }
+  }
+
 protected:
 
   template<bool rounding> void forward_pass() { single_pass<true, rounding>(); }

@@ -26,6 +26,9 @@ class Solver:
     def solve_ilp(self):
         lib.solver_solve_ilp(self.solver)
 
+    def execute_combilp(self):
+        lib.solver_execute_combilp(self.solver)
+
 
 def construct_solver(model):
     s = Solver()
