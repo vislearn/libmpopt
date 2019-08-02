@@ -156,8 +156,8 @@ public:
 #endif
   }
 
-  auto primal() { return std::tuple(primal0_, primal1_); }
-  const auto primal() const { return std::tie(primal0_, primal1_); }
+  auto primal() { return std::tie(primal0_, primal1_); }
+  const auto primal() const { return std::tuple(primal0_, primal1_); }
 
 protected:
   void assert_index(const index idx0, const index idx1) const
