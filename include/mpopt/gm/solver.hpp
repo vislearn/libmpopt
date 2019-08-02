@@ -65,8 +65,9 @@ public:
       node->pairwise.reset_primal();
   }
 
-  void run(const int max_batches = 1000 / batch_size)
+  void run(const int max_iterations = 1000)
   {
+    const int max_batches = (max_iterations + batch_size - 1) / batch_size;
     assert(graph_.is_prepared());
     cost best_ub = std::numeric_limits<cost>::infinity();
 

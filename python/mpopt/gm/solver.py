@@ -17,8 +17,8 @@ class Solver:
     def lower_bound(self):
         return lib.solver_lower_bound(self.solver)
 
-    def upper_bound(self):
-        return lib.solver_upper_bound(self.solver)
+    def evaluate_primal(self):
+        return lib.solver_evaluate_primal(self.solver)
 
     def run(self, max_iterations=1000):
         lib.solver_run(self.solver, max_iterations)
