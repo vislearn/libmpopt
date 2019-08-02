@@ -129,6 +129,7 @@ public:
     auto* unary0 = unaries_[idx_unary0];
     auto* unary1 = unaries_[idx_unary1];
     auto* pairwise = pairwise_[idx_pairwise];
+    assert(std::tuple(unary0->unary.size(), unary1->unary.size()) == pairwise->pairwise.size());
 
     auto find_free_slot = [](auto& vector) -> auto& {
       auto it = std::find(vector.begin(), vector.end(), nullptr);
