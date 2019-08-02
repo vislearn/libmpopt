@@ -7,12 +7,12 @@ namespace gm {
 struct messages {
 
   template<bool forward, typename UNARY_NODE>
-  static void receive(const UNARY_NODE* unary_node)
+  static void receive(const UNARY_NODE* unary_node, double beta=1.0)
   {
     auto& edges = unary_node->template edges<!forward>();
     for (const auto* pairwise_node : edges) {
       for (index l = 0; l < unary_node->unary.size(); ++l) {
-        const cost msg = pairwise_node->pairwise.template min_marginal<forward>(l);
+        const cost msg = pairwise_node->pairwise.template min_marginal<forward>(l) * beta;
         pairwise_node->pairwise.template repam<forward>(l, -msg);
         unary_node->unary.repam(l, msg);
       }
@@ -20,18 +20,42 @@ struct messages {
   }
 
   template<bool forward, typename UNARY_NODE>
-  static void send(const UNARY_NODE* unary_node)
+  static void send(const UNARY_NODE* unary_node, double beta=1.0)
   {
     auto& edges = unary_node->template edges<forward>();
     index split = std::max(unary_node->forward.size(), unary_node->backward.size());
     for (const auto* pairwise_node : edges) {
       assert(split >= 1);
-      for (index l = 0; l < unary_node->unary.size(); ++l) {
-        const cost msg = unary_node->unary.get(l) / split;
-        unary_node->unary.repam(l, -msg);
-        pairwise_node->pairwise.template repam<!forward>(l, msg);
-      }
+      directed_send_helper<forward>(unary_node, pairwise_node, beta * 1.0 / split);
       --split;
+    }
+  }
+
+  template<typename UNARY_NODE>
+  static void diffusion(const UNARY_NODE* unary_node)
+  {
+    index split = unary_node->forward.size() + unary_node->backward.size();
+    for (const auto* pairwise_node : unary_node->backward) {
+      assert(split >= 1);
+      directed_send_helper<false>(unary_node, pairwise_node, 1.0 / split);
+      --split;
+    }
+    for (const auto* pairwise_node : unary_node->forward) {
+      assert(split >= 1);
+      directed_send_helper<true>(unary_node, pairwise_node, 1.0 / split);
+      --split;
+    }
+    assert(split == 0);
+  }
+
+  template<bool forward, typename PAIRWISE_NODE>
+  static void send_pairwise(const PAIRWISE_NODE* pairwise_node)
+  {
+    const auto no_labels_to = std::get<forward ? 1 : 0>(pairwise_node->pairwise.size());
+    for (index l = 0; l < no_labels_to; ++l) {
+      const auto msg = pairwise_node->pairwise.template min_marginal<forward>(l);
+      pairwise_node->pairwise.template repam<forward>(l, -msg);
+      pairwise_node->template unary<forward>()->unary.repam(l, msg);
     }
   }
 
@@ -120,6 +144,17 @@ struct messages {
 
     for (const auto* pairwise_node : unary_node->backward)
       pairwise_node->pairwise.primal1_ = primal;
+  }
+
+  template<bool forward, typename UNARY_NODE, typename PAIRWISE_NODE>
+  static void directed_send_helper(const UNARY_NODE* unary_node, const PAIRWISE_NODE* pairwise_node, double fraction)
+  {
+    assert(fraction > 0 && fraction <= 1);
+    for (index l = 0; l < unary_node->unary.size(); ++l) {
+      const cost msg = unary_node->unary.get(l) * fraction;
+      unary_node->unary.repam(l, -msg);
+      pairwise_node->pairwise.template repam<!forward>(l, msg);
+    }
   }
 
 };
