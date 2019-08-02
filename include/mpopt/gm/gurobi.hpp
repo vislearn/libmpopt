@@ -128,9 +128,7 @@ public:
   void finalize()
   {
     if (!finalized_) {
-      add_dangling_unaries();
       add_linear_constraints();
-      marginalize_invisible_arcs();
       finalized_ = true;
     }
   }
@@ -138,6 +136,8 @@ public:
   void optimize()
   {
     finalize();
+    std::cout << "Going to optimize an ILP with " << unaries_.size() << " + " << pairwise_.size() << " factors" << std::endl;
+
     model_.set(GRB_IntParam_Threads, 1); // single thread
     model_.set(GRB_IntParam_Method, 1); // dual simplex
     model_.optimize();
@@ -154,16 +154,6 @@ public:
   }
 
 protected:
-  void add_dangling_unaries()
-  {
-    for (auto it = pairwise_.begin(); it != pairwise_.end(); ++it) {
-      if (unaries_.find(it->first->unary0) == unaries_.end())
-        add_factor(it->first->unary0);
-      if (unaries_.find(it->first->unary1) == unaries_.end())
-        add_factor(it->first->unary1);
-    }
-  }
-
   void add_linear_constraints()
   {
     for (auto it = pairwise_.begin(); it != pairwise_.end(); ++it) {
@@ -191,34 +181,6 @@ protected:
           model_.addConstr(expr == unary.variable(idx1));
         }
       }
-    }
-  }
-
-  void marginalize_invisible_arcs()
-  {
-    // Important: Here we assume that `add_dangling_unaries` was already called.
-    // This means that both connected unaries of a pairwise term are already
-    // present. Hence here we iterate over all unaries only.
-
-    for (auto it = unaries_.begin(); it != unaries_.end(); ++it) {
-      const auto* unary_node = it->first;
-      auto& gurobi_unary = it->second;
-
-      bool call_update = false;
-      std::vector<cost> coeffs(unary_node->unary.costs_.begin(), unary_node->unary.costs_.end());
-
-      for (const auto* pairwise_node : unary_node->forward)
-        if (pairwise_.find(pairwise_node) == pairwise_.end())
-          for (size_t i = 0; i < coeffs.size(); ++i)
-            coeffs[i] += pairwise_node->pairwise.min_marginal0(i);
-
-      for (const auto* pairwise_node : unary_node->backward)
-        if (pairwise_.find(pairwise_node) == pairwise_.end())
-          for (size_t i = 0; i < coeffs.size(); ++i)
-            coeffs[i] += pairwise_node->pairwise.min_marginal1(i);
-
-      for (size_t i = 0; i < coeffs.size(); ++i)
-        gurobi_unary.variable(i).set(GRB_DoubleAttr_Obj, coeffs[i]);
     }
   }
 
