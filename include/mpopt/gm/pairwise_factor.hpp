@@ -144,6 +144,16 @@ public:
     const auto indices = to_nonlinear(linear_idx);
     primal0_ = std::get<0>(indices);
     primal1_ = std::get<1>(indices);
+
+#ifndef NDEBUG
+    size_t counter = 0;
+    for (auto x : costs_)
+      if (dbg::are_identical(x, costs_[linear_idx]))
+        ++counter;
+
+    if (counter > 1)
+      std::cout << "highly similar values: " << dbg_info() << std::endl;
+#endif
   }
 
   auto primal() { return std::tuple(primal0_, primal1_); }

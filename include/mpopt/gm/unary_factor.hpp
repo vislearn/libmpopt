@@ -79,6 +79,16 @@ public:
     auto it = std::min_element(costs_.cbegin(), costs_.cend());
     primal_ = it - costs_.cbegin();
     assert(primal_ >= 0 && primal_ < costs_.size());
+
+#ifndef NDEBUG
+    size_t counter = 0;
+    for (auto x : costs_)
+      if (dbg::are_identical(x, costs_[primal_]))
+        ++counter;
+
+    if (counter > 1)
+      std::cout << "highly similar values: " << dbg_info() << std::endl;
+#endif
   }
 
   auto& primal() { return primal_; }
