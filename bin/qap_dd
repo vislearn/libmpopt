@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 
+import argparse
 import sys
 
 from mpopt import qap, utils
 
 
 if __name__ == '__main__':
-    input_filename, = sys.argv[1:]
-    with utils.smart_open(input_filename, 'rt') as f:
+    parser = argparse.ArgumentParser(description='Optimizer for *.dd quadratic assignment models.')
+    parser.add_argument('--relaxation', choices=('gm', 'qap-pw', 'qap'), default='qap')
+    parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
+    args = parser.parse_args()
+
+
+    with utils.smart_open(args.input_filename, 'rt') as f:
         model = qap.parse_dd_model(f)
-    solver = qap.construct_gm_solver(model)
-    print('initial lower bound: {}'.format(solver.lower_bound()))
+
+    if args.relaxation == 'gm':
+        solver = qap.construct_gm_solver(model)
+    elif args.relaxation in ('qap', 'qap-pw'):
+        solver = qap.construct_qap_solver(model, with_uniqueness=args.relaxation=='qap')
+    else:
+        raise NotImplementedError
+
+    print('initial lower bound: {}'.format(solver.lower_bound()), flush=True)
     solver.run()
