@@ -1,8 +1,7 @@
-#ifndef LIBMPOPT_CT_MISC_HPP
-#define LIBMPOPT_CT_MISC_HPP
+#ifndef LIBMPOPT_COMMON_MISC_HPP
+#define LIBMPOPT_COMMON_MISC_HPP
 
 namespace mpopt {
-namespace ct {
 
 template<typename FORWARD_ITERATOR_DATA, typename FORWARD_ITERATOR_BOOL>
 auto min_element(FORWARD_ITERATOR_DATA data_begin, FORWARD_ITERATOR_DATA data_end,
@@ -52,7 +51,6 @@ auto least_two_values(FORWARD_ITERATOR begin, FORWARD_ITERATOR end)
   return std::make_tuple(first_val, second_val);
 }
 
-}
 }
 
 #endif
