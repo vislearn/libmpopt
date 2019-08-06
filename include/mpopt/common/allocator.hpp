@@ -5,8 +5,10 @@ namespace mpopt {
 
 class memory_block {
 public:
-  static constexpr size_t size_1024gib = size_t(1) * 1024 * 1024 * 1024 * 1024;
-  static constexpr size_t size_512mib = size_t(1) * 1024 * 1024 * 512;
+  static constexpr size_t size_mib = size_t(1) * 1024 * 1024;
+  static constexpr size_t size_512mib = size_mib * 512;
+  static constexpr size_t size_gib = size_mib * 1024;
+  static constexpr size_t size_1024gib = size_gib * 1024;
 
   memory_block()
   : memory_(nullptr)
@@ -16,14 +18,15 @@ public:
   {
     while (memory_ == nullptr && size_ >= size_512mib) {
       void* result = std::malloc(size_);
-#ifndef NDEBUG
-      std::cout << "[mem] ctor: size=" << size_ << " -> result=" << result << std::endl;
-#endif
       if (result == static_cast<void*>(0))
         size_ -= size_512mib;
       else
         memory_ = static_cast<char*>(result);
     }
+
+#ifndef NDEBUG
+      std::cout << "[mem] ctor: size=" << size_ << "B (" << (1.0f * size_ / size_gib) << "GiB) -> memory_=" << static_cast<void*>(memory_) << std::endl;
+#endif
 
     if (memory_ == nullptr)
       throw std::bad_alloc();
@@ -61,7 +64,7 @@ public:
     assert(result == memory_);
     size_ = current_size;
 #ifndef NDEBUG
-      std::cout << "[mem] finalize: size=" << size_ << " (" << (size_ / 1024.0 / 1024.0) << " MiB)" << std::endl;
+      std::cout << "[mem] finalize: size=" << size_ << " (" << (1.0f * size_ / size_mib) << " MiB)" << std::endl;
 #endif
     finalized_ = true;
   }
