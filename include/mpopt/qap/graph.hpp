@@ -6,6 +6,23 @@ namespace qap {
 
 template<typename> struct unary_node;
 template<typename> struct pairwise_node;
+template<typename> struct uniqueness_node;
+
+
+template<typename NODE_TYPE>
+struct link_info {
+  using node_type = NODE_TYPE;
+
+  link_info()
+  : node(nullptr)
+  , slot(-1)
+  { }
+
+  bool is_prepared() const { return node != nullptr; }
+
+  const NODE_TYPE* node;
+  index slot;
+};
 
 
 template<typename ALLOCATOR>
@@ -13,14 +30,92 @@ struct unary_node {
   using allocator_type = ALLOCATOR;
   using unary_node_type = unary_node<allocator_type>;
   using pairwise_node_type = pairwise_node<allocator_type>;
+  using uniqueness_node_type = uniqueness_node<allocator_type>;
 
   mutable unary_factor<allocator_type> unary;
+  fixed_vector_alloc_gen<link_info<uniqueness_node_type>, allocator_type> uniqueness;
 
   unary_node(index number_of_labels, const allocator_type& allocator)
   : unary(number_of_labels, allocator)
+  , uniqueness(number_of_labels, allocator)
   { }
 
-  bool is_prepared() const { return unary.is_prepared(); }
+  bool is_prepared() const
+  {
+    bool result = unary.is_prepared();
+
+    index slot = 0;
+    for (const auto& link : uniqueness) {
+      // result = result && link.is_prepared();
+      // FIXME: The handling of unary and uniqueness factors is inconsistent.
+      //        The uniqueness factor knows about the dummy. For the unary we
+      //        add +1 to the number of labels to model the dummy.
+      //        Unfortunately we allocate as many uniqueness links as labels.
+      //        This means that the last uniqueness link will never be prepared.
+      //        The best solution is to unify the behaviour of unary and
+      //        uniqueness factors and uncomment the check above, again.
+      assert(link.node == nullptr || link.node->unaries[link.slot].node == this);
+      assert(link.node == nullptr || link.node->unaries[link.slot].slot == slot);
+      ++slot;
+    }
+
+    return result;
+  }
+
+  template<typename FUNCTOR>
+  void traverse_uniqueness(FUNCTOR f) const
+  {
+    index slot = 0;
+    for (const auto& link : uniqueness) {
+      // TODO: Would be awesome if we could execute things in this loop
+      //       unconditionally.
+      if (link.node != nullptr)
+        f(link, slot);
+      ++slot;
+    }
+  }
+};
+
+
+template<typename ALLOCATOR>
+struct uniqueness_node {
+  using allocator_type = ALLOCATOR;
+  using uniqueness_node_type = uniqueness_node<allocator_type>;
+  using unary_node_type = unary_node<allocator_type>;
+
+  mutable uniqueness_factor<allocator_type> uniqueness;
+  fixed_vector_alloc_gen<link_info<unary_node_type>, allocator_type> unaries;
+
+  uniqueness_node(index number_of_unaries, const allocator_type& allocator)
+  : uniqueness(number_of_unaries, allocator)
+  , unaries(number_of_unaries, allocator)
+  { }
+
+  bool is_prepared() const
+  {
+    bool result = uniqueness.is_prepared();
+
+    index slot = 0;
+    for (const auto& link : unaries) {
+      result = result && link.is_prepared();
+      assert(link.node == nullptr || link.node->uniqueness[link.slot].node == this);
+      assert(link.node == nullptr || link.node->uniqueness[link.slot].slot == slot);
+      ++slot;
+    }
+
+    return result;
+  }
+
+  template<typename FUNCTOR>
+  void traverse_unaries(FUNCTOR f) const
+  {
+    index slot = 0;
+    for (const auto& link : unaries) {
+      assert(link.is_prepared());
+      f(link, slot);
+      ++slot;
+    }
+  }
 };
 
 
@@ -58,6 +153,7 @@ class graph {
 public:
   using allocator_type = ALLOCATOR;
   using unary_node_type = unary_node<ALLOCATOR>;
+  using uniqueness_node_type = uniqueness_node<allocator_type>;
   using pairwise_node_type = pairwise_node<ALLOCATOR>;
 
   graph(const ALLOCATOR& allocator = ALLOCATOR())
@@ -66,11 +162,13 @@ public:
 
   const auto& unaries() const { return unaries_; }
   const auto& pairwise() const { return pairwise_; }
+  const auto& uniqueness() const { return uniqueness_; }
 
   unary_node_type* add_unary(index idx, index number_of_labels)
   {
     assert(number_of_labels >= 0);
     assert(idx == unaries_.size());
+    assert(uniqueness_.size() == 0);
     assert(pairwise_.size() == 0);
 
     unaries_.push_back(nullptr);
@@ -80,6 +178,24 @@ public:
     new (node) unary_node_type(number_of_labels, allocator_);
 #ifndef NDEBUG
     node->unary.set_debug_info(idx);
+#endif
+
+    return node;
+  }
+
+  uniqueness_node_type* add_uniqueness(index idx, index number_of_unaries)
+  {
+    assert(number_of_unaries >= 0);
+    assert(idx == uniqueness_.size());
+    assert(pairwise_.size() == 0);
+
+    uniqueness_.push_back(nullptr);
+    auto& node = uniqueness_.back();
+    typename std::allocator_traits<allocator_type>::template rebind_alloc<uniqueness_node_type> a(allocator_);
+    node = a.allocate();
+    new (node) uniqueness_node_type(number_of_unaries, allocator_);
+#ifndef NDEBUG
+    node->uniqueness.set_debug_info(idx);
 #endif
 
     return node;
@@ -108,6 +224,7 @@ public:
     auto* unary0 = unaries_[idx_unary0];
     auto* unary1 = unaries_[idx_unary1];
     auto* pairwise = pairwise_[idx_pairwise];
+    assert(std::tuple(unary0->unary.size(), unary1->unary.size()) == pairwise->pairwise.size());
 
     assert(pairwise->unary0 == nullptr && pairwise->unary1 == nullptr);
     pairwise->unary0 = unary0;
@@ -118,11 +235,33 @@ public:
 #endif
   }
 
+  void add_uniqueness_link(index idx_unary, index label, index idx_uniqueness, index slot)
+  {
+    assert(idx_unary >= 0 && idx_unary < unaries_.size());
+    assert(idx_uniqueness >= 0 && idx_uniqueness < uniqueness_.size());
+
+    auto* unary = unaries_[idx_unary];
+    auto* uniqueness = uniqueness_[idx_uniqueness];
+
+    assert(label >= 0 && label < unary->uniqueness.size());
+    assert(!unary->uniqueness[label].is_prepared());
+    unary->uniqueness[label].node = uniqueness;
+    unary->uniqueness[label].slot = slot;
+
+    assert(slot >= 0 && slot < uniqueness->unaries.size());
+    assert(!uniqueness->unaries[slot].is_prepared());
+    uniqueness->unaries[slot].node = unary;
+    uniqueness->unaries[slot].slot = label;
+  }
+
   bool is_prepared() const
   {
     bool result = true;
 
     for (auto* node : unaries_)
+      result = result && node->is_prepared();
+
+    for (auto* node : uniqueness_)
       result = result && node->is_prepared();
 
     for (auto* node : pairwise_)
@@ -135,6 +274,7 @@ protected:
   allocator_type allocator_;
   std::vector<unary_node_type*> unaries_;
   std::vector<pairwise_node_type*> pairwise_;
+  std::vector<uniqueness_node_type*> uniqueness_;
 };
 
 }

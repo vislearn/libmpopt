@@ -5,6 +5,7 @@ using allocator_type = mpopt::block_allocator<mpopt::cost>;
 using solver_type = mpopt::qap::solver<allocator_type>;
 using graph_type = mpopt::qap::graph<allocator_type>;
 using unary_node_type = mpopt::qap::unary_node<allocator_type>;
+using uniqueness_node_type = mpopt::qap::uniqueness_node<allocator_type>;
 using pairwise_node_type = mpopt::qap::pairwise_node<allocator_type>;
 
 struct mpopt_qap_solver_t {
@@ -22,11 +23,14 @@ struct mpopt_qap_solver_t {
 inline auto* to_graph(graph_type* g) { return reinterpret_cast<mpopt_qap_graph*>(g); }
 inline auto* from_graph(mpopt_qap_graph* g) { return reinterpret_cast<graph_type*>(g); }
 
-inline auto* to_unary(unary_node_type* g) { return reinterpret_cast<mpopt_qap_unary_node*>(g); }
-inline auto* from_unary(mpopt_qap_unary_node* g) { return reinterpret_cast<unary_node_type*>(g); }
+inline auto* to_unary(unary_node_type* n) { return reinterpret_cast<mpopt_qap_unary_node*>(n); }
+inline auto* from_unary(mpopt_qap_unary_node* n) { return reinterpret_cast<unary_node_type*>(n); }
 
-inline auto* to_pairwise(pairwise_node_type* g) { return reinterpret_cast<mpopt_qap_pairwise_node*>(g); }
-inline auto* from_pairwise(mpopt_qap_pairwise_node* g) { return reinterpret_cast<pairwise_node_type*>(g); }
+inline auto* to_uniqueness(uniqueness_node_type* n) { return reinterpret_cast<mpopt_qap_uniqueness_node*>(n); }
+inline auto* from_uniqueness(mpopt_qap_uniqueness_node* n) { return reinterpret_cast<uniqueness_node_type*>(n); }
+
+inline auto* to_pairwise(pairwise_node_type* n) { return reinterpret_cast<mpopt_qap_pairwise_node*>(n); }
+inline auto* from_pairwise(mpopt_qap_pairwise_node* n) { return reinterpret_cast<pairwise_node_type*>(n); }
 
 extern "C" {
 
@@ -46,6 +50,12 @@ mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx,
   return to_unary(node);
 }
 
+mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries)
+{
+  auto* node = from_graph(graph)->add_uniqueness(idx, number_of_unaries);
+  return to_uniqueness(node);
+}
+
 mpopt_qap_pairwise_node* mpopt_qap_graph_add_pairwise(mpopt_qap_graph* graph, int idx, int number_of_labels0, int number_of_labels1)
 {
   auto* node = from_graph(graph)->add_pairwise(idx, number_of_labels0, number_of_labels1);
@@ -57,6 +67,11 @@ void mpopt_qap_graph_add_pairwise_link(mpopt_qap_graph* graph, int idx_unary0, i
   from_graph(graph)->add_pairwise_link(idx_unary0, idx_unary1, idx_pairwise);
 }
 
+void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, int label, int idx_uniqueness, int slot)
+{
+  from_graph(graph)->add_uniqueness_link(idx_unary, label, idx_uniqueness, slot);
+}
+
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations) { s->solver.run(max_iterations); }
 double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lower_bound(); }
 
@@ -65,6 +80,7 @@ double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lowe
 //
 
 void mpopt_qap_unary_set_cost(mpopt_qap_unary_node* n, int label, double cost) { from_unary(n)->unary.set(label, cost); }
+void mpopt_qap_uniqueness_set_cost(mpopt_qap_uniqueness_node* n, int unary, double cost) { from_uniqueness(n)->uniqueness.set(unary, cost); }
 void mpopt_qap_pairwise_set_cost(mpopt_qap_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->pairwise.set(l0, l1, cost); }
 
 }

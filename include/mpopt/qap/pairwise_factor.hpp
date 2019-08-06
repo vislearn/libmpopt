@@ -166,7 +166,7 @@ protected:
   index index0_, index1_;
 #endif
 
-  friend struct messages;
+  friend struct pairwise_messages;
 };
 
 }

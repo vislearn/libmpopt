@@ -1,26 +1,26 @@
-#ifndef LIBMPOPT_QAP_UNARY_FACTOR_HPP
-#define LIBMPOPT_QAP_UNARY_FACTOR_HPP
+#ifndef LIBMPOPT_QAP_UNIQUENESS_FACTOR_HPP
+#define LIBMPOPT_QAP_UNIQUENESS_FACTOR_HPP
 
 namespace mpopt {
 namespace qap {
 
 template<typename ALLOCATOR = std::allocator<cost>>
-class unary_factor {
+class uniqueness_factor {
 public:
   using allocator_type = ALLOCATOR;
-  static constexpr cost initial_cost = std::numeric_limits<cost>::signaling_NaN();
+  static constexpr cost initial_cost = 0;
   static constexpr index primal_unset = std::numeric_limits<index>::max();
 
-  unary_factor(index number_of_labels, const ALLOCATOR& allocator = ALLOCATOR())
-  : costs_(number_of_labels, initial_cost, allocator)
+  uniqueness_factor(index size, const ALLOCATOR& allocator = ALLOCATOR())
+  : costs_(size + 1, initial_cost, allocator)
 #ifndef NDEBUG
   , index_(-1)
 #endif
   {
   }
 
-  unary_factor(const unary_factor& other) = delete;
-  unary_factor& operator=(const unary_factor& other) = delete;
+  uniqueness_factor(const uniqueness_factor& other) = delete;
+  uniqueness_factor& operator=(const uniqueness_factor& other) = delete;
 
 #ifndef NDEBUG
   void set_debug_info(index idx) { index_ = idx; }
@@ -33,14 +33,11 @@ public:
   }
 #endif
 
-  auto size() const { return costs_.size(); }
+  auto size() const { return costs_.size() - 1; }
 
   bool is_prepared() const
   {
-    bool result = true;
-    for (const auto& x : costs_)
-        result = result && !std::isnan(x);
-    return result;
+    return true;
   }
 
   void set(const index idx, cost c) { assert_index(idx); costs_[idx] = c; }
@@ -93,7 +90,6 @@ protected:
   index index_;
 #endif
 
-  friend struct pairwise_messages;
   friend struct uniqueness_messages;
 };
 

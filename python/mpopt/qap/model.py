@@ -13,13 +13,13 @@ class Model:
         self._no_assignments = no_assignments
         self._no_edges = no_edges
 
-        self._assignments = []
-        self._edges = []
-        self._unaries_left = {}
-        self._unaries_right = {}
+        self._assignments = []    # [Assignment]
+        self._edges = []          # [Edge]
+        self._unaries_left = {}   # idx_left  -> [idx_assignment]
+        self._unaries_right = {}  # idx_right -> [idx_assignment]
 
-        self._pairwise_left = {}
-        self._pairwise_right = {}
+        self._pairwise_left = {}  # idx_left  x idx_left  -> cost matrix
+        self._pairwise_right = {} # idx_right x idx_right -> cost matrix
 
         self._no_forward_left = [0] * self._no_left
         self._no_backward_left = [0] * self._no_left

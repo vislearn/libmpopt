@@ -8,11 +8,14 @@
 #include <mpopt/common/debug.hpp>
 #include <mpopt/common/fixed_vector.hpp>
 #include <mpopt/common/signal_handler.hpp>
+#include <mpopt/common/misc.hpp>
 
 #include <mpopt/qap/unary_factor.hpp>
+#include <mpopt/qap/uniqueness_factor.hpp>
 #include <mpopt/qap/pairwise_factor.hpp>
 #include <mpopt/qap/graph.hpp>
-#include <mpopt/qap/messages.hpp>
+#include <mpopt/qap/pairwise_messages.hpp>
+#include <mpopt/qap/uniqueness_messages.hpp>
 #include <mpopt/qap/solver.hpp>
 
 #endif

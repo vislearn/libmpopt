@@ -26,6 +26,9 @@ public:
     for (const auto* node : graph_.unaries())
       result += node->unary.lower_bound();
 
+    for (const auto* node : graph_.uniqueness())
+      result += node->uniqueness.lower_bound();
+
     for (const auto* node : graph_.pairwise())
       result += node->pairwise.lower_bound();
 
@@ -55,8 +58,9 @@ public:
       node->pairwise.reset_primal();
   }
 
-  void run(const int max_batches = 1000 / batch_size)
+  void run(const int max_iterations = 1000)
   {
+    const int max_batches = (max_iterations + batch_size - 1) / batch_size;
     assert(graph_.is_prepared());
 
     signal_handler h;
@@ -85,8 +89,14 @@ protected:
   template<bool rounding>
   void single_pass()
   {
-    // TODO: Implement this.
-    assert(false);
+    for (const auto* node : graph_.pairwise())
+      pairwise_messages::update(node);
+
+    for (const auto* node : graph_.unaries())
+      uniqueness_messages::send_messages_to_uniqueness(node);
+
+    for (const auto* node : graph_.uniqueness())
+      uniqueness_messages::send_messages_to_unaries(node);
   }
 
   graph_type graph_;
