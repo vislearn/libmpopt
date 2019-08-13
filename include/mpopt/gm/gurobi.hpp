@@ -16,7 +16,7 @@ public:
   {
     std::vector<double> coeffs(vars_.size(), 1.0);
     for (size_t i = 0; i < factor_->size(); ++i)
-      vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_INTEGER);
+      vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_BINARY);
 
     GRBLinExpr expr;
     expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
@@ -27,9 +27,12 @@ public:
   {
     auto& p = factor_->primal();
     p = factor_type::primal_unset;
-    for (size_t i = 0; i < vars_.size(); ++i)
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5)
+    for (size_t i = 0; i < vars_.size(); ++i) {
+      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
+        assert(p == factor_type::primal_unset);
         p = i;
+      }
+    }
     assert(p != factor_type::primal_unset);
   }
 
@@ -69,6 +72,7 @@ public:
 
     for (size_t i = 0; i < vars_.size(); ++i) {
       if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
+        assert(p0 == factor_type::primal_unset && p1 == factor_type::primal_unset);
         const auto indices = factor_->to_nonlinear(i);
         p0 = std::get<0>(indices);
         p1 = std::get<1>(indices);
@@ -135,7 +139,7 @@ public:
 
   void optimize()
   {
-    finalize();
+    assert(finalized_);
     std::cout << "Going to optimize an ILP with " << unaries_.size() << " + " << pairwise_.size() << " factors" << std::endl;
 
     model_.set(GRB_IntParam_Threads, 1); // single thread
@@ -146,40 +150,34 @@ public:
 
   void update_primals()
   {
-    for (auto it = unaries_.begin(); it != unaries_.end(); ++it)
-      it->second.update_primal();
+    for (auto& x : unaries_)
+      x.second.update_primal();
 
-    for (auto it = pairwise_.begin(); it != pairwise_.end(); ++it)
-      it->second.update_primal();
+    for (auto& x : pairwise_)
+      x.second.update_primal();
   }
 
 protected:
   void add_linear_constraints()
   {
-    for (auto it = pairwise_.begin(); it != pairwise_.end(); ++it) {
-      const auto* pairwise_node = it->first;
-      auto& pairwise = it->second;
+    for (auto& pair : pairwise_) {
+      const auto* pairwise_node = pair.first;
+      auto& pairwise = pair.second;
 
-      auto it0 = unaries_.find(pairwise_node->unary0);
-      if (it0 != unaries_.end()) {
-        auto& unary = it0->second;
-        for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0) {
-          GRBLinExpr expr;
-          for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1)
-            expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
-          model_.addConstr(expr == unary.variable(idx0));
-        }
+      auto& unary0 = unaries_.at(pairwise_node->unary0);
+      for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0) {
+        GRBLinExpr expr;
+        for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1)
+          expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
+        model_.addConstr(expr == unary0.variable(idx0));
       }
 
-      auto it1 = unaries_.find(pairwise_node->unary1);
-      if (it1 != unaries_.end()) {
-        auto& unary = it1->second;
-        for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1) {
-          GRBLinExpr expr;
-          for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0)
-            expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
-          model_.addConstr(expr == unary.variable(idx1));
-        }
+      auto& unary1 = unaries_.at(pairwise_node->unary1);
+      for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1) {
+        GRBLinExpr expr;
+        for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0)
+          expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
+        model_.addConstr(expr == unary1.variable(idx1));
       }
     }
   }
