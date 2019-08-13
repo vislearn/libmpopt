@@ -174,9 +174,9 @@ protected:
       auto it1 = unaries_.find(pairwise_node->unary1);
       if (it1 != unaries_.end()) {
         auto& unary = it1->second;
-        for (index idx1 = 1; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1) {
+        for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1) {
           GRBLinExpr expr;
-          for (index idx0 = 1; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0)
+          for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0)
             expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
           model_.addConstr(expr == unary.variable(idx1));
         }
