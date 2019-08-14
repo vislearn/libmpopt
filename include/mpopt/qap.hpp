@@ -17,6 +17,7 @@
 #include <mpopt/qap/graph.hpp>
 #include <mpopt/qap/pairwise_messages.hpp>
 #include <mpopt/qap/uniqueness_messages.hpp>
+#include <mpopt/qap/gurobi.hpp>
 #include <mpopt/qap/solver.hpp>
 
 #endif

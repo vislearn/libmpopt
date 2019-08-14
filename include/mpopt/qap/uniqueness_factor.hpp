@@ -91,6 +91,8 @@ protected:
 #endif
 
   friend struct uniqueness_messages;
+  template<typename> friend class gurobi_model_builder; // FIXME: Get rid of this.
+  template<typename> friend class gurobi_uniqueness_factor;
 };
 
 }

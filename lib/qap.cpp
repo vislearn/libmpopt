@@ -73,6 +73,7 @@ void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, 
 }
 
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations) { s->solver.run(max_iterations); }
+void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s) { s->solver.solve_ilp(); }
 double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lower_bound(); }
 
 //
