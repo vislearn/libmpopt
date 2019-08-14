@@ -9,6 +9,7 @@
 #include <mpopt/common/fixed_vector.hpp>
 #include <mpopt/common/signal_handler.hpp>
 #include <mpopt/common/misc.hpp>
+#include <mpopt/common/consistency.hpp>
 
 #include <mpopt/qap/unary_factor.hpp>
 #include <mpopt/qap/uniqueness_factor.hpp>

@@ -20,6 +20,33 @@ struct pairwise_messages {
     helper_move_to_unary<false, false>(pairwise_node);
   }
 
+  template<typename PAIRWISE_NODE>
+  static consistency check_primal_consistency(const PAIRWISE_NODE* pairwise_node)
+  {
+    constexpr auto pw_unset = decltype(pairwise_node->pairwise)::primal_unset;
+    constexpr auto un_unset = decltype(pairwise_node->unary0->unary)::primal_unset;
+
+    consistency result;
+    if (pairwise_node->pairwise.primal0_ == pw_unset ||
+        pairwise_node->pairwise.primal1_ == pw_unset)
+    {
+      result.mark_unknown();
+      return result;
+    }
+
+    if (pairwise_node->unary0->unary.primal_ == un_unset)
+      result.mark_unknown();
+    else if (pairwise_node->unary0->unary.primal_ != pairwise_node->pairwise.primal0_)
+      result.mark_inconsistent();
+
+    if (pairwise_node->unary1->unary.primal_ == un_unset)
+      result.mark_unknown();
+    else if (pairwise_node->unary1->unary.primal_ != pairwise_node->pairwise.primal1_)
+      result.mark_inconsistent();
+
+    return result;
+  }
+
 private:
 
   template<typename PAIRWISE_NODE>

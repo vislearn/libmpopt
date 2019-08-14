@@ -39,10 +39,22 @@ public:
   {
     assert(graph_.is_prepared());
     const cost inf = std::numeric_limits<cost>::infinity();
-    cost result = inf;
+    cost result = 0;
 
-    // TODO: Implement this.
-    assert(false);
+    for (const auto* node : graph_.unaries())
+      result += node->unary.evaluate_primal();
+
+    for (const auto* node : graph_.uniqueness()) {
+      if (!uniqueness_messages::check_primal_consistency(node))
+        result += inf;
+      result += node->uniqueness.evaluate_primal();
+    }
+
+    for (const auto* node : graph_.pairwise()) {
+      if (!pairwise_messages::check_primal_consistency(node))
+        result += inf;
+      result += node->pairwise.evaluate_primal();
+    }
 
     return result;
   }
@@ -62,6 +74,7 @@ public:
   {
     const int max_batches = (max_iterations + batch_size - 1) / batch_size;
     assert(graph_.is_prepared());
+    cost best_ub = std::numeric_limits<cost>::infinity();
 
     signal_handler h;
     using clock_type = std::chrono::high_resolution_clock;
@@ -72,6 +85,7 @@ public:
         single_pass<false>();
 
       single_pass<true>();
+      best_ub = std::min(best_ub, evaluate_primal());
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
@@ -80,6 +94,8 @@ public:
       iterations_ += batch_size;
       std::cout << "it=" << iterations_ << " "
                 << "lb=" << lb << " "
+                << "ub=" << best_ub << " "
+                << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
                 << "t=" << seconds.count() << std::endl;
     }
   }

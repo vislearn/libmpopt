@@ -40,6 +40,28 @@ struct uniqueness_messages {
     });
   }
 
+  template<typename UNIQUENESS_NODE>
+  static consistency check_primal_consistency(const UNIQUENESS_NODE* uniqueness_node)
+  {
+    constexpr auto uniqueness_unset = decltype(uniqueness_node->uniqueness)::primal_unset;
+    constexpr auto unary_unset = decltype(uniqueness_node->unaries[0].node->unary)::primal_unset;
+
+    consistency result;
+    if (uniqueness_node->uniqueness.primal() == uniqueness_unset) {
+      result.mark_unknown();
+      return result;
+    }
+
+    uniqueness_node->traverse_unaries([&](const auto& link, index slot) {
+      if (link.node->unary.primal() == unary_unset)
+        result.mark_unknown();
+      else if ((link.node->unary.primal() == link.slot) != (uniqueness_node->uniqueness.primal() == slot))
+        result.mark_inconsistent();
+    });
+
+    return result;
+  }
+
 };
 
 }
