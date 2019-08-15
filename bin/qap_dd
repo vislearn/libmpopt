@@ -13,7 +13,6 @@ if __name__ == '__main__':
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
     args = parser.parse_args()
 
-
     with utils.smart_open(args.input_filename, 'rt') as f:
         model = qap.parse_dd_model(f)
 

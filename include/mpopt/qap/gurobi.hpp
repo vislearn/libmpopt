@@ -4,8 +4,6 @@
 namespace mpopt {
 namespace qap {
 
-
-
 template<typename ALLOCATOR>
 class gurobi_model_builder {
 public:

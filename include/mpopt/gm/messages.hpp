@@ -148,7 +148,6 @@ struct messages {
     assert(unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset);
     index primal = unary_node->unary.primal();
 
-
     for (const auto* pairwise_node : unary_node->forward) {
       auto [pw_primal0, pw_primal1] = pairwise_node->pairwise.primal();
       pw_primal0 = primal;

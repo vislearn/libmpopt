@@ -24,7 +24,6 @@ struct print_iterator_helper {
   , end(end)
   { }
 
-
   ITERATOR begin;
   ITERATOR end;
 };
