@@ -133,6 +133,11 @@ public:
     for (const auto* node : graph_.uniqueness())
       builder.add_factor(node);
 
+#ifndef NDEBUG
+    for (const auto* node : graph_.pairwise())
+      assert(dbg::are_identical(node->pairwise.lower_bound(), 0.0));
+#endif
+
     builder.finalize();
     builder.optimize();
     builder.update_primals();
