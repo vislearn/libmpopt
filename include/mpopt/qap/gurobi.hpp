@@ -215,9 +215,13 @@ public:
 protected:
   void add_linear_constraints()
   {
+    // We assume that both unaries of a pairwise edge are present in the ILP.
+    // Otherwise we can not mark the variables for the pairwise edge
+    // `GRB_CONTINUOUS`.
     for (auto& pair : pairwise_) {
       const auto* pairwise_node = pair.first;
       auto& pairwise = pair.second;
+      assert(unaries_.count(pairwise_node->unary0) == 1 && unaries_.count(pairwise_node->unary1) == 1);
 
       auto& unary0 = unaries_.at(pairwise_node->unary0);
       for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0) {
@@ -236,12 +240,15 @@ protected:
       }
     }
 
-    for (auto it = uniqueness_.begin(); it != uniqueness_.end(); ++it) {
-      const auto* uniqueness_node = it->first;
-      auto& uniqueness = it->second;
+    // Not all unaries of a uniqueness factor have to be present in the ILP.
+    for (auto& pair : uniqueness_) {
+      const auto* uniqueness_node = pair.first;
+      auto& uniqueness = pair.second;
 
       uniqueness_node->traverse_unaries([&](const auto& link, index slot) {
-        model_.addConstr(uniqueness.variable(slot) == unaries_.at(link.node).variable(link.slot));
+        auto it = unaries_.find(link.node);
+        if (it != unaries_.end())
+          model_.addConstr(uniqueness.variable(slot) == it->second.variable(link.slot));
       });
     }
   }
