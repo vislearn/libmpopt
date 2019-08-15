@@ -13,6 +13,7 @@ public:
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
   , iterations_(0)
+  , constant_(0)
   { }
 
   auto& get_graph() { return graph_; }
@@ -21,7 +22,7 @@ public:
   cost lower_bound() const
   {
     assert(graph_.is_prepared());
-    cost result = 0;
+    cost result = constant_;
 
     for (const auto* node : graph_.unaries())
       result += node->unary.lower_bound();
@@ -39,7 +40,7 @@ public:
   {
     assert(graph_.is_prepared());
     const cost inf = std::numeric_limits<cost>::infinity();
-    cost result = 0;
+    cost result = constant_;
 
     for (const auto* node : graph_.unaries())
       result += node->unary.evaluate_primal();
@@ -160,15 +161,20 @@ protected:
     if constexpr (rounding)
       solve_lap_as_ilp();
 
-    for (const auto* node : graph_.unaries())
+    for (const auto* node : graph_.unaries()) {
+      constant_ += node->unary.normalize();
       uniqueness_messages::send_messages_to_uniqueness(node);
+    }
 
-    for (const auto* node : graph_.uniqueness())
+    for (const auto* node : graph_.uniqueness()) {
+      constant_ += node->uniqueness.normalize();
       uniqueness_messages::send_messages_to_unaries(node);
+    }
   }
 
   graph_type graph_;
   int iterations_;
+  cost constant_;
   GRBEnv gurobi_env_;
 };
 
