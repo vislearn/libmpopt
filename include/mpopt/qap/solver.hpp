@@ -104,7 +104,8 @@ public:
   {
     reset_primal();
 
-    gurobi_model_builder<allocator_type> builder(env_);
+    gurobi_model_builder<allocator_type> builder(gurobi_env_);
+    builder.set_constant(constant_);
 
     for (const auto* node : graph_.unaries())
       builder.add_factor(node);
@@ -125,7 +126,7 @@ public:
   {
     reset_primal();
 
-    gurobi_model_builder<allocator_type> builder(env_);
+    gurobi_model_builder<allocator_type> builder(gurobi_env_);
 
     for (const auto* node : graph_.unaries())
       builder.add_factor(node);
@@ -168,7 +169,7 @@ protected:
 
   graph_type graph_;
   int iterations_;
-  GRBEnv env_;
+  GRBEnv gurobi_env_;
 };
 
 }
