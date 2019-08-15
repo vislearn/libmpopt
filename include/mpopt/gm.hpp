@@ -9,9 +9,11 @@
 #include <mpopt/common/fixed_vector.hpp>
 #include <mpopt/common/signal_handler.hpp>
 #include <mpopt/common/consistency.hpp>
+#include <mpopt/common/array_accessor.hpp>
 
-#include <mpopt/gm/unary_factor.hpp>
-#include <mpopt/gm/pairwise_factor.hpp>
+#include <mpopt/common/factors/unary.hpp>
+#include <mpopt/common/factors/pairwise.hpp>
+
 #include <mpopt/gm/messages.hpp>
 #include <mpopt/gm/graph.hpp>
 #include <mpopt/gm/gurobi.hpp>

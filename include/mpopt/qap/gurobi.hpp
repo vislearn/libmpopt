@@ -4,132 +4,6 @@
 namespace mpopt {
 namespace qap {
 
-template<typename ALLOCATOR>
-class gurobi_unary_factor {
-public:
-  using allocator_type = ALLOCATOR;
-  using factor_type = unary_factor<allocator_type>;
-
-  gurobi_unary_factor(factor_type& factor, GRBModel& model)
-  : factor_(&factor)
-  , vars_(factor.size())
-  {
-    std::vector<double> coeffs(vars_.size(), 1.0);
-    for (size_t i = 0; i < factor_->size(); ++i)
-      vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_BINARY);
-
-    GRBLinExpr expr;
-    expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
-    model.addConstr(expr == 1);
-  }
-
-  void update_primal() const
-  {
-    auto& p = factor_->primal();
-    p = factor_type::primal_unset;
-    for (size_t i = 0; i < vars_.size(); ++i) {
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
-        assert(p == factor_type::primal_unset);
-        p = i;
-      }
-    }
-    assert(p != factor_type::primal_unset);
-  }
-
-  auto& variable(index i) { assert(i >= 0 && i < vars_.size()); return vars_[i]; }
-  const auto& factor() const { assert(factor_ != nullptr); return *factor_; }
-
-protected:
-  factor_type* factor_;
-  std::vector<GRBVar> vars_;
-};
-
-
-template<typename ALLOCATOR>
-class gurobi_uniqueness_factor {
-public:
-  using allocator_type = ALLOCATOR;
-  using factor_type = uniqueness_factor<allocator_type>;
-
-  gurobi_uniqueness_factor(factor_type& factor, GRBModel& model)
-  : factor_(&factor)
-  , vars_(factor.costs_.size())
-  {
-    std::vector<double> coeffs(vars_.size(), 1.0);
-    for (size_t i = 0; i < vars_.size(); ++i)
-      vars_[i] = model.addVar(0.0, 1.0, factor_->costs_[i], GRB_BINARY);
-
-    GRBLinExpr expr;
-    expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
-    model.addConstr(expr == 1);
-  }
-
-  void update_primal() const
-  {
-    auto& p = factor_->primal();
-    p = factor_type::primal_unset;
-    for (size_t i = 0; i < vars_.size(); ++i) {
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
-        assert(p == factor_type::primal_unset);
-        p = i;
-      }
-    }
-    assert(p != factor_type::primal_unset);
-  }
-
-  auto& variable(index i) { assert(i >= 0 && i < vars_.size()); return vars_[i]; }
-  const auto& factor() const { assert(factor_ != nullptr); return *factor_; }
-
-protected:
-  factor_type* factor_;
-  std::vector<GRBVar> vars_;
-};
-
-
-template<typename ALLOCATOR>
-class gurobi_pairwise_factor {
-public:
-  using allocator_type = ALLOCATOR;
-  using factor_type = pairwise_factor<allocator_type>;
-
-  gurobi_pairwise_factor(factor_type& factor, GRBModel& model)
-  : factor_(&factor)
-  , vars_(factor.no_labels0_ * factor.no_labels1_)
-  {
-    std::vector<double> coeffs(vars_.size(), 1.0);
-    for (size_t i = 0; i < vars_.size(); ++i)
-      vars_[i] = model.addVar(0.0, 1.0, factor_->costs_[i], GRB_CONTINUOUS);
-
-    GRBLinExpr expr;
-    expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
-    model.addConstr(expr == 1);
-  }
-
-  void update_primal() const
-  {
-    auto& p0 = factor_->primal0_;
-    auto& p1 = factor_->primal1_;
-    p0 = p1 = factor_type::primal_unset;
-
-    for (size_t i = 0; i < vars_.size(); ++i) {
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
-        assert(p0 == factor_type::primal_unset && p1 == factor_type::primal_unset);
-        const auto indices = factor_->to_nonlinear(i);
-        p0 = std::get<0>(indices);
-        p1 = std::get<1>(indices);
-      }
-    }
-
-    assert(p0 != factor_type::primal_unset && p1 != factor_type::primal_unset);
-  }
-
-  auto& variable(index i) { assert(i >= 0 && i < vars_.size()); return vars_[i]; }
-  const auto& factor() const { assert(factor_ != nullptr); return *factor_; }
-
-protected:
-  factor_type* factor_;
-  std::vector<GRBVar> vars_;
-};
 
 
 template<typename ALLOCATOR>
@@ -221,21 +95,22 @@ protected:
     for (auto& pair : pairwise_) {
       const auto* pairwise_node = pair.first;
       auto& pairwise = pair.second;
-      assert(unaries_.count(pairwise_node->unary0) == 1 && unaries_.count(pairwise_node->unary1) == 1);
+      const auto [size0, size1] = pairwise_node->pairwise.size();
+      two_dimension_array_accessor a(size0, size1);
 
       auto& unary0 = unaries_.at(pairwise_node->unary0);
-      for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0) {
+      for (index idx0 = 0; idx0 < size0; ++idx0) {
         GRBLinExpr expr;
-        for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1)
-          expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
+        for (index idx1 = 0; idx1 < size1; ++idx1)
+          expr += pairwise.variable(a.to_linear(idx0, idx1));
         model_.addConstr(expr == unary0.variable(idx0));
       }
 
       auto& unary1 = unaries_.at(pairwise_node->unary1);
-      for (index idx1 = 0; idx1 < pairwise_node->pairwise.no_labels1_; ++idx1) {
+      for (index idx1 = 0; idx1 < size1; ++idx1) {
         GRBLinExpr expr;
-        for (index idx0 = 0; idx0 < pairwise_node->pairwise.no_labels0_; ++idx0)
-          expr += pairwise.variable(pairwise_node->pairwise.to_linear(idx0, idx1));
+        for (index idx0 = 0; idx0 < size0; ++idx0)
+          expr += pairwise.variable(a.to_linear(idx0, idx1));
         model_.addConstr(expr == unary1.variable(idx1));
       }
     }

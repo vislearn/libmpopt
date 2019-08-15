@@ -1,8 +1,7 @@
-#ifndef LIBMPOPT_GM_PAIRWISE_FACTOR_HPP
-#define LIBMPOPT_GM_PAIRWISE_FACTOR_HPP
+#ifndef LIBMPOPT_COMMON_FACTORS_PAIRWISE_HPP
+#define LIBMPOPT_COMMON_FACTORS_PAIRWISE_HPP
 
 namespace mpopt {
-namespace gm {
 
 template<typename ALLOCATOR = std::allocator<cost>>
 class pairwise_factor {
@@ -54,15 +53,15 @@ public:
 
   void set(const index idx0, const index idx1, cost c)
   {
-    assert_index(idx0, idx1);
-    const index linear_idx = to_linear(idx0, idx1);
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
+    const index linear_idx = a.to_linear(idx0, idx1);
     costs_[linear_idx] = c;
   }
 
   cost get(const index idx0, const index idx1)
   {
-    assert_index(idx0, idx1);
-    const index linear_idx = to_linear(idx0, idx1);
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
+    const index linear_idx = a.to_linear(idx0, idx1);
     return costs_[linear_idx];
   }
 
@@ -73,18 +72,20 @@ public:
 
   cost min_marginal0(const index idx0) const
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     cost minimum = std::numeric_limits<cost>::infinity();
     for (index idx1 = 0; idx1 < no_labels1_; ++idx1) {
-      minimum = std::min(minimum, costs_[to_linear(idx0, idx1)]);
+      minimum = std::min(minimum, costs_[a.to_linear(idx0, idx1)]);
     }
     return minimum;
   }
 
   cost min_marginal1(const index idx1) const
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     cost minimum = std::numeric_limits<cost>::infinity();
     for (index idx0 = 0; idx0 < no_labels0_; ++idx0) {
-      minimum = std::min(minimum, costs_[to_linear(idx0, idx1)]);
+      minimum = std::min(minimum, costs_[a.to_linear(idx0, idx1)]);
     }
     return minimum;
   }
@@ -100,18 +101,20 @@ public:
 
   void repam0(const index idx0, const cost msg)
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     for (index idx1 = 0; idx1 < no_labels1_; ++idx1) {
       assert_index(idx0, idx1);
-      auto linear_idx = to_linear(idx0, idx1);
+      auto linear_idx = a.to_linear(idx0, idx1);
       costs_[linear_idx] += msg;
     }
   }
 
   void repam1(const index idx1, const cost msg)
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     for (index idx0 = 0; idx0 < no_labels0_; ++idx0) {
       assert_index(idx0, idx1);
-      auto linear_idx = to_linear(idx0, idx1);
+      auto linear_idx = a.to_linear(idx0, idx1);
       costs_[linear_idx] += msg;
     }
   }
@@ -129,19 +132,21 @@ public:
 
   cost evaluate_primal() const
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     if (primal0_ != primal_unset && primal1_ != primal_unset)
-      return costs_[to_linear(primal0_, primal1_)];
+      return costs_[a.to_linear(primal0_, primal1_)];
     else
       return std::numeric_limits<cost>::infinity();
   }
 
   void round_independently()
   {
+    two_dimension_array_accessor a(no_labels0_, no_labels1_);
     auto it = std::min_element(costs_.cbegin(), costs_.cend());
     auto linear_idx = it - costs_.cbegin();
     assert(linear_idx >= 0 && linear_idx < costs_.size());
 
-    const auto indices = to_nonlinear(linear_idx);
+    const auto indices = a.to_nonlinear(linear_idx);
     primal0_ = std::get<0>(indices);
     primal1_ = std::get<1>(indices);
 
@@ -167,25 +172,6 @@ protected:
     assert(idx0 * idx1 < costs_.size());
   }
 
-  size_t to_linear(const index idx0, const index idx1) const
-  {
-    assert_index(idx0, idx1);
-    size_t result = idx0 * no_labels1_ + idx1;
-    assert(result >= 0 && result < costs_.size());
-    return result;
-  }
-
-  std::tuple<index, index> to_nonlinear(const index idx) const
-  {
-    assert(idx >= 0 && idx < costs_.size());
-    const index idx0 = idx / no_labels1_;
-    const index idx1 = idx % no_labels1_;
-    assert(idx0 >= 0 && idx0 < no_labels0_);
-    assert(idx1 >= 0 && idx1 < no_labels1_);
-    assert(to_linear(idx0, idx1) == idx);
-    return std::tuple(idx0, idx1);
-  }
-
   fixed_vector_alloc_gen<cost, ALLOCATOR> costs_;
   index primal0_, primal1_;
   index no_labels0_, no_labels1_;
@@ -194,12 +180,57 @@ protected:
   index index0_, index1_;
 #endif
 
-  friend struct messages;
-  template<typename> friend class gurobi_model_builder; // FIXME: Get rid of this.
   template<typename> friend class gurobi_pairwise_factor;
 };
 
-}
+
+template<typename ALLOCATOR>
+class gurobi_pairwise_factor {
+public:
+  using allocator_type = ALLOCATOR;
+  using factor_type = pairwise_factor<allocator_type>;
+
+  gurobi_pairwise_factor(factor_type& factor, GRBModel& model)
+  : factor_(&factor)
+  , vars_(factor.no_labels0_ * factor.no_labels1_)
+  {
+    std::vector<double> coeffs(vars_.size(), 1.0);
+    for (size_t i = 0; i < vars_.size(); ++i)
+      vars_[i] = model.addVar(0.0, 1.0, factor_->costs_[i], GRB_CONTINUOUS);
+
+    GRBLinExpr expr;
+    expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
+    model.addConstr(expr == 1);
+  }
+
+  void update_primal() const
+  {
+    auto [size0, size1] = factor_->size();
+    two_dimension_array_accessor a(size0, size1);
+
+    auto [p0, p1] = factor_->primal();
+    p0 = p1 = factor_type::primal_unset;
+
+    for (size_t i = 0; i < vars_.size(); ++i) {
+      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
+        assert(p0 == factor_type::primal_unset && p1 == factor_type::primal_unset);
+        const auto indices = a.to_nonlinear(i);
+        p0 = std::get<0>(indices);
+        p1 = std::get<1>(indices);
+      }
+    }
+
+    assert(p0 != factor_type::primal_unset && p1 != factor_type::primal_unset);
+  }
+
+  auto& variable(index i) { assert(i >= 0 && i < vars_.size()); return vars_[i]; }
+  const auto& factor() const { assert(factor_ != nullptr); return *factor_; }
+
+protected:
+  factor_type* factor_;
+  std::vector<GRBVar> vars_;
+};
+
 }
 
 #endif

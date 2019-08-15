@@ -1,8 +1,7 @@
-#ifndef LIBMPOPT_GM_UNARY_FACTOR_HPP
-#define LIBMPOPT_GM_UNARY_FACTOR_HPP
+#ifndef LIBMPOPT_COMMON_FACTORS_UNARY_HPP
+#define LIBMPOPT_COMMON_FACTORS_UNARY_HPP
 
 namespace mpopt {
-namespace gm {
 
 template<typename ALLOCATOR = std::allocator<cost>>
 class unary_factor {
@@ -103,13 +102,49 @@ protected:
 #ifndef NDEBUG
   index index_;
 #endif
-
-  friend struct messages;
-  template<typename> friend class gurobi_model_builder; // FIXME: Get rid of this.
-  template<typename> friend class gurobi_unary_factory;
 };
 
-}
+
+template<typename ALLOCATOR>
+class gurobi_unary_factor {
+public:
+  using allocator_type = ALLOCATOR;
+  using factor_type = unary_factor<allocator_type>;
+
+  gurobi_unary_factor(factor_type& factor, GRBModel& model)
+  : factor_(&factor)
+  , vars_(factor.size())
+  {
+    std::vector<double> coeffs(vars_.size(), 1.0);
+    for (size_t i = 0; i < factor_->size(); ++i)
+      vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_BINARY);
+
+    GRBLinExpr expr;
+    expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
+    model.addConstr(expr == 1);
+  }
+
+  void update_primal() const
+  {
+    auto& p = factor_->primal();
+    p = factor_type::primal_unset;
+    for (size_t i = 0; i < vars_.size(); ++i) {
+      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
+        assert(p == factor_type::primal_unset);
+        p = i;
+      }
+    }
+    assert(p != factor_type::primal_unset);
+  }
+
+  auto& variable(index i) { assert(i >= 0 && i < vars_.size()); return vars_[i]; }
+  const auto& factor() const { assert(factor_ != nullptr); return *factor_; }
+
+protected:
+  factor_type* factor_;
+  std::vector<GRBVar> vars_;
+};
+
 }
 
 #endif

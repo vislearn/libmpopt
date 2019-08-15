@@ -95,16 +95,18 @@ struct messages {
     }
 
     for (const auto* pairwise_node : unary_node->forward) {
-      if (pairwise_node->pairwise.primal0_ == pw_unset)
+      auto [pw0, pw1] = pairwise_node->pairwise.primal();
+      if (pw0 == pw_unset)
         result.mark_unknown();
-      else if (unary_node->unary.primal() != pairwise_node->pairwise.primal0_)
+      else if (pw0 != unary_node->unary.primal())
         result.mark_inconsistent();
     }
 
     for (const auto* pairwise_node : unary_node->backward) {
-      if (pairwise_node->pairwise.primal1_ == pw_unset)
+      auto [pw0, pw1] = pairwise_node->pairwise.primal();
+      if (pw1 == pw_unset)
         result.mark_unknown();
-      else if (unary_node->unary.primal() != pairwise_node->pairwise.primal1_)
+      else if (pw1 != unary_node->unary.primal())
         result.mark_inconsistent();
     }
 
@@ -117,22 +119,24 @@ struct messages {
     constexpr auto pw_unset = decltype(pairwise_node->pairwise)::primal_unset;
     constexpr auto un_unset = decltype(pairwise_node->unary0->unary)::primal_unset;
 
+    const auto [pw0, pw1] = pairwise_node->pairwise.primal();
+    const auto un0 = pairwise_node->unary0->unary.primal();
+    const auto un1 = pairwise_node->unary1->unary.primal();
+
     consistency result;
-    if (pairwise_node->pairwise.primal0_ == pw_unset ||
-        pairwise_node->pairwise.primal1_ == pw_unset)
-    {
+    if (pw0 == pw_unset || pw1 == pw_unset) {
       result.mark_unknown();
       return result;
     }
 
-    if (pairwise_node->unary0->unary.primal_ == un_unset)
+    if (un0 == un_unset)
       result.mark_unknown();
-    else if (pairwise_node->unary0->unary.primal_ != pairwise_node->pairwise.primal0_)
+    else if (un0 != pw0)
       result.mark_inconsistent();
 
-    if (pairwise_node->unary1->unary.primal_ == un_unset)
+    if (un1 == un_unset)
       result.mark_unknown();
-    else if (pairwise_node->unary1->unary.primal_ != pairwise_node->pairwise.primal1_)
+    else if (un1 != pw1)
       result.mark_inconsistent();
 
     return result;
@@ -144,11 +148,16 @@ struct messages {
     assert(unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset);
     index primal = unary_node->unary.primal();
 
-    for (const auto* pairwise_node : unary_node->forward)
-      pairwise_node->pairwise.primal0_ = primal;
 
-    for (const auto* pairwise_node : unary_node->backward)
-      pairwise_node->pairwise.primal1_ = primal;
+    for (const auto* pairwise_node : unary_node->forward) {
+      auto [pw_primal0, pw_primal1] = pairwise_node->pairwise.primal();
+      pw_primal0 = primal;
+    }
+
+    for (const auto* pairwise_node : unary_node->backward) {
+      auto [pw_primal0, pw_primal1] = pairwise_node->pairwise.primal();
+      pw_primal1 = primal;
+    }
   }
 
 private:

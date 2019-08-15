@@ -10,10 +10,13 @@
 #include <mpopt/common/signal_handler.hpp>
 #include <mpopt/common/misc.hpp>
 #include <mpopt/common/consistency.hpp>
+#include <mpopt/common/array_accessor.hpp>
+
+#include <mpopt/common/factors/unary.hpp>
+#include <mpopt/common/factors/pairwise.hpp>
 
 #include <mpopt/qap/unary_factor.hpp>
 #include <mpopt/qap/uniqueness_factor.hpp>
-#include <mpopt/qap/pairwise_factor.hpp>
 #include <mpopt/qap/graph.hpp>
 #include <mpopt/qap/pairwise_messages.hpp>
 #include <mpopt/qap/uniqueness_messages.hpp>
