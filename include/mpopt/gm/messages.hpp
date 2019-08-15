@@ -46,6 +46,11 @@ struct messages {
       --split;
     }
     assert(split == 0);
+
+#ifndef NDEBUG
+    for (index i = 0; i < unary_node->unary.size(); ++i)
+      assert(dbg::are_identical(unary_node->unary.get(i), 0.0));
+#endif
   }
 
   template<bool forward, typename PAIRWISE_NODE>
@@ -145,6 +150,8 @@ struct messages {
     for (const auto* pairwise_node : unary_node->backward)
       pairwise_node->pairwise.primal1_ = primal;
   }
+
+private:
 
   template<bool forward, typename UNARY_NODE, typename PAIRWISE_NODE>
   static void directed_send_helper(const UNARY_NODE* unary_node, const PAIRWISE_NODE* pairwise_node, double fraction)

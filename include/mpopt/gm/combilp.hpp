@@ -26,18 +26,8 @@ public:
       reparametrize_border();
 
       GRBEnv env;
-      size_t inconsistent = 0;
       gurobi_model_builder<allocator_type> builder(env);
-      for (const auto* node : graph_->unaries()) {
-        if (!mask_sac_.at(node)) {
-          builder.add_factor(node);
-          ++inconsistent;
-        }
-      }
-      for (const auto* node : graph_->pairwise()) {
-        if (!mask_sac_.at(node->unary0) && !mask_sac_.at(node->unary1))
-          builder.add_factor(node);
-      }
+      const auto inconsistent = populate_builder(builder);
 
       std::cout << "\n== CombiLP iteration " << (iterations+1)
                 << " (" << inconsistent << "/" << graph_->unaries().size() << ", "
@@ -92,41 +82,41 @@ protected:
 
   bool set_consistent_unary_primal_if_possible(const unary_node_type* unary_node)
   {
-      unary_node->unary.reset_primal();
+    unary_node->unary.reset_primal();
 
-      bool is_sac = false;
-      bool is_first = true;
+    bool is_sac = false;
+    bool is_first = true;
 
-      auto process_primal = [&](const index label) {
-        if (is_first) {
-          is_first = false;
-          unary_node->unary.primal() = label;
-        } else {
-          if (unary_node->unary.primal() != label)
-            unary_node->unary.reset_primal();
-        }
-      };
-
-      for (const auto* pairwise_node : unary_node->backward) {
-        auto [p0, p1] = pairwise_node->pairwise.primal();
-        assert(p1 != decltype(pairwise_node->pairwise)::primal_unset);
-        process_primal(p1);
-      }
-
-      for (const auto* pairwise_node : unary_node->forward) {
-        auto [p0, p1] = pairwise_node->pairwise.primal();
-        assert(p0 != decltype(pairwise_node->pairwise)::primal_unset);
-        process_primal(p0);
-      }
-
+    auto process_primal = [&](const index label) {
       if (is_first) {
-        unary_node->unary.round_independently();
-        is_sac = true;
+        is_first = false;
+        unary_node->unary.primal() = label;
+      } else {
+        if (unary_node->unary.primal() != label)
+          unary_node->unary.reset_primal();
       }
+    };
 
-      is_sac = unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset;
-      assert(!is_sac || messages::check_unary_primal_consistency(unary_node));
-      return is_sac;
+    for (const auto* pairwise_node : unary_node->backward) {
+      auto [p0, p1] = pairwise_node->pairwise.primal();
+      assert(p1 != decltype(pairwise_node->pairwise)::primal_unset);
+      process_primal(p1);
+    }
+
+    for (const auto* pairwise_node : unary_node->forward) {
+      auto [p0, p1] = pairwise_node->pairwise.primal();
+      assert(p0 != decltype(pairwise_node->pairwise)::primal_unset);
+      process_primal(p0);
+    }
+
+    if (is_first) {
+      unary_node->unary.round_independently();
+      is_sac = true;
+    }
+
+    is_sac = unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset;
+    assert(!is_sac || messages::check_unary_primal_consistency(unary_node));
+    return is_sac;
   }
 
   void reparametrize_border()
@@ -158,6 +148,24 @@ protected:
     }
 
     return result;
+  }
+
+  size_t populate_builder(gurobi_model_builder<allocator_type>& builder)
+  {
+    size_t inconsistent = 0;
+
+    for (const auto* node : graph_->unaries()) {
+      if (!mask_sac_.at(node)) {
+        builder.add_factor(node);
+        ++inconsistent;
+      }
+    }
+
+    for (const auto* node : graph_->pairwise())
+      if (!mask_sac_.at(node->unary0) && !mask_sac_.at(node->unary1))
+        builder.add_factor(node);
+
+    return inconsistent;
   }
 
   template<typename PAIRWISE_NODE>
