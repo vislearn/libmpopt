@@ -30,17 +30,15 @@ struct unary_node {
     return FORWARD ? forward : backward;
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = unary.is_prepared();
+    assert(unary.is_prepared());
 
     for (const auto* pairwise : forward)
-      result = result && pairwise != nullptr;
+      assert(pairwise != nullptr);
 
     for (const auto* pairwise : backward)
-      result = result && pairwise != nullptr;
-
-    return result;
+      assert(pairwise != nullptr);
   }
 };
 
@@ -67,9 +65,11 @@ struct pairwise_node {
     return forward ? unary1 : unary0;
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    return pairwise.is_prepared() && unary0 != nullptr && unary1 != nullptr;
+    assert(pairwise.is_prepared());
+    assert(unary0 != nullptr);
+    assert(unary1 != nullptr);
   }
 };
 
@@ -149,17 +149,13 @@ public:
 #endif
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = true;
-
     for (auto* node : unaries_)
-      result = result && node->is_prepared();
+      node->check_structure();
 
     for (auto* node : pairwise_)
-      result = result && node->is_prepared();
-
-    return result;
+      node->check_structure();
   }
 
 protected:

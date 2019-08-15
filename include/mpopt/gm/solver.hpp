@@ -21,7 +21,7 @@ public:
 
   cost lower_bound() const
   {
-    assert(graph_.is_prepared());
+    graph_.check_structure();
     cost result = constant_;
 
     for (const auto* node : graph_.unaries())
@@ -35,7 +35,7 @@ public:
 
   cost evaluate_primal() const
   {
-    assert(graph_.is_prepared());
+    graph_.check_structure();
     const cost inf = std::numeric_limits<cost>::infinity();
     cost result = constant_;
 
@@ -67,8 +67,8 @@ public:
 
   void run(const int max_iterations = 1000)
   {
+    graph_.check_structure();
     const int max_batches = (max_iterations + batch_size - 1) / batch_size;
-    assert(graph_.is_prepared());
     cost best_ub = std::numeric_limits<cost>::infinity();
 
     signal_handler h;

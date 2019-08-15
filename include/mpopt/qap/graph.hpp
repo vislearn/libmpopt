@@ -40,13 +40,13 @@ struct unary_node {
   , uniqueness(number_of_labels, allocator)
   { }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = unary.is_prepared();
+    assert(unary.is_prepared());
 
     index slot = 0;
     for (const auto& link : uniqueness) {
-      // result = result && link.is_prepared();
+      // assert(link.is_prepared());
       // FIXME: The handling of unary and uniqueness factors is inconsistent.
       //        The uniqueness factor knows about the dummy. For the unary we
       //        add +1 to the number of labels to model the dummy.
@@ -58,8 +58,6 @@ struct unary_node {
       assert(link.node == nullptr || link.node->unaries[link.slot].slot == slot);
       ++slot;
     }
-
-    return result;
   }
 
   template<typename FUNCTOR>
@@ -91,19 +89,17 @@ struct uniqueness_node {
   , unaries(number_of_unaries, allocator)
   { }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = uniqueness.is_prepared();
+    assert(uniqueness.is_prepared());
 
     index slot = 0;
     for (const auto& link : unaries) {
-      result = result && link.is_prepared();
+      assert(link.is_prepared());
       assert(link.node == nullptr || link.node->uniqueness[link.slot].node == this);
       assert(link.node == nullptr || link.node->uniqueness[link.slot].slot == slot);
       ++slot;
     }
-
-    return result;
   }
 
   template<typename FUNCTOR>
@@ -141,9 +137,11 @@ struct pairwise_node {
     return forward ? unary1 : unary0;
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    return pairwise.is_prepared() && unary0 != nullptr && unary1 != nullptr;
+    assert(pairwise.is_prepared());
+    assert(unary0 != nullptr);
+    assert(unary1 != nullptr);
   }
 };
 
@@ -254,20 +252,18 @@ public:
     uniqueness->unaries[slot].slot = label;
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
     bool result = true;
 
     for (auto* node : unaries_)
-      result = result && node->is_prepared();
+      node->check_structure();
 
     for (auto* node : uniqueness_)
-      result = result && node->is_prepared();
+      node->check_structure();
 
     for (auto* node : pairwise_)
-      result = result && node->is_prepared();
-
-    return result;
+      node->check_structure();
   }
 
 protected:

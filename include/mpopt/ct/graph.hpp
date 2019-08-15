@@ -149,12 +149,12 @@ struct detection_node {
     }
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = detection.is_prepared();
+    assert(detection.is_prepared());
 
     for (const auto& edge : incoming) {
-      result &= edge.is_prepared();
+      assert(edge.is_prepared());
       assert(edge.node1->outgoing[edge.slot1].node1 == this ||
              edge.node1->outgoing[edge.slot1].node2 == this);
       assert(!edge.is_division() ||
@@ -165,18 +165,16 @@ struct detection_node {
 
     for (const auto& edge : outgoing)
     {
-      result &= edge.is_prepared();
+      assert(edge.is_prepared());
       assert(edge.node1->incoming[edge.slot1].node1 == this);
       assert(!edge.is_division() ||
              edge.node2->incoming[edge.slot2].node1 == this);
     }
 
     for (const auto& edge : conflicts) {
-      result &= edge.is_prepared();
+      assert(edge.is_prepared());
       assert(edge.node->detections[edge.slot].node == this);
     }
-
-    return result;
   }
 };
 
@@ -206,16 +204,14 @@ struct conflict_node {
     }
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = conflict.is_prepared();
+    assert(conflict.is_prepared());
 
     for (const auto& edge : detections) {
-      result &= edge.is_prepared();
+      assert(edge.is_prepared());
       assert(edge.node->conflicts[edge.slot].node == this);
     }
-
-    return result;
   }
 };
 
@@ -377,19 +373,15 @@ public:
       });
   }
 
-  bool is_prepared() const
+  void check_structure() const
   {
-    bool result = true;
-
     for (auto& timestep : timesteps_) {
       for (auto* node : timestep.detections)
-        result &= node->is_prepared();
+        node->check_structure();
 
       for (auto* node : timestep.conflicts)
-        result &= node->is_prepared();
+        node->check_structure();
     }
-
-    return result;
   }
 
 protected:

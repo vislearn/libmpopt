@@ -23,7 +23,7 @@ public:
 
   cost lower_bound() const
   {
-    assert(graph_.is_prepared());
+    graph_.check_structure();
     cost result = 0;
     for (const auto& timestep : graph_.timesteps()) {
       for (const auto* node : timestep.detections)
@@ -38,7 +38,7 @@ public:
 
   cost evaluate_primal() const
   {
-    assert(graph_.is_prepared());
+    graph_.check_structure();
     const cost inf = std::numeric_limits<cost>::infinity();
     cost result = 0;
 
@@ -116,7 +116,7 @@ public:
 
   void run(const int max_batches = 1000 / batch_size)
   {
-    assert(graph_.is_prepared());
+    graph_.check_structure();
     const auto& timesteps = graph_.timesteps();
 
     std::vector<detection_primal> best_detection_primals(graph_.number_of_detections());
