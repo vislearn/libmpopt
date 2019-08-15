@@ -9,6 +9,7 @@ from mpopt import qap, utils
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Optimizer for *.dd quadratic assignment models.')
     parser.add_argument('--relaxation', choices=('gm', 'qap-pw', 'qap'), default='qap')
+    parser.add_argument('--maxIterations', type=int, default=1000)
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
     args = parser.parse_args()
 
@@ -24,4 +25,4 @@ if __name__ == '__main__':
         raise NotImplementedError
 
     print('initial lower bound: {}'.format(solver.lower_bound()), flush=True)
-    solver.run()
+    solver.run(args.maxIterations)
