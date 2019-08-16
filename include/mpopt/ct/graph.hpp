@@ -121,13 +121,13 @@ struct detection_node {
   using detection_type = detection_factor<ALLOCATOR>;
   using conflict_type = conflict_node<ALLOCATOR>;
 
-  mutable detection_type detection;
+  mutable detection_type factor;
   fixed_vector_alloc_gen<transition_edge<node_type>, ALLOCATOR> incoming;
   fixed_vector_alloc_gen<transition_edge<node_type>, ALLOCATOR> outgoing;
   fixed_vector_alloc_gen<conflict_edge<conflict_type>, ALLOCATOR> conflicts;
 
   detection_node(index number_of_incoming, index number_of_outgoing, index number_of_conflicts, const allocator_type& allocator)
-  : detection(number_of_incoming, number_of_outgoing, allocator)
+  : factor(number_of_incoming, number_of_outgoing, allocator)
   , incoming(number_of_incoming, allocator)
   , outgoing(number_of_outgoing, allocator)
   , conflicts(number_of_conflicts, allocator)
@@ -151,7 +151,7 @@ struct detection_node {
 
   void check_structure() const
   {
-    assert(detection.is_prepared());
+    assert(factor.is_prepared());
 
     for (const auto& edge : incoming) {
       assert(edge.is_prepared());
@@ -186,11 +186,11 @@ struct conflict_node {
   using conflict_type = conflict_factor<ALLOCATOR>;
   using detection_type = detection_node<ALLOCATOR>;
 
-  mutable conflict_type conflict;
+  mutable conflict_type factor;
   fixed_vector_alloc_gen<conflict_edge<detection_type>, ALLOCATOR> detections;
 
   conflict_node(index number_of_detections, const allocator_type& allocator)
-  : conflict(number_of_detections, allocator)
+  : factor(number_of_detections, allocator)
   , detections(number_of_detections, allocator)
   { }
 
@@ -206,7 +206,7 @@ struct conflict_node {
 
   void check_structure() const
   {
-    assert(conflict.is_prepared());
+    assert(factor.is_prepared());
 
     for (const auto& edge : detections) {
       assert(edge.is_prepared());
@@ -261,7 +261,7 @@ public:
     node = a.allocate();
     new (node) detection_node_type(number_of_incoming, number_of_outgoing, number_of_conflicts, allocator_);
 #ifndef NDEBUG
-    node->detection.set_debug_info(timestep, detection);
+    node->factor.set_debug_info(timestep, detection);
 #endif
 
     return node;
@@ -281,7 +281,7 @@ public:
     node = a.allocate();
     new (node) conflict_node_type(number_of_detections, allocator_); // FIXME: Dtor is never called.
 #ifndef NDEBUG
-    node->conflict.set_debug_info(timestep, conflict);
+    node->factor.set_debug_info(timestep, conflict);
 #endif
 
     return node;

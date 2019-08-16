@@ -25,10 +25,10 @@ public:
     cost result = constant_;
 
     for (const auto* node : graph_.unaries())
-      result += node->unary.lower_bound();
+      result += node->factor.lower_bound();
 
     for (const auto* node : graph_.pairwise())
-      result += node->pairwise.lower_bound();
+      result += node->factor.lower_bound();
 
     return result;
   }
@@ -42,13 +42,13 @@ public:
     for (const auto* node : graph_.unaries()) {
       if (!messages::check_unary_primal_consistency(node))
         result += inf;
-      result += node->unary.evaluate_primal();
+      result += node->factor.evaluate_primal();
     }
 
     for (const auto* node : graph_.pairwise()) {
       if (!messages::check_pairwise_primal_consistency(node))
         result += inf;
-      result += node->pairwise.evaluate_primal();
+      result += node->factor.evaluate_primal();
     }
 
     return result;
@@ -59,10 +59,10 @@ public:
   void reset_primal()
   {
     for (const auto* node : graph_.unaries())
-      node->unary.reset_primal();
+      node->factor.reset_primal();
 
     for (const auto* node : graph_.pairwise())
-      node->pairwise.reset_primal();
+      node->factor.reset_primal();
   }
 
   void run(const int max_iterations = 1000)
@@ -140,7 +140,7 @@ protected:
     auto helper = [&](auto begin, auto end) {
       for (auto it = begin; it != end; ++it) {
         messages::receive<forward>(*it);
-        constant_ += (*it)->unary.normalize();
+        constant_ += (*it)->factor.normalize();
 
         if constexpr (rounding) {
           messages::trws_style_rounding<forward>(*it);

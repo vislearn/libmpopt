@@ -80,9 +80,9 @@ double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lowe
 // factor API
 //
 
-void mpopt_qap_unary_set_cost(mpopt_qap_unary_node* n, int label, double cost) { from_unary(n)->unary.set(label, cost); }
-void mpopt_qap_uniqueness_set_cost(mpopt_qap_uniqueness_node* n, int unary, double cost) { from_uniqueness(n)->uniqueness.set(unary, cost); }
-void mpopt_qap_pairwise_set_cost(mpopt_qap_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->pairwise.set(l0, l1, cost); }
+void mpopt_qap_unary_set_cost(mpopt_qap_unary_node* n, int label, double cost) { from_unary(n)->factor.set(label, cost); }
+void mpopt_qap_uniqueness_set_cost(mpopt_qap_uniqueness_node* n, int unary, double cost) { from_uniqueness(n)->factor.set(unary, cost); }
+void mpopt_qap_pairwise_set_cost(mpopt_qap_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->factor.set(l0, l1, cost); }
 
 }
 

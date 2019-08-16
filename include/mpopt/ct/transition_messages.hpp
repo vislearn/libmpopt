@@ -7,17 +7,17 @@ namespace ct {
 struct transition_messages {
 
   template<bool to_right, typename DETECTION_NODE>
-  static void send_messages(const DETECTION_NODE& node)
+  static void send_messages(const DETECTION_NODE* node)
   {
-    auto& here = node.detection;
+    auto& here = node->factor;
     using detection_type = typename DETECTION_NODE::detection_type;
 
 #ifndef NDEBUG
     auto local_lower_bound = [&](const auto& edge) {
       cost result = here.lower_bound();
-      result += edge.node1->detection.lower_bound();
+      result += edge.node1->factor.lower_bound();
       if (edge.is_division() && to_right)
-        result += edge.node2->detection.lower_bound();
+        result += edge.node2->factor.lower_bound();
       return result;
     };
 #endif
@@ -35,7 +35,7 @@ struct transition_messages {
     const auto real_second_minimum = std::min(second_minimum, cost_nirvana);
     const auto set_to = std::min(constant + (first_minimum + real_second_minimum) * 0.5, 0.0);
 
-    node.template traverse_transitions<to_right>([&](auto& edge, auto slot) {
+    node->template traverse_transitions<to_right>([&](auto& edge, auto slot) {
       const auto slot_cost   = to_right ? here.outgoing(slot)
                                         : here.incoming(slot);
       const auto repam_this  = to_right ? &detection_type::repam_outgoing
@@ -49,10 +49,10 @@ struct transition_messages {
       auto msg = constant + slot_cost - set_to;
       (here.*repam_this)(slot, -msg);
       if (edge.is_division() && to_right) {
-        (edge.node1->detection.*repam_other)(edge.slot1, .5 * msg);
-        (edge.node2->detection.*repam_other)(edge.slot2, .5 * msg);
+        (edge.node1->factor.*repam_other)(edge.slot1, .5 * msg);
+        (edge.node2->factor.*repam_other)(edge.slot2, .5 * msg);
       } else {
-        (edge.node1->detection.*repam_other)(edge.slot1, msg);
+        (edge.node1->factor.*repam_other)(edge.slot1, msg);
       }
 
 #ifndef NDEBUG
@@ -63,10 +63,10 @@ struct transition_messages {
   }
 
   template<bool to_right, typename DETECTION_NODE>
-  static consistency check_primal_consistency_impl(const DETECTION_NODE& node, index slot)
+  static consistency check_primal_consistency_impl(const DETECTION_NODE* node, index slot)
   {
     consistency result;
-    const auto& here = node.detection;
+    const auto& here = node->factor;
 
     if (!here.primal().template is_transition_set<to_right>()) {
       result.mark_unknown();
@@ -74,14 +74,14 @@ struct transition_messages {
     }
 
     const auto p = here.primal().template transition<to_right>();
-    assert(slot >= 0 && slot < node.template transitions<to_right>().size());
-    const auto& edge = node.template transitions<to_right>()[slot];
+    assert(slot >= 0 && slot < node->template transitions<to_right>().size());
+    const auto& edge = node->template transitions<to_right>()[slot];
 
     // We do not mark the current node as `unknown` if the other side is
     // currently unset. This mirrors the implementation for the conflict
     // consistency.
 
-    const auto& there1 = edge.node1->detection;
+    const auto& there1 = edge.node1->factor;
     if (there1.primal().template is_transition_set<!to_right>()) {
       if ((p == slot) != (there1.primal().template transition<!to_right>() == edge.slot1))
         result.mark_inconsistent();
@@ -97,7 +97,7 @@ struct transition_messages {
     // For `to_right == false` the second connected factor is a factor of
     // the very same time step (so the "sibling" of `node`).
     if (edge.is_division()) {
-      const auto& there2 = edge.node2->detection;
+      const auto& there2 = edge.node2->factor;
       if (there2.primal().is_incoming_set()) {
         if ((p == slot) != (there2.primal().incoming() == edge.slot2))
           result.mark_inconsistent();
@@ -110,19 +110,19 @@ struct transition_messages {
   }
 
   template<bool to_right, typename DETECTION_NODE>
-  static consistency check_primal_consistency(const DETECTION_NODE& node, index slot)
+  static consistency check_primal_consistency(const DETECTION_NODE* node, index slot)
   {
     consistency this_side = check_primal_consistency_impl<to_right>(node, slot);
 
 #ifndef NDEBUG
-    assert(slot >= 0 && slot < node.template transitions<to_right>().size());
-    const auto& edge = node.template transitions<to_right>()[slot];
+    assert(slot >= 0 && slot < node->template transitions<to_right>().size());
+    const auto& edge = node->template transitions<to_right>()[slot];
 
-    consistency other_side1 = check_primal_consistency_impl<!to_right>(*edge.node1, edge.slot1);
+    consistency other_side1 = check_primal_consistency_impl<!to_right>(edge.node1, edge.slot1);
     assert(this_side == other_side1);
 
     if (edge.is_division()) {
-      consistency other_side2 = check_primal_consistency_impl<false>(*edge.node2, edge.slot2);
+      consistency other_side2 = check_primal_consistency_impl<false>(edge.node2, edge.slot2);
       assert(this_side == other_side2);
     }
 #endif
@@ -131,15 +131,15 @@ struct transition_messages {
   }
 
   template<typename DETECTION_NODE>
-  static consistency check_primal_consistency(const DETECTION_NODE& node)
+  static consistency check_primal_consistency(const DETECTION_NODE* node)
   {
     consistency result;
 
-    node.template traverse_transitions<false>([&](const auto& edge, auto slot) {
+    node->template traverse_transitions<false>([&](const auto& edge, auto slot) {
       result.merge(check_primal_consistency<false>(node, slot));
     });
 
-    node.template traverse_transitions<true>([&](const auto& edge, auto slot) {
+    node->template traverse_transitions<true>([&](const auto& edge, auto slot) {
       result.merge(check_primal_consistency<true>(node, slot));
     });
 
@@ -147,9 +147,9 @@ struct transition_messages {
   }
 
   template<bool to_right, typename DETECTION_NODE>
-  static void propagate_primal(const DETECTION_NODE& node)
+  static void propagate_primal(const DETECTION_NODE* node)
   {
-    const auto& here = node.detection;
+    const auto& here = node->factor;
 
     if (here.primal().is_detection_off())
       return;
@@ -157,38 +157,38 @@ struct transition_messages {
     if constexpr (to_right) {
       assert(here.primal().is_outgoing_set());
       if (here.primal().outgoing() < here.outgoing_.size() - 1) {
-        const auto& edge = node.outgoing[here.primal().outgoing()];
+        const auto& edge = node->outgoing[here.primal().outgoing()];
 
-        edge.node1->detection.primal().set_incoming(edge.slot1);
+        edge.node1->factor.primal().set_incoming(edge.slot1);
         for (const auto& conflict_edge : edge.node1->conflicts) {
-          conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
-          conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+          conflict_messages::template propagate_primal_to_conflict(conflict_edge.node);
+          conflict_messages::template propagate_primal_to_detections(conflict_edge.node);
         }
 
         if (edge.is_division()) {
-          edge.node2->detection.primal().set_incoming(edge.slot2);
+          edge.node2->factor.primal().set_incoming(edge.slot2);
           for (const auto& conflict_edge : edge.node2->conflicts) {
-            conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
-            conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+            conflict_messages::template propagate_primal_to_conflict(conflict_edge.node);
+            conflict_messages::template propagate_primal_to_detections(conflict_edge.node);
           }
         }
       }
     } else {
       assert(here.primal().is_incoming_set());
       if (here.primal().incoming() < here.incoming_.size() - 1){
-        const auto& edge = node.incoming[here.primal().incoming()];
+        const auto& edge = node->incoming[here.primal().incoming()];
 
-        edge.node1->detection.primal().set_outgoing(edge.slot1);
+        edge.node1->factor.primal().set_outgoing(edge.slot1);
         for (const auto& conflict_edge : edge.node1->conflicts) {
-          conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
-          conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+          conflict_messages::template propagate_primal_to_conflict(conflict_edge.node);
+          conflict_messages::template propagate_primal_to_detections(conflict_edge.node);
         }
 
         if (edge.is_division()) {
-          edge.node2->detection.primal().set_incoming(edge.slot2);
+          edge.node2->factor.primal().set_incoming(edge.slot2);
           for (const auto& conflict_edge : edge.node2->conflicts) {
-            conflict_messages::template propagate_primal_to_conflict(*conflict_edge.node);
-            conflict_messages::template propagate_primal_to_detections(*conflict_edge.node);
+            conflict_messages::template propagate_primal_to_conflict(conflict_edge.node);
+            conflict_messages::template propagate_primal_to_detections(conflict_edge.node);
           }
         }
       }
@@ -196,7 +196,7 @@ struct transition_messages {
   }
 
   template<bool from_left, typename DETECTION_NODE, typename CONTAINER>
-  static void get_primal_possibilities(const DETECTION_NODE& node, CONTAINER& out)
+  static void get_primal_possibilities(const DETECTION_NODE* node, CONTAINER& out)
   {
     out.fill(true);
 
@@ -216,7 +216,7 @@ struct transition_messages {
     };
 
     auto it = out.begin();
-    for (const auto& edge : node.template transitions<!from_left>()) {
+    for (const auto& edge : node->template transitions<!from_left>()) {
       assert(it != out.end());
 
       auto helper = [&](const auto& factor, auto slot, auto primal_getter) {
@@ -231,12 +231,12 @@ struct transition_messages {
         }
       };
 
-      helper(edge.node1->detection, edge.slot1, get_primal);
+      helper(edge.node1->factor, edge.slot1, get_primal);
       if (edge.is_division()) {
         if constexpr (from_left)
-          helper(edge.node2->detection, edge.slot2, get_primal2);
+          helper(edge.node2->factor, edge.slot2, get_primal2);
         else
-          helper(edge.node2->detection, edge.slot2, get_primal);
+          helper(edge.node2->factor, edge.slot2, get_primal);
       }
       ++it;
     }

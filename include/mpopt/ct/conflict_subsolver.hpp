@@ -114,22 +114,22 @@ public:
     if (visited_.find(node) == visited_.end()) {
       visited_.insert(node);
       for (const auto& edge : node->detections) {
-        if (edge.node->detection.primal().is_detection_off())
+        if (edge.node->factor.primal().is_detection_off())
           continue;
 
         if (factor_to_variable_.find(edge.node) == factor_to_variable_.end()) {
-          auto var = subsolver.add_node(edge.node->detection.min_detection());
+          auto var = subsolver.add_node(edge.node->factor.min_detection());
           factor_to_variable_.insert(std::pair(edge.node, var));
           variable_to_factor_.insert(std::pair(var, edge.node));
         }
       }
 
       for (size_t i = 0; i < node->detections.size(); ++i) {
-        if (node->detections[i].node->detection.primal().is_detection_off())
+        if (node->detections[i].node->factor.primal().is_detection_off())
           continue;
 
         for (size_t j = i+1; j < node->detections.size(); ++j) {
-          if (node->detections[j].node->detection.primal().is_detection_off())
+          if (node->detections[j].node->factor.primal().is_detection_off())
             continue;
 
           assert(factor_to_variable_.find(node->detections[i].node) != factor_to_variable_.end());
@@ -142,7 +142,7 @@ public:
       }
 
       for (const auto& edge : node->detections) {
-        if (edge.node->detection.primal().is_detection_off())
+        if (edge.node->factor.primal().is_detection_off())
           continue;
 
         for (const auto& edge2 : edge.node->conflicts)
@@ -178,7 +178,7 @@ public:
   void add_detection(const detection_node_type* node)
   {
     assert(factor_to_variable_.find(node) == factor_to_variable_.end());
-    factor_to_variable_[node] = model_.addVar(0, 1, node->detection.min_detection(), GRB_BINARY);
+    factor_to_variable_[node] = model_.addVar(0, 1, node->factor.min_detection(), GRB_BINARY);
   }
 
   void add_conflict(const conflict_node_type* node)

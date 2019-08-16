@@ -27,10 +27,10 @@ public:
     cost result = 0;
     for (const auto& timestep : graph_.timesteps()) {
       for (const auto* node : timestep.detections)
-        result += node->detection.lower_bound();
+        result += node->factor.lower_bound();
 
       for (const auto* node : timestep.conflicts)
-        result += node->conflict.lower_bound();
+        result += node->factor.lower_bound();
     }
 
     return result;
@@ -44,15 +44,15 @@ public:
 
     for (const auto& timestep : graph_.timesteps()) {
       for (const auto* node : timestep.detections) {
-        if (!transition_messages::check_primal_consistency(*node))
+        if (!transition_messages::check_primal_consistency(node))
           result += inf;
-        result += node->detection.evaluate_primal();
+        result += node->factor.evaluate_primal();
       }
 
       for (const auto* node : timestep.conflicts) {
-        if (!conflict_messages::check_primal_consistency(*node))
+        if (!conflict_messages::check_primal_consistency(node))
           result += inf;
-        result += node->conflict.evaluate_primal();
+        result += node->factor.evaluate_primal();
       }
     }
 
@@ -65,10 +65,10 @@ public:
   {
     for (const auto& timestep : graph_.timesteps()) {
       for (const auto* node : timestep.detections)
-        node->detection.reset_primal();
+        node->factor.reset_primal();
 
       for (const auto* node : timestep.conflicts)
-        node->conflict.reset_primal();
+        node->factor.reset_primal();
     }
   }
 
@@ -103,7 +103,7 @@ public:
     if constexpr (rounding)
       for (const auto& timestep : timesteps)
         for (const auto* node : timestep.detections)
-          node->detection.fix_primal();
+          node->factor.fix_primal();
 
 #ifndef NDEBUG
     auto lb_after = lower_bound();
@@ -129,11 +129,11 @@ public:
       for (const auto& t : timesteps) {
         for (const auto* node : t.detections) {
           assert(it_detection != best_detection_primals.end());
-          functor(it_detection++, node->detection);
+          functor(it_detection++, node->factor);
         }
         for (const auto* node : t.conflicts) {
           assert(it_conflict != best_conflict_primals.end());
-          functor(it_conflict++, node->conflict);
+          functor(it_conflict++, node->factor);
         }
       }
       assert(it_detection == best_detection_primals.end());
@@ -190,19 +190,19 @@ protected:
   void single_step(const timestep_type& t)
   {
     for (const auto* node : t.conflicts)
-      conflict_messages::send_messages_to_conflict(*node);
+      conflict_messages::send_messages_to_conflict(node);
 
     for (const auto* node : t.conflicts)
-      conflict_messages::send_messages_to_detection(*node);
+      conflict_messages::send_messages_to_detection(node);
 
     if constexpr (rounding) {
       std::vector<cost> original;
       for (const auto* node : t.detections)
-        original.push_back(node->detection.detection());
+        original.push_back(node->factor.detection());
 
       for (const auto* node : t.conflicts) {
         for (size_t i = 0; i < node->detections.size(); ++i) {
-          node->detections[i].node->detection.repam_detection(node->conflict.get(i));
+          node->detections[i].node->factor.repam_detection(node->factor.get(i));
         }
       }
 
@@ -215,7 +215,7 @@ protected:
       subsolver.optimize();
       for (const auto* node : t.detections)
         if (!subsolver.assignment(node))
-          node->detection.primal().set_detection_off();
+          node->factor.primal().set_detection_off();
 
       auto it = original.cbegin();
 
@@ -224,8 +224,8 @@ protected:
       std::vector<typename graph_type::detection_node_type*> sorted_detections(t.detections.cbegin(), t.detections.cend());
       std::sort(sorted_detections.begin(), sorted_detections.end(),
         [](const auto* a, const auto* b) {
-          const auto va = a->detection.min_detection();
-          const auto vb = b->detection.min_detection();
+          const auto va = a->factor.min_detection();
+          const auto vb = b->factor.min_detection();
           return va < vb;
         });
 
@@ -235,30 +235,30 @@ protected:
         // verify that it is the case.
         auto check_messages = [&]() {
 #ifndef NDEBUG
-          assert(transition_messages::check_primal_consistency(*node).is_not_inconsistent());
+          assert(transition_messages::check_primal_consistency(node).is_not_inconsistent());
           for (const auto& edge : node->conflicts)
-            assert(conflict_messages::check_primal_consistency(*edge.node).is_not_inconsistent());
+            assert(conflict_messages::check_primal_consistency(edge.node).is_not_inconsistent());
 #endif
         };
 
         std::array<bool, max_number_of_detection_edges + 1> possible;
-        transition_messages::get_primal_possibilities<forward>(*node, possible);
+        transition_messages::get_primal_possibilities<forward>(node, possible);
 
-        node->detection.template round_primal<forward>(possible); check_messages();
-        transition_messages::propagate_primal<!forward>(*node); check_messages();
+        node->factor.template round_primal<forward>(possible); check_messages();
+        transition_messages::propagate_primal<!forward>(node); check_messages();
         for (const auto& edge : node->conflicts) {
-          conflict_messages::propagate_primal_to_conflict(*edge.node); check_messages();
-          conflict_messages::propagate_primal_to_detections(*edge.node); check_messages();
+          conflict_messages::propagate_primal_to_conflict(edge.node); check_messages();
+          conflict_messages::propagate_primal_to_detections(edge.node); check_messages();
         }
       }
 
       it = original.cbegin();
       for (const auto* node : t.detections)
-        node->detection.set_detection_cost(*it++);
+        node->factor.set_detection_cost(*it++);
     }
 
     for (const auto* node : t.detections)
-      transition_messages::send_messages<forward>(*node);
+      transition_messages::send_messages<forward>(node);
   }
 
   graph_type graph_;

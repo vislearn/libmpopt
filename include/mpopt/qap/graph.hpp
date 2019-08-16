@@ -32,17 +32,17 @@ struct unary_node {
   using pairwise_node_type = pairwise_node<allocator_type>;
   using uniqueness_node_type = uniqueness_node<allocator_type>;
 
-  mutable unary_factor<allocator_type> unary;
+  mutable unary_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<uniqueness_node_type>, allocator_type> uniqueness;
 
   unary_node(index number_of_labels, const allocator_type& allocator)
-  : unary(number_of_labels, allocator)
+  : factor(number_of_labels, allocator)
   , uniqueness(number_of_labels, allocator)
   { }
 
   void check_structure() const
   {
-    assert(unary.is_prepared());
+    assert(factor.is_prepared());
 
     index slot = 0;
     for (const auto& link : uniqueness) {
@@ -81,17 +81,17 @@ struct uniqueness_node {
   using uniqueness_node_type = uniqueness_node<allocator_type>;
   using unary_node_type = unary_node<allocator_type>;
 
-  mutable uniqueness_factor<allocator_type> uniqueness;
+  mutable uniqueness_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<unary_node_type>, allocator_type> unaries;
 
   uniqueness_node(index number_of_unaries, const allocator_type& allocator)
-  : uniqueness(number_of_unaries, allocator)
+  : factor(number_of_unaries, allocator)
   , unaries(number_of_unaries, allocator)
   { }
 
   void check_structure() const
   {
-    assert(uniqueness.is_prepared());
+    assert(factor.is_prepared());
 
     index slot = 0;
     for (const auto& link : unaries) {
@@ -121,12 +121,12 @@ struct pairwise_node {
   using unary_node_type = unary_node<allocator_type>;
   using pairwise_node_type = pairwise_node<allocator_type>;
 
-  mutable pairwise_factor<allocator_type> pairwise;
+  mutable pairwise_factor<allocator_type> factor;
   unary_node_type* unary0;
   unary_node_type* unary1;
 
   pairwise_node(index number_of_labels0, index number_of_labels1, const allocator_type& allocator)
-  : pairwise(number_of_labels0, number_of_labels1, allocator)
+  : factor(number_of_labels0, number_of_labels1, allocator)
   , unary0(nullptr)
   , unary1(nullptr)
   { }
@@ -139,7 +139,7 @@ struct pairwise_node {
 
   void check_structure() const
   {
-    assert(pairwise.is_prepared());
+    assert(factor.is_prepared());
     assert(unary0 != nullptr);
     assert(unary1 != nullptr);
   }
@@ -175,7 +175,7 @@ public:
     node = a.allocate();
     new (node) unary_node_type(number_of_labels, allocator_);
 #ifndef NDEBUG
-    node->unary.set_debug_info(idx);
+    node->factor.set_debug_info(idx);
 #endif
 
     return node;
@@ -193,7 +193,7 @@ public:
     node = a.allocate();
     new (node) uniqueness_node_type(number_of_unaries, allocator_);
 #ifndef NDEBUG
-    node->uniqueness.set_debug_info(idx);
+    node->factor.set_debug_info(idx);
 #endif
 
     return node;
@@ -222,14 +222,14 @@ public:
     auto* unary0 = unaries_[idx_unary0];
     auto* unary1 = unaries_[idx_unary1];
     auto* pairwise = pairwise_[idx_pairwise];
-    assert(std::tuple(unary0->unary.size(), unary1->unary.size()) == pairwise->pairwise.size());
+    assert(std::tuple(unary0->factor.size(), unary1->factor.size()) == pairwise->factor.size());
 
     assert(pairwise->unary0 == nullptr && pairwise->unary1 == nullptr);
     pairwise->unary0 = unary0;
     pairwise->unary1 = unary1;
 
 #ifndef NDEBUG
-    pairwise->pairwise.set_debug_info(idx_unary0, idx_unary1);
+    pairwise->factor.set_debug_info(idx_unary0, idx_unary1);
 #endif
   }
 

@@ -67,8 +67,8 @@ double mpopt_gm_solver_evaluate_primal(mpopt_gm_solver* s) { return s->solver.ev
 // factor API
 //
 
-void mpopt_gm_unary_set_cost(mpopt_gm_unary_node* n, int label, double cost) { from_unary(n)->unary.set(label, cost); }
-void mpopt_gm_pairwise_set_cost(mpopt_gm_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->pairwise.set(l0, l1, cost); }
+void mpopt_gm_unary_set_cost(mpopt_gm_unary_node* n, int label, double cost) { from_unary(n)->factor.set(label, cost); }
+void mpopt_gm_pairwise_set_cost(mpopt_gm_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->factor.set(l0, l1, cost); }
 
 }
 

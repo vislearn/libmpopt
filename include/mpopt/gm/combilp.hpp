@@ -42,7 +42,7 @@ public:
         if (mask_sac_.at(node))
           assert(messages::check_unary_primal_consistency(node));
         else
-          assert(node->unary.primal() != decltype(node->unary)::primal_unset);
+          assert(node->factor.primal() != decltype(node->factor)::primal_unset);
 #endif
 
       changed = process_mismatches();
@@ -71,8 +71,8 @@ protected:
     }
 
     for (const auto* pairwise_node : graph_->pairwise()) {
-      pairwise_node->pairwise.reset_primal();
-      pairwise_node->pairwise.round_independently();
+      pairwise_node->factor.reset_primal();
+      pairwise_node->factor.round_independently();
     }
 
     mask_sac_.clear();
@@ -82,7 +82,7 @@ protected:
 
   bool set_consistent_unary_primal_if_possible(const unary_node_type* unary_node)
   {
-    unary_node->unary.reset_primal();
+    unary_node->factor.reset_primal();
 
     bool is_sac = false;
     bool is_first = true;
@@ -90,31 +90,31 @@ protected:
     auto process_primal = [&](const index label) {
       if (is_first) {
         is_first = false;
-        unary_node->unary.primal() = label;
+        unary_node->factor.primal() = label;
       } else {
-        if (unary_node->unary.primal() != label)
-          unary_node->unary.reset_primal();
+        if (unary_node->factor.primal() != label)
+          unary_node->factor.reset_primal();
       }
     };
 
     for (const auto* pairwise_node : unary_node->backward) {
-      auto [p0, p1] = pairwise_node->pairwise.primal();
-      assert(p1 != decltype(pairwise_node->pairwise)::primal_unset);
+      auto [p0, p1] = pairwise_node->factor.primal();
+      assert(p1 != decltype(pairwise_node->factor)::primal_unset);
       process_primal(p1);
     }
 
     for (const auto* pairwise_node : unary_node->forward) {
-      auto [p0, p1] = pairwise_node->pairwise.primal();
-      assert(p0 != decltype(pairwise_node->pairwise)::primal_unset);
+      auto [p0, p1] = pairwise_node->factor.primal();
+      assert(p0 != decltype(pairwise_node->factor)::primal_unset);
       process_primal(p0);
     }
 
     if (is_first) {
-      unary_node->unary.round_independently();
+      unary_node->factor.round_independently();
       is_sac = true;
     }
 
-    is_sac = unary_node->unary.primal() != decltype(unary_node->unary)::primal_unset;
+    is_sac = unary_node->factor.primal() != decltype(unary_node->factor)::primal_unset;
     assert(!is_sac || messages::check_unary_primal_consistency(unary_node));
     return is_sac;
   }
@@ -174,19 +174,19 @@ protected:
     constexpr auto unary_unset = unary_factor<allocator_type>::primal_unset;
     constexpr auto pairwise_unset = pairwise_factor<allocator_type>::primal_unset;
 
-    auto [p0, p1] = pairwise_node->pairwise.primal();
+    auto [p0, p1] = pairwise_node->factor.primal();
     assert(p0 != pairwise_unset && p1 != pairwise_unset);
 
     const auto* unary0 = pairwise_node->unary0;
     const auto* unary1 = pairwise_node->unary1;
-    assert(unary0->unary.primal() != unary_unset);
-    assert(unary1->unary.primal() != unary_unset);
+    assert(unary0->factor.primal() != unary_unset);
+    assert(unary1->factor.primal() != unary_unset);
 
-    const cost current = pairwise_node->pairwise.get(p0, p1);
-    const cost switched = pairwise_node->pairwise.get(unary0->unary.primal(), unary1->unary.primal());
+    const cost current = pairwise_node->factor.get(p0, p1);
+    const cost switched = pairwise_node->factor.get(unary0->factor.primal(), unary1->factor.primal());
 
     if (switched <= current + epsilon) {
-      pairwise_node->pairwise.primal() = std::tuple(unary0->unary.primal(), unary1->unary.primal());
+      pairwise_node->factor.primal() = std::tuple(unary0->factor.primal(), unary1->factor.primal());
       assert(messages::check_pairwise_primal_consistency(pairwise_node));
       return true;
     }

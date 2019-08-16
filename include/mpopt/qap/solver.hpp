@@ -25,13 +25,13 @@ public:
     cost result = constant_;
 
     for (const auto* node : graph_.unaries())
-      result += node->unary.lower_bound();
+      result += node->factor.lower_bound();
 
     for (const auto* node : graph_.uniqueness())
-      result += node->uniqueness.lower_bound();
+      result += node->factor.lower_bound();
 
     for (const auto* node : graph_.pairwise())
-      result += node->pairwise.lower_bound();
+      result += node->factor.lower_bound();
 
     return result;
   }
@@ -43,18 +43,18 @@ public:
     cost result = constant_;
 
     for (const auto* node : graph_.unaries())
-      result += node->unary.evaluate_primal();
+      result += node->factor.evaluate_primal();
 
     for (const auto* node : graph_.uniqueness()) {
       if (!uniqueness_messages::check_primal_consistency(node))
         result += inf;
-      result += node->uniqueness.evaluate_primal();
+      result += node->factor.evaluate_primal();
     }
 
     for (const auto* node : graph_.pairwise()) {
       if (!pairwise_messages::check_primal_consistency(node))
         result += inf;
-      result += node->pairwise.evaluate_primal();
+      result += node->factor.evaluate_primal();
     }
 
     return result;
@@ -65,10 +65,10 @@ public:
   void reset_primal()
   {
     for (const auto* node : graph_.unaries())
-      node->unary.reset_primal();
+      node->factor.reset_primal();
 
     for (const auto* node : graph_.pairwise())
-      node->pairwise.reset_primal();
+      node->factor.reset_primal();
   }
 
   void run(const int max_iterations = 1000)
@@ -137,7 +137,7 @@ public:
 
 #ifndef NDEBUG
     for (const auto* node : graph_.pairwise())
-      assert(dbg::are_identical(node->pairwise.lower_bound(), 0.0));
+      assert(dbg::are_identical(node->factor.lower_bound(), 0.0));
 #endif
 
     builder.finalize();
@@ -145,9 +145,9 @@ public:
     builder.update_primals();
 
     for (const auto* node : graph_.pairwise())
-      node->pairwise.primal() = std::tuple(
-        node->unary0->unary.primal(),
-        node->unary1->unary.primal());
+      node->factor.primal() = std::tuple(
+        node->unary0->factor.primal(),
+        node->unary1->factor.primal());
   }
 
 protected:
@@ -162,12 +162,12 @@ protected:
       solve_lap_as_ilp();
 
     for (const auto* node : graph_.unaries()) {
-      constant_ += node->unary.normalize();
+      constant_ += node->factor.normalize();
       uniqueness_messages::send_messages_to_uniqueness(node);
     }
 
     for (const auto* node : graph_.uniqueness()) {
-      constant_ += node->uniqueness.normalize();
+      constant_ += node->factor.normalize();
       uniqueness_messages::send_messages_to_unaries(node);
     }
   }

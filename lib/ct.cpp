@@ -89,21 +89,21 @@ void mpopt_ct_tracker_backward_step(mpopt_ct_tracker* t, int timestep) { t->trac
 // detection API
 //
 
-void mpopt_ct_detection_set_detection_cost(mpopt_ct_detection* d, double on) { from_detection(d)->detection.set_detection_cost(on); }
-void mpopt_ct_detection_set_appearance_cost(mpopt_ct_detection* d, double c) { from_detection(d)->detection.set_appearance_cost(c); }
-void mpopt_ct_detection_set_disappearance_cost(mpopt_ct_detection* d, double c) { from_detection(d)->detection.set_disappearance_cost(c); }
-void mpopt_ct_detection_set_incoming_cost(mpopt_ct_detection* d, int idx, double c) { from_detection(d)->detection.set_incoming_cost(idx, c); }
-void mpopt_ct_detection_set_outgoing_cost(mpopt_ct_detection* d, int idx, double c) { from_detection(d)->detection.set_outgoing_cost(idx, c); }
+void mpopt_ct_detection_set_detection_cost(mpopt_ct_detection* d, double on) { from_detection(d)->factor.set_detection_cost(on); }
+void mpopt_ct_detection_set_appearance_cost(mpopt_ct_detection* d, double c) { from_detection(d)->factor.set_appearance_cost(c); }
+void mpopt_ct_detection_set_disappearance_cost(mpopt_ct_detection* d, double c) { from_detection(d)->factor.set_disappearance_cost(c); }
+void mpopt_ct_detection_set_incoming_cost(mpopt_ct_detection* d, int idx, double c) { from_detection(d)->factor.set_incoming_cost(idx, c); }
+void mpopt_ct_detection_set_outgoing_cost(mpopt_ct_detection* d, int idx, double c) { from_detection(d)->factor.set_outgoing_cost(idx, c); }
 
-double mpopt_ct_detection_get_detection_cost(mpopt_ct_detection* d) { return from_detection(d)->detection.detection(); }
-double mpopt_ct_detection_get_appearance_cost(mpopt_ct_detection* d) { return from_detection(d)->detection.appearance(); }
-double mpopt_ct_detection_get_disappearance_cost(mpopt_ct_detection* d) { return from_detection(d)->detection.disappearance(); }
-double mpopt_ct_detection_get_incoming_cost(mpopt_ct_detection* d, int idx) { return from_detection(d)->detection.incoming(idx); }
-double mpopt_ct_detection_get_outgoing_cost(mpopt_ct_detection* d, int idx) { return from_detection(d)->detection.outgoing(idx); }
+double mpopt_ct_detection_get_detection_cost(mpopt_ct_detection* d) { return from_detection(d)->factor.detection(); }
+double mpopt_ct_detection_get_appearance_cost(mpopt_ct_detection* d) { return from_detection(d)->factor.appearance(); }
+double mpopt_ct_detection_get_disappearance_cost(mpopt_ct_detection* d) { return from_detection(d)->factor.disappearance(); }
+double mpopt_ct_detection_get_incoming_cost(mpopt_ct_detection* d, int idx) { return from_detection(d)->factor.incoming(idx); }
+double mpopt_ct_detection_get_outgoing_cost(mpopt_ct_detection* d, int idx) { return from_detection(d)->factor.outgoing(idx); }
 
 int mpopt_ct_detection_get_incoming_primal(mpopt_ct_detection* d)
 {
-  auto p = from_detection(d)->detection.primal().incoming();
+  auto p = from_detection(d)->factor.primal().incoming();
   if (p == mpopt::ct::detection_primal::undecided || p == mpopt::ct::detection_primal::off)
     return -1;
   else
@@ -112,7 +112,7 @@ int mpopt_ct_detection_get_incoming_primal(mpopt_ct_detection* d)
 
 int mpopt_ct_detection_get_outgoing_primal(mpopt_ct_detection* d)
 {
-  auto p = from_detection(d)->detection.primal().outgoing();
+  auto p = from_detection(d)->factor.primal().outgoing();
   if (p == mpopt::ct::detection_primal::undecided || p == mpopt::ct::detection_primal::off)
     return -1;
   else
@@ -123,9 +123,9 @@ int mpopt_ct_detection_get_outgoing_primal(mpopt_ct_detection* d)
 // conflict API
 //
 
-void mpopt_ct_conflict_set_cost(mpopt_ct_conflict* c, int idx, double cost) { from_conflict(c)->conflict.set(idx, cost); }
-double mpopt_ct_conflict_get_cost(mpopt_ct_conflict* c, int idx) { return from_conflict(c)->conflict.get(idx); }
-int mpopt_ct_conflict_get_primal(mpopt_ct_conflict* c) { return from_conflict(c)->conflict.primal().get(); }
+void mpopt_ct_conflict_set_cost(mpopt_ct_conflict* c, int idx, double cost) { from_conflict(c)->factor.set(idx, cost); }
+double mpopt_ct_conflict_get_cost(mpopt_ct_conflict* c, int idx) { return from_conflict(c)->factor.get(idx); }
+int mpopt_ct_conflict_get_primal(mpopt_ct_conflict* c) { return from_conflict(c)->factor.primal().get(); }
 
 }
 

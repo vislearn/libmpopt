@@ -23,12 +23,12 @@ struct pairwise_messages {
   template<typename PAIRWISE_NODE>
   static consistency check_primal_consistency(const PAIRWISE_NODE* pairwise_node)
   {
-    constexpr auto pw_unset = decltype(pairwise_node->pairwise)::primal_unset;
-    constexpr auto un_unset = decltype(pairwise_node->unary0->unary)::primal_unset;
+    constexpr auto pw_unset = decltype(pairwise_node->factor)::primal_unset;
+    constexpr auto un_unset = decltype(pairwise_node->unary0->factor)::primal_unset;
 
-    const auto [pw0, pw1] = pairwise_node->pairwise.primal();
-    const auto un0 = pairwise_node->unary0->unary.primal();
-    const auto un1 = pairwise_node->unary1->unary.primal();
+    const auto [pw0, pw1] = pairwise_node->factor.primal();
+    const auto un0 = pairwise_node->unary0->factor.primal();
+    const auto un1 = pairwise_node->unary1->factor.primal();
 
     consistency result;
     if (pw0 == pw_unset || pw1 == pw_unset) {
@@ -57,15 +57,15 @@ private:
     const auto* unary0 = pairwise_node->unary0;
     const auto* unary1 = pairwise_node->unary1;
 
-    for (index l = 0; l < unary0->unary.size(); ++l) {
-      const cost msg = unary0->unary.get(l);
-      unary0->unary.repam(l, -msg);
-      pairwise_node->pairwise.repam0(l, msg);
+    for (index l = 0; l < unary0->factor.size(); ++l) {
+      const cost msg = unary0->factor.get(l);
+      unary0->factor.repam(l, -msg);
+      pairwise_node->factor.repam0(l, msg);
     }
-    for (index l = 0; l < unary1->unary.size(); ++l) {
-      const cost msg = unary1->unary.get(l);
-      unary1->unary.repam(l, -msg);
-      pairwise_node->pairwise.repam1(l, msg);
+    for (index l = 0; l < unary1->factor.size(); ++l) {
+      const cost msg = unary1->factor.get(l);
+      unary1->factor.repam(l, -msg);
+      pairwise_node->factor.repam1(l, msg);
     }
   }
 
@@ -73,10 +73,10 @@ private:
   static void helper_move_to_unary(const PAIRWISE_NODE* pairwise_node)
   {
     const auto* unary_node = pairwise_node->template unary<forward>();
-    for (index l = 0; l < unary_node->unary.size(); ++l) {
-      const cost msg = (half ? 0.5 : 1.0) * pairwise_node->pairwise.template min_marginal<forward>(l);
-      pairwise_node->pairwise.template repam<forward>(l, -msg);
-      unary_node->unary.repam(l, msg);
+    for (index l = 0; l < unary_node->factor.size(); ++l) {
+      const cost msg = (half ? 0.5 : 1.0) * pairwise_node->factor.template min_marginal<forward>(l);
+      pairwise_node->factor.template repam<forward>(l, -msg);
+      unary_node->factor.repam(l, msg);
     }
   }
 

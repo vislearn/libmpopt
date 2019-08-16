@@ -30,7 +30,7 @@ public:
     assert(!finalized_);
     // TODO: Do we really want this check? We already use try_emplace.
     assert(unaries_.find(node) == unaries_.end());
-    unaries_.try_emplace(node, node->unary, model_);
+    unaries_.try_emplace(node, node->factor, model_);
   }
 
   void add_factor(const pairwise_node_type* node)
@@ -39,7 +39,7 @@ public:
     assert(!finalized_);
     // TODO: Do we really want this check? We already use try_emplace.
     assert(pairwise_.find(node) == pairwise_.end());
-    pairwise_.try_emplace(node, node->pairwise, model_);
+    pairwise_.try_emplace(node, node->factor, model_);
   }
 
   void finalize()
@@ -79,7 +79,7 @@ protected:
     for (auto& pair : pairwise_) {
       const auto* pairwise_node = pair.first;
       auto& pairwise = pair.second;
-      const auto [size0, size1] = pairwise_node->pairwise.size();
+      const auto [size0, size1] = pairwise_node->factor.size();
       two_dimension_array_accessor a(size0, size1);
 
       auto& unary0 = unaries_.at(pairwise_node->unary0);
