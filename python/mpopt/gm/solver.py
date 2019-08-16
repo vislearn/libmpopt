@@ -1,33 +1,11 @@
+from ..common.solver import BaseSolver
 from . import libmpopt_gm as lib
 
 
-class Solver:
+class Solver(BaseSolver):
 
     def __init__(self):
-        self.solver = lib.solver_create()
-
-    def __del__(self):
-        self.destroy()
-
-    def destroy(self):
-        if self.solver is not None:
-            lib.solver_destroy(self.solver)
-            self.solver = None
-
-    def lower_bound(self):
-        return lib.solver_lower_bound(self.solver)
-
-    def evaluate_primal(self):
-        return lib.solver_evaluate_primal(self.solver)
-
-    def run(self, max_iterations=1000):
-        lib.solver_run(self.solver, max_iterations)
-
-    def solve_ilp(self):
-        lib.solver_solve_ilp(self.solver)
-
-    def execute_combilp(self):
-        lib.solver_execute_combilp(self.solver)
+        super().__init__(lib)
 
 
 def construct_solver(model):

@@ -1,27 +1,11 @@
+from ..common.solver import BaseSolver
 from . import libmpopt_ct as lib
 
 
-class Tracker:
+class Tracker(BaseSolver):
 
     def __init__(self):
-        self.tracker = lib.tracker_create()
-
-    def __del__(self):
-        self.destroy()
-
-    def destroy(self):
-        if self.tracker is not None:
-            lib.tracker_destroy(self.tracker)
-            self.tracker = None
-
-    def lower_bound(self):
-        return lib.tracker_lower_bound(self.tracker)
-
-    def upper_bound(self):
-        return lib.tracker_upper_bound(self.tracker)
-
-    def run(self, max_iterations=1000):
-        lib.tracker_run(self.tracker, max_iterations)
+        super().__init__(lib)
 
     def forward_step(self, timestep):
         lib.tracker_forward_step(self.tracker, timestep)
