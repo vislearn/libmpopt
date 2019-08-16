@@ -14,6 +14,7 @@
 
 #include <mpopt/common/factors/unary.hpp>
 #include <mpopt/common/factors/pairwise.hpp>
+#include <mpopt/common/solver.hpp>
 
 #include <mpopt/qap/unary_factor.hpp>
 #include <mpopt/qap/uniqueness_factor.hpp>

@@ -13,6 +13,7 @@
 
 #include <mpopt/common/factors/unary.hpp>
 #include <mpopt/common/factors/pairwise.hpp>
+#include <mpopt/common/solver.hpp>
 
 #include <mpopt/gm/messages.hpp>
 #include <mpopt/gm/graph.hpp>

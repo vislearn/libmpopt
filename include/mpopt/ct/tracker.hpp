@@ -5,72 +5,18 @@ namespace mpopt {
 namespace ct {
 
 template<typename ALLOCATOR = std::allocator<cost>>
-class tracker {
+class tracker : public solver<tracker<ALLOCATOR>> {
 public:
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
-  using detection_type = typename graph_type::detection_type;
-  using conflict_type = typename graph_type::conflict_type;
   using timestep_type = typename graph_type::timestep_type;
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  , iterations_(0)
   { }
 
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
-
-  cost lower_bound() const
-  {
-    graph_.check_structure();
-    cost result = 0;
-    for (const auto& timestep : graph_.timesteps()) {
-      for (const auto* node : timestep.detections)
-        result += node->factor.lower_bound();
-
-      for (const auto* node : timestep.conflicts)
-        result += node->factor.lower_bound();
-    }
-
-    return result;
-  }
-
-  cost evaluate_primal() const
-  {
-    graph_.check_structure();
-    const cost inf = std::numeric_limits<cost>::infinity();
-    cost result = 0;
-
-    for (const auto& timestep : graph_.timesteps()) {
-      for (const auto* node : timestep.detections) {
-        if (!transition_messages::check_primal_consistency(node))
-          result += inf;
-        result += node->factor.evaluate_primal();
-      }
-
-      for (const auto* node : timestep.conflicts) {
-        if (!conflict_messages::check_primal_consistency(node))
-          result += inf;
-        result += node->factor.evaluate_primal();
-      }
-    }
-
-    return result;
-  }
-
-  cost upper_bound() const { return evaluate_primal(); }
-
-  void reset_primal()
-  {
-    for (const auto& timestep : graph_.timesteps()) {
-      for (const auto* node : timestep.detections)
-        node->factor.reset_primal();
-
-      for (const auto* node : timestep.conflicts)
-        node->factor.reset_primal();
-    }
-  }
 
   // This method is only needed for external rounding code.
   template<bool forward>
@@ -85,7 +31,7 @@ public:
   void single_pass()
   {
 #ifndef NDEBUG
-    auto lb_before = lower_bound();
+    auto lb_before = this->lower_bound();
 #endif
 
     auto runner = [&](auto begin, auto end) {
@@ -106,7 +52,7 @@ public:
           node->factor.fix_primal();
 
 #ifndef NDEBUG
-    auto lb_after = lower_bound();
+    auto lb_after = this->lower_bound();
     assert(lb_before <= lb_after + epsilon);
 #endif
   }
@@ -141,7 +87,7 @@ public:
     };
 
     auto remember_best_primals = [&]() {
-      auto ub = evaluate_primal();
+      auto ub = this->evaluate_primal();
       if (ub < best_ub) {
         best_ub = ub;
         visit_primal_storage([&](auto it, const auto& f) { *it = f.primal(); });
@@ -162,20 +108,20 @@ public:
         backward_pass<false>();
       }
 
-      reset_primal();
+      this->reset_primal();
       forward_pass<true>();
       remember_best_primals();
 
-      reset_primal();
+      this->reset_primal();
       backward_pass<true>();
       remember_best_primals();
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
 
-      const auto lb = lower_bound();
-      iterations_ += batch_size;
-      std::cout << "it=" << iterations_ << " "
+      const auto lb = this->lower_bound();
+      this->iterations_ += batch_size;
+      std::cout << "it=" << this->iterations_ << " "
                 << "lb=" << lb << " "
                 << "ub=" << best_ub << " "
                 << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
@@ -186,6 +132,19 @@ public:
   }
 
 protected:
+
+  template<typename FUNCTOR>
+  void for_each_node(FUNCTOR f) const
+  {
+    for (const auto& timestep : graph_.timesteps()) {
+      for (const auto* node : timestep.detections)
+        f(node);
+
+      for (const auto* node : timestep.conflicts)
+        f(node);
+    }
+  }
+
   template<bool forward, bool rounding>
   void single_step(const timestep_type& t)
   {
@@ -206,7 +165,7 @@ protected:
         }
       }
 
-      conflict_subsolver2<graph_type> subsolver(gurobi_env_);
+      conflict_subsolver2<graph_type> subsolver(this->gurobi_env_);
       for (const auto* node : t.detections)
         subsolver.add_detection(node);
       for (const auto* node : t.conflicts)
@@ -262,8 +221,7 @@ protected:
   }
 
   graph_type graph_;
-  int iterations_;
-  GRBEnv gurobi_env_;
+  friend class solver<tracker<ALLOCATOR>>;
 };
 
 }

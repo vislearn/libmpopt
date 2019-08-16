@@ -5,71 +5,18 @@ namespace mpopt {
 namespace qap {
 
 template<typename ALLOCATOR>
-class solver {
+class solver : public ::mpopt::solver<solver<ALLOCATOR>> {
 public:
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
+  using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  , iterations_(0)
-  , constant_(0)
   { }
 
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
-
-  cost lower_bound() const
-  {
-    graph_.check_structure();
-    cost result = constant_;
-
-    for (const auto* node : graph_.unaries())
-      result += node->factor.lower_bound();
-
-    for (const auto* node : graph_.uniqueness())
-      result += node->factor.lower_bound();
-
-    for (const auto* node : graph_.pairwise())
-      result += node->factor.lower_bound();
-
-    return result;
-  }
-
-  cost evaluate_primal() const
-  {
-    graph_.check_structure();
-    const cost inf = std::numeric_limits<cost>::infinity();
-    cost result = constant_;
-
-    for (const auto* node : graph_.unaries())
-      result += node->factor.evaluate_primal();
-
-    for (const auto* node : graph_.uniqueness()) {
-      if (!uniqueness_messages::check_primal_consistency(node))
-        result += inf;
-      result += node->factor.evaluate_primal();
-    }
-
-    for (const auto* node : graph_.pairwise()) {
-      if (!pairwise_messages::check_primal_consistency(node))
-        result += inf;
-      result += node->factor.evaluate_primal();
-    }
-
-    return result;
-  }
-
-  cost upper_bound() const { return evaluate_primal(); }
-
-  void reset_primal()
-  {
-    for (const auto* node : graph_.unaries())
-      node->factor.reset_primal();
-
-    for (const auto* node : graph_.pairwise())
-      node->factor.reset_primal();
-  }
 
   void run(const int max_iterations = 1000)
   {
@@ -86,14 +33,14 @@ public:
         single_pass<false>();
 
       single_pass<true>();
-      best_ub = std::min(best_ub, evaluate_primal());
+      best_ub = std::min(best_ub, this->evaluate_primal());
 
       const auto clock_now = clock_type::now();
       const std::chrono::duration<double> seconds = clock_now - clock_start;
 
-      const auto lb = lower_bound();
-      iterations_ += batch_size;
-      std::cout << "it=" << iterations_ << " "
+      const auto lb = this->lower_bound();
+      this->iterations_ += batch_size;
+      std::cout << "it=" << this->iterations_ << " "
                 << "lb=" << lb << " "
                 << "ub=" << best_ub << " "
                 << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
@@ -101,33 +48,10 @@ public:
     }
   }
 
-  void solve_ilp()
-  {
-    reset_primal();
-
-    gurobi_model_builder<allocator_type> builder(gurobi_env_);
-    builder.set_constant(constant_);
-
-    for (const auto* node : graph_.unaries())
-      builder.add_factor(node);
-
-    for (const auto* node : graph_.uniqueness())
-      builder.add_factor(node);
-
-    for (const auto* node : graph_.pairwise())
-      builder.add_factor(node);
-
-    builder.finalize();
-    builder.optimize();
-    builder.update_primals();
-    std::cout << "final objective: " << evaluate_primal() << std::endl;
-  }
-
   void solve_lap_as_ilp()
   {
-    reset_primal();
-
-    gurobi_model_builder<allocator_type> builder(gurobi_env_);
+    // We do not reset the primals and use the currently set ones as MIP start.
+    gurobi_model_builder<allocator_type> builder(this->gurobi_env_);
 
     for (const auto* node : graph_.unaries())
       builder.add_factor(node);
@@ -152,6 +76,19 @@ public:
 
 protected:
 
+  template<typename FUNCTOR>
+  void for_each_node(FUNCTOR f) const
+  {
+    for (const auto* node : graph_.unaries())
+      f(node);
+
+    for (const auto* node : graph_.uniqueness())
+      f(node);
+
+    for (const auto* node : graph_.pairwise())
+      f(node);
+  }
+
   template<bool rounding>
   void single_pass()
   {
@@ -162,20 +99,18 @@ protected:
       solve_lap_as_ilp();
 
     for (const auto* node : graph_.unaries()) {
-      constant_ += node->factor.normalize();
+      this->constant_ += node->factor.normalize();
       uniqueness_messages::send_messages_to_uniqueness(node);
     }
 
     for (const auto* node : graph_.uniqueness()) {
-      constant_ += node->factor.normalize();
+      this->constant_ += node->factor.normalize();
       uniqueness_messages::send_messages_to_unaries(node);
     }
   }
 
   graph_type graph_;
-  int iterations_;
-  cost constant_;
-  GRBEnv gurobi_env_;
+  friend class ::mpopt::solver<solver<ALLOCATOR>>;
 };
 
 }
