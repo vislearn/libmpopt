@@ -14,14 +14,12 @@ class Solver(BaseSolver):
         super().__init__(lib)
 
 
-def construct_gm_solver(model):
-    from ..gm import libmpopt_gm as lib
-    from ..gm.solver import Solver as Solver
+def construct_gm_model(model):
+    from ..gm.model import Model as GmModel
 
-    edges, no_forward, no_backward = create_pairwise_data(model, create_new_edges=True)
-
-    s = Solver()
-    g = lib.solver_get_graph(s.solver)
+    # We ignore the no_forward and no_backward info, as the GM model
+    # does this bookkeeping action anyway.
+    edges = create_pairwise_data(model, create_new_edges=True)[0]
 
     u_map = []
     idx_map = {}
@@ -30,27 +28,19 @@ def construct_gm_solver(model):
             idx_map[idx] = len(u_map)
             u_map.append(idx)
 
-    # insert unary factors
+    gm_model = GmModel()
     for u, idx in enumerate(u_map):
-        f = lib.graph_add_unary(g, u, len(model._unaries_left[idx]) + 1,
-            no_forward[idx], no_backward[idx])
-        for i, ass_id in enumerate(model._unaries_left[idx]):
-            lib.unary_set_cost(f, i, model._assignments[ass_id].cost)
-        lib.unary_set_cost(f, i+1, 0.0)
+        costs = [model._assignments[ass_id].cost for ass_id in model._unaries_left[idx]]
+        costs.append(0.0)
+        gm_model.add_unary(costs)
 
-    # insert pairwise factors
-    for i, (idx1, idx2) in enumerate(edges):
-        f = lib.graph_add_pairwise(g, i, edges[idx1, idx2].shape[0], edges[idx1, idx2].shape[1])
-        lib.graph_add_pairwise_link(g, idx_map[idx1], idx_map[idx2], i)
-        for l_u in range(len(model._unaries_left[idx1]) + 1):
-            for l_v in range(len(model._unaries_left[idx2]) + 1):
-                lib.pairwise_set_cost(f, l_u, l_v, edges[idx1, idx2][l_u, l_v])
+    for (idx1, idx2), costs in edges.items():
+        gm_model.add_pairwise(idx1, idx2, costs)
 
-    lib.solver_finalize(s.solver)
-    return s
+    return gm_model
 
 
-def construct_qap_solver(model, with_uniqueness=True):
+def construct_solver(model, with_uniqueness=True):
     s = Solver()
     g = lib.solver_get_graph(s.solver)
 
