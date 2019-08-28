@@ -9,6 +9,8 @@ class solver : public ::mpopt::solver<solver<ALLOCATOR>> {
 public:
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
+  using unary_node_type = typename graph_type::unary_node_type;
+  using pairwise_node_type = typename graph_type::pairwise_node_type;
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
@@ -73,6 +75,16 @@ protected:
 
     for (const auto* node : graph_.pairwise())
       f(node);
+  }
+
+  bool check_primal_consistency(const unary_node_type* node) const
+  {
+    return messages::check_unary_primal_consistency(node);
+  }
+
+  bool check_primal_consistency(const pairwise_node_type* node) const
+  {
+    return messages::check_pairwise_primal_consistency(node);
   }
 
   template<bool rounding> void forward_pass() { single_pass<true, rounding>(); }

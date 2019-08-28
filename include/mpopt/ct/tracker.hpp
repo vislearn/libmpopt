@@ -10,6 +10,8 @@ public:
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
   using timestep_type = typename graph_type::timestep_type;
+  using detection_node_type = typename graph_type::detection_node_type;
+  using conflict_node_type = typename graph_type::conflict_node_type;
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
@@ -143,6 +145,16 @@ protected:
       for (const auto* node : timestep.conflicts)
         f(node);
     }
+  }
+
+  bool check_primal_consistency(const detection_node_type* node) const
+  {
+    return transition_messages::check_primal_consistency(node);
+  }
+
+  bool check_primal_consistency(const conflict_node_type* node) const
+  {
+    return conflict_messages::check_primal_consistency(node);
   }
 
   template<bool forward, bool rounding>

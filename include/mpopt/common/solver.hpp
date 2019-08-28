@@ -25,15 +25,18 @@ public:
 
   cost evaluate_primal() const
   {
-    static_cast<const DERIVED_TYPE*>(this)->graph_.check_structure();
+    const auto* derived = static_cast<const DERIVED_TYPE*>(this);
+
+    derived->graph_.check_structure();
     const cost inf = std::numeric_limits<cost>::infinity();
     cost result = constant_;
 
-    static_cast<const DERIVED_TYPE*>(this)->for_each_node([&result](const auto* node) {
-      // FIXME: Check primal consistency. We need to have access to the message
-      // types for this...
-      result += node->factor.evaluate_primal();
-    });
+    derived->for_each_node(
+      [&](const auto* node) {
+        if (!derived->check_primal_consistency(node))
+          result += inf;
+        result += node->factor.evaluate_primal();
+      });
 
     return result;
   }
