@@ -34,10 +34,14 @@ struct unary_node {
 
   mutable unary_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<uniqueness_node_type>, allocator_type> uniqueness;
+  fixed_vector_alloc_gen<const pairwise_node_type*, allocator_type> forward;
+  fixed_vector_alloc_gen<const pairwise_node_type*, allocator_type> backward;
 
-  unary_node(index number_of_labels, const allocator_type& allocator)
+  unary_node(index number_of_labels, index number_of_forward, index number_of_backward, const allocator_type& allocator)
   : factor(number_of_labels, allocator)
   , uniqueness(number_of_labels, allocator)
+  , forward(number_of_forward, allocator)
+  , backward(number_of_backward, allocator)
   { }
 
   void check_structure() const
@@ -162,7 +166,7 @@ public:
   const auto& pairwise() const { return pairwise_; }
   const auto& uniqueness() const { return uniqueness_; }
 
-  unary_node_type* add_unary(index idx, index number_of_labels)
+  unary_node_type* add_unary(index idx, index number_of_labels, index number_of_forward, index number_of_backward)
   {
     assert(number_of_labels >= 0);
     assert(idx == unaries_.size());
@@ -173,7 +177,7 @@ public:
     auto& node = unaries_.back();
     typename std::allocator_traits<allocator_type>::template rebind_alloc<unary_node_type> a(allocator_);
     node = a.allocate();
-    new (node) unary_node_type(number_of_labels, allocator_);
+    new (node) unary_node_type(number_of_labels, number_of_forward, number_of_backward, allocator_);
 #ifndef NDEBUG
     node->factor.set_debug_info(idx);
 #endif
@@ -223,6 +227,15 @@ public:
     auto* unary1 = unaries_[idx_unary1];
     auto* pairwise = pairwise_[idx_pairwise];
     assert(std::tuple(unary0->factor.size(), unary1->factor.size()) == pairwise->factor.size());
+
+    auto find_free_slot = [](auto& vector) -> auto& {
+      auto it = std::find(vector.begin(), vector.end(), nullptr);
+      assert(it != vector.end());
+      return *it;
+    };
+
+    find_free_slot(unary0->forward) = pairwise;
+    find_free_slot(unary1->backward) = pairwise;
 
     assert(pairwise->unary0 == nullptr && pairwise->unary1 == nullptr);
     pairwise->unary0 = unary0;

@@ -44,9 +44,7 @@ def construct_solver(model, with_uniqueness=True):
     s = Solver()
     g = lib.solver_get_graph(s.solver)
 
-    # We ignore the no_forward and no_backward return values, as they are not
-    # needed for the QAP library.
-    edges = create_pairwise_data(model, create_new_edges=not with_uniqueness)[0]
+    edges, no_forward, no_backward = create_pairwise_data(model, create_new_edges=not with_uniqueness)
 
     u_map = []
     idx_map = {}
@@ -57,7 +55,8 @@ def construct_solver(model, with_uniqueness=True):
 
     # insert unary factors
     for u, idx in enumerate(u_map):
-        f = lib.graph_add_unary(g, u, len(model._unaries_left[idx]) + 1)
+        f = lib.graph_add_unary(g, u, len(model._unaries_left[idx]) + 1,
+                no_forward[idx], no_backward[idx])
         for i, ass_id in enumerate(model._unaries_left[idx]):
             lib.unary_set_cost(f, i, model._assignments[ass_id].cost)
         lib.unary_set_cost(f, i+1, 0.0)

@@ -44,9 +44,9 @@ void mpopt_qap_solver_finalize(mpopt_qap_solver* s) { s->memory.finalize(); }
 
 mpopt_qap_graph* mpopt_qap_solver_get_graph(mpopt_qap_solver* s) { return to_graph(&s->solver.get_graph()); }
 
-mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx, int number_of_labels)
+mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx, int number_of_labels, int number_of_forward, int number_of_backward)
 {
-  auto* node = from_graph(graph)->add_unary(idx, number_of_labels);
+  auto* node = from_graph(graph)->add_unary(idx, number_of_labels, number_of_forward, number_of_backward);
   return to_unary(node);
 }
 
