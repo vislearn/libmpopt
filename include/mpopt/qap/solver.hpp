@@ -104,7 +104,7 @@ protected:
   {
     if constexpr (std::is_same_v<NODE_TYPE, unary_node_type>)
       return unary_messages::check_primal_consistency(node);
-    else if constexpr (std::is_same_v<NODE_TYPE, uniqueness_messages>)
+    else if constexpr (std::is_same_v<NODE_TYPE, uniqueness_node_type>)
       return uniqueness_messages::check_primal_consistency(node);
     else if constexpr (std::is_same_v<NODE_TYPE, pairwise_node_type>)
       return pairwise_messages::check_primal_consistency(node);
