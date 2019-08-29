@@ -105,6 +105,10 @@ protected:
   template<bool rounding>
   void single_pass()
   {
+#ifndef NDEBUG
+    auto lb_before = this->lower_bound();
+#endif
+
     for (const auto* node : graph_.pairwise())
       pairwise_messages::update(node);
 
@@ -120,6 +124,11 @@ protected:
       this->constant_ += node->factor.normalize();
       uniqueness_messages::send_messages_to_unaries(node);
     }
+
+#ifndef NDEBUG
+    auto lb_after = this->lower_bound();
+    assert(lb_before <= lb_after + epsilon);
+#endif
   }
 
   graph_type graph_;

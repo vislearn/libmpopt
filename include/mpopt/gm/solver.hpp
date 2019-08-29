@@ -93,6 +93,10 @@ protected:
   template<bool forward, bool rounding>
   void single_pass()
   {
+#ifndef NDEBUG
+    auto lb_before = this->lower_bound();
+#endif
+
     auto helper = [&](auto begin, auto end) {
       for (auto it = begin; it != end; ++it) {
         messages::receive<forward>(*it);
@@ -111,6 +115,11 @@ protected:
       helper(graph_.unaries().begin(), graph_.unaries().end());
     else
       helper(graph_.unaries().rbegin(), graph_.unaries().rend());
+
+#ifndef NDEBUG
+    auto lb_after = this->lower_bound();
+    assert(lb_before <= lb_after + epsilon);
+#endif
   }
 
   graph_type graph_;
