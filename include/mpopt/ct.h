@@ -29,9 +29,12 @@ mpopt_ct_conflict* mpopt_ct_graph_get_conflict(mpopt_ct_graph* g, int timestep, 
 
 void mpopt_ct_tracker_run(mpopt_ct_tracker* t, int max_iterations);
 double mpopt_ct_tracker_lower_bound(mpopt_ct_tracker* t);
-double mpopt_ct_tracker_upper_bound(mpopt_ct_tracker* t);
+double mpopt_ct_tracker_evaluate_primal(mpopt_ct_tracker* t);
 void mpopt_ct_tracker_forward_step(mpopt_ct_tracker* t, int timestep);
 void mpopt_ct_tracker_backward_step(mpopt_ct_tracker* t, int timestep);
+
+void mpopt_ct_tracker_solve_ilp(mpopt_ct_tracker* t);
+void mpopt_ct_tracker_execute_combilp(mpopt_ct_tracker* t);
 
 //
 // detection API

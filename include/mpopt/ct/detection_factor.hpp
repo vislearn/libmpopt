@@ -98,6 +98,7 @@ protected:
 #endif
 };
 
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class detection_factor {
 public:
@@ -232,6 +233,19 @@ public:
     }
   }
 
+  void round_independently()
+  {
+    // TODO: Should we call `reset_primal`?
+    if (min_detection() < 0.0) {
+      auto min_inc = std::min_element(incoming_.cbegin(), incoming_.cend());
+      auto min_out = std::min_element(outgoing_.cbegin(), outgoing_.cend());
+      primal_.set_incoming(min_inc - incoming_.cbegin());
+      primal_.set_outgoing(min_out - outgoing_.cbegin());
+    } else {
+      primal_.set_detection_off();
+    }
+  }
+
   void fix_primal()
   {
     assert(primal_.is_incoming_set() || primal_.is_outgoing_set());
@@ -256,6 +270,100 @@ protected:
 
   friend struct transition_messages;
   friend struct conflict_messages;
+  template<typename> friend class gurobi_detection_factor;
+};
+
+
+template<typename ALLOCATOR = std::allocator<cost>>
+class gurobi_detection_factor {
+public:
+  using allocator_type = ALLOCATOR;
+  using detection_type = detection_factor<allocator_type>;
+
+  gurobi_detection_factor(detection_type& detection, GRBModel& model)
+  : detection_(&detection)
+  , var_incoming_(detection.incoming_.size())
+  , var_outgoing_(detection.outgoing_.size())
+  {
+    std::vector<double> coeffs(std::max(var_incoming_.size(), var_outgoing_.size()), 1.0);
+    var_detection_ = model.addVar(0.0, 1.0, detection_->detection_, GRB_INTEGER);
+
+    for (size_t i = 0; i < var_incoming_.size(); ++i)
+      var_incoming_[i] = model.addVar(0.0, 1.0, detection_->incoming_[i], GRB_INTEGER);
+
+    for (size_t i = 0; i < var_outgoing_.size(); ++i)
+      var_outgoing_[i] = model.addVar(0.0, 1.0, detection_->outgoing_[i], GRB_INTEGER);
+
+    GRBLinExpr expr_incoming;
+    expr_incoming.addTerms(coeffs.data(), var_incoming_.data(), var_incoming_.size());
+    model.addConstr(expr_incoming == var_detection_);
+
+    GRBLinExpr expr_outgoing;
+    expr_outgoing.addTerms(coeffs.data(), var_outgoing_.data(), var_outgoing_.size());
+    model.addConstr(expr_outgoing == var_detection_);
+
+    if (detection_->primal().is_detection_off()) {
+      var_detection_.set(GRB_DoubleAttr_Start, 0.0);
+      for (auto& x : var_incoming_) x.set(GRB_DoubleAttr_Start, 0.0);
+      for (auto& x : var_outgoing_) x.set(GRB_DoubleAttr_Start, 0.0);
+    } else {
+      if (detection_->primal().is_detection_on())
+        var_detection_.set(GRB_DoubleAttr_Start, 1.0);
+
+      if (detection_->primal().is_incoming_set()) {
+        auto p = detection_->primal().incoming();
+        for (size_t i = 0; i < var_incoming_.size(); ++i)
+          var_incoming_[i].set(GRB_DoubleAttr_Start, i == p ? 1.0 : 0.0);
+      }
+
+      if (detection_->primal().is_outgoing_set()) {
+        auto p = detection_->primal().outgoing();
+        for (size_t i = 0; i < var_outgoing_.size(); ++i)
+          var_outgoing_[i].set(GRB_DoubleAttr_Start, i == p ? 1.0 : 0.0);
+      }
+    }
+  }
+
+  void update_primal() const
+  {
+    auto& p = detection_->primal();
+    p.reset();
+
+    if (var_detection_.get(GRB_DoubleAttr_X) <= 0.5) {
+      p.set_detection_off();
+    } else {
+      for (size_t i = 0; i < var_incoming_.size(); ++i)
+        if (var_incoming_[i].get(GRB_DoubleAttr_X) >= 0.5)
+          p.set_incoming(i);
+
+      for (size_t i = 0; i < var_outgoing_.size(); ++i)
+        if (var_outgoing_[i].get(GRB_DoubleAttr_X) >= 0.5)
+          p.set_outgoing(i);
+    }
+
+    assert(!p.is_undecided());
+  }
+
+  auto& detection() { return var_detection_; }
+  auto& incoming(index i) { assert(i >= 0 && i < var_incoming_.size()); return var_incoming_[i]; }
+  auto& outgoing(index i) { assert(i >= 0 && i < var_outgoing_.size()); return var_outgoing_[i]; }
+
+  template<bool forward>
+  auto& transition(index i)
+  {
+    if constexpr (forward)
+      return outgoing(i);
+    else
+      return incoming(i);
+  }
+
+  const auto& factor() const { assert(detection_ != nullptr); return *detection_; }
+
+protected:
+  detection_type* detection_;
+  GRBVar var_detection_;
+  std::vector<GRBVar> var_incoming_;
+  std::vector<GRBVar> var_outgoing_;
 };
 
 }

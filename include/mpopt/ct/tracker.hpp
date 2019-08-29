@@ -12,6 +12,7 @@ public:
   using timestep_type = typename graph_type::timestep_type;
   using detection_node_type = typename graph_type::detection_node_type;
   using conflict_node_type = typename graph_type::conflict_node_type;
+  using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
@@ -132,6 +133,14 @@ public:
     }
 
     restore_best_primals();
+  }
+
+  void execute_combilp()
+  {
+    this->reset_primal();
+    combilp subsolver(graph_);
+    subsolver.run();
+    backward_pass<false>();
   }
 
 protected:

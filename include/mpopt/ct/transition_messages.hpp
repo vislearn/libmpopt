@@ -7,8 +7,10 @@ namespace ct {
 struct transition_messages {
 
   template<bool to_right, typename DETECTION_NODE>
-  static void send_messages(const DETECTION_NODE* node)
+  static void send_messages(const DETECTION_NODE* node, double weight=1.0)
   {
+    assert(weight > 0 && weight <= 1.0);
+
     auto& here = node->factor;
     using detection_type = typename DETECTION_NODE::detection_type;
 
@@ -46,7 +48,7 @@ struct transition_messages {
 #ifndef NDEBUG
       const cost lb_before = local_lower_bound(edge);
 #endif
-      auto msg = constant + slot_cost - set_to;
+      auto msg = (constant + slot_cost - set_to) * weight;
       (here.*repam_this)(slot, -msg);
       if (edge.is_division() && to_right) {
         (edge.node1->factor.*repam_other)(edge.slot1, .5 * msg);

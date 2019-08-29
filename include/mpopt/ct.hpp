@@ -18,7 +18,9 @@
 #include <mpopt/ct/transition_messages.hpp>
 
 #include <mpopt/ct/graph.hpp>
+#include <mpopt/ct/gurobi.hpp>
 #include <mpopt/ct/conflict_subsolver.hpp>
+#include <mpopt/ct/combilp.hpp>
 #include <mpopt/ct/tracker.hpp>
 
 #endif

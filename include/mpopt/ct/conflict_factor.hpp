@@ -115,6 +115,55 @@ protected:
 
   friend struct transition_messages;
   friend struct conflict_messages;
+  template<typename> friend class gurobi_conflict_factor;
+};
+
+
+template<typename ALLOCATOR = std::allocator<cost>>
+class gurobi_conflict_factor {
+public:
+  using allocator_type = ALLOCATOR;
+  using conflict_type = conflict_factor<allocator_type>;
+
+  gurobi_conflict_factor(conflict_type& conflict, GRBModel& model)
+  : conflict_(&conflict)
+  , variables_(conflict.costs_.size())
+  {
+    std::vector<double> coeffs(variables_.size(), 1.0);
+
+    for (size_t i = 0; i < variables_.size(); ++i)
+      variables_[i] = model.addVar(0.0, 1.0, conflict_->costs_[i], GRB_INTEGER);
+
+    GRBLinExpr expr;
+    expr.addTerms(coeffs.data(), variables_.data(), variables_.size());
+    model.addConstr(expr == 1);
+
+    if (conflict_->primal().is_set()) {
+      const auto p = conflict_->primal().get();
+      for (size_t i = 0; i < variables_.size(); ++i)
+        variables_[i].set(GRB_DoubleAttr_Start, i == p ? 1.0 : 0.0);
+    }
+  }
+
+  void update_primal() const
+  {
+    auto& p = conflict_->primal();
+    p.reset();
+
+    for (size_t i = 0; i < variables_.size(); ++i)
+      if (variables_[i].get(GRB_DoubleAttr_X) >= 0.5)
+        p.set(i);
+
+    assert(!p.is_undecided());
+  }
+
+  auto& variable(index i) { assert(i >= 0 && i < variables_.size()); return variables_[i]; }
+
+  const auto& factor() const { assert(conflict_ != nullptr); return *conflict_; }
+
+protected:
+  conflict_type* conflict_;
+  std::vector<GRBVar> variables_;
 };
 
 }
