@@ -177,7 +177,7 @@ protected:
         }
       }
 
-      conflict_subsolver2<graph_type> subsolver(this->gurobi_env_);
+      conflict_subsolver<graph_type> subsolver(this->gurobi_env_);
       for (const auto* node : t.detections)
         subsolver.add_detection(node);
       for (const auto* node : t.conflicts)
