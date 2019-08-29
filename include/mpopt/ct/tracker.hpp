@@ -171,11 +171,9 @@ protected:
       for (const auto* node : t.detections)
         original.push_back(node->factor.detection());
 
-      for (const auto* node : t.conflicts) {
-        for (size_t i = 0; i < node->detections.size(); ++i) {
+      for (const auto* node : t.conflicts)
+        for (size_t i = 0; i < node->detections.size(); ++i)
           node->detections[i].node->factor.repam_detection(node->factor.get(i));
-        }
-      }
 
       conflict_subsolver<graph_type> subsolver(this->gurobi_env_);
       for (const auto* node : t.detections)
