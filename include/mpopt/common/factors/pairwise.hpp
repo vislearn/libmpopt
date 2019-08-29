@@ -144,7 +144,6 @@ public:
     two_dimension_array_accessor a(no_labels0_, no_labels1_);
     auto it = std::min_element(costs_.cbegin(), costs_.cend());
     auto linear_idx = it - costs_.cbegin();
-    assert(linear_idx >= 0 && linear_idx < costs_.size());
 
     const auto indices = a.to_nonlinear(linear_idx);
     primal0_ = std::get<0>(indices);
@@ -173,8 +172,8 @@ protected:
   }
 
   fixed_vector_alloc_gen<cost, ALLOCATOR> costs_;
-  index primal0_, primal1_;
   index no_labels0_, no_labels1_;
+  index primal0_, primal1_;
 
 #ifndef NDEBUG
   index index0_, index1_;

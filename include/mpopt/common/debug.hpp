@@ -11,7 +11,7 @@ bool are_identical(const T a, const T b)
 {
   constexpr T inf = std::numeric_limits<T>::infinity();
 
-  if (a == inf && b == inf || b == -inf && b == -inf)
+  if ((a == inf && b == inf) || (b == -inf && b == -inf))
     return true;
 
   return std::abs(a - b) < epsilon;

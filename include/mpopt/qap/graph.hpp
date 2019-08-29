@@ -254,8 +254,6 @@ public:
 
   void check_structure() const
   {
-    bool result = true;
-
     for (auto* node : unaries_)
       node->check_structure();
 
