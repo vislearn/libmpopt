@@ -1,11 +1,20 @@
 from ..common.solver import BaseSolver
 from . import libmpopt_ct as lib
 
+for member in dir(lib):
+    if member[:8] == 'tracker_':
+        new_member = 'solver_' + member[8:]
+        setattr(lib, new_member, getattr(lib, member))
+
 
 class Tracker(BaseSolver):
 
     def __init__(self):
         super().__init__(lib)
+
+    @property
+    def tracker(self):
+        return self.solver
 
     def forward_step(self, timestep):
         lib.tracker_forward_step(self.tracker, timestep)
