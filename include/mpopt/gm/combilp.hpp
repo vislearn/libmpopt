@@ -18,6 +18,9 @@ public:
 
   void run()
   {
+    GRBEnv env;
+    gurobi_model_builder<allocator_type> builder(env);
+
     preprocess();
 
     int iterations = 0;
@@ -25,8 +28,6 @@ public:
     while (changed) {
       reparametrize_border();
 
-      GRBEnv env;
-      gurobi_model_builder<allocator_type> builder(env);
       const auto inconsistent = populate_builder(builder);
 
       std::cout << "\n== CombiLP iteration " << (iterations+1)
@@ -154,16 +155,24 @@ protected:
   {
     size_t inconsistent = 0;
 
+    // We just reset all the primals. In case we insert new ones we do not want
+    // to confuse Gurobi with an invalid MIP start. (Set primals are used as
+    // MIP start.)
+
     for (const auto* node : graph_->unaries()) {
       if (!mask_sac_.at(node)) {
+        node->factor.reset_primal();
         builder.add_factor(node);
         ++inconsistent;
       }
     }
 
-    for (const auto* node : graph_->pairwise())
-      if (!mask_sac_.at(node->unary0) && !mask_sac_.at(node->unary1))
+    for (const auto* node : graph_->pairwise()) {
+      if (!mask_sac_.at(node->unary0) && !mask_sac_.at(node->unary1)) {
+        node->factor.reset_primal();
         builder.add_factor(node);
+      }
+    }
 
     return inconsistent;
   }
