@@ -193,9 +193,19 @@ public:
   : factor_(&factor)
   , vars_(factor.no_labels0_ * factor.no_labels1_)
   {
+    std::optional<size_t> linear_primal_idx;
+    if (factor_->primal() != std::tuple(factor_type::primal_unset, factor_type::primal_unset)) {
+      two_dimension_array_accessor a(factor_->no_labels0_, factor_->no_labels1_);
+      const auto [p0, p1] = factor_->primal();
+      linear_primal_idx = a.to_linear(p0, p1);
+    }
+
     std::vector<double> coeffs(vars_.size(), 1.0);
-    for (size_t i = 0; i < vars_.size(); ++i)
+    for (size_t i = 0; i < vars_.size(); ++i) {
       vars_[i] = model.addVar(0.0, 1.0, factor_->costs_[i], GRB_CONTINUOUS);
+      if (linear_primal_idx.has_value())
+        vars_[i].set(GRB_DoubleAttr_Start, *linear_primal_idx == i ? 1.0 : 0.0);
+    }
 
     GRBLinExpr expr;
     expr.addTerms(coeffs.data(), vars_.data(), vars_.size());

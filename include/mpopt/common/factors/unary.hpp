@@ -116,8 +116,11 @@ public:
   , vars_(factor.size())
   {
     std::vector<double> coeffs(vars_.size(), 1.0);
-    for (size_t i = 0; i < factor_->size(); ++i)
+    for (size_t i = 0; i < factor_->size(); ++i) {
       vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_BINARY);
+      if (factor_->primal() != factor_type::primal_unset)
+        vars_[i].set(GRB_DoubleAttr_Start, factor_->primal() == i ? 1.0 : 0.0);
+    }
 
     GRBLinExpr expr;
     expr.addTerms(coeffs.data(), vars_.data(), vars_.size());
