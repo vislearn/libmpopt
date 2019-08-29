@@ -22,7 +22,9 @@ void mpopt_qap_graph_add_pairwise_link(mpopt_qap_graph* graph, int idx_unary0, i
 void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, int label, int idx_uniqueness, int slot);
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations);
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s);
+void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s);
 double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s);
+double mpopt_qap_solver_evaluate_primal(mpopt_qap_solver* s);
 
 void mpopt_qap_unary_set_cost(mpopt_qap_unary_node* n, int label, double cost);
 void mpopt_qap_uniqueness_set_cost(mpopt_qap_uniqueness_node* n, int unary, double cost);
