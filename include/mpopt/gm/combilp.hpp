@@ -127,9 +127,9 @@ protected:
 
       if (sac0 != sac1) {
         if (sac0)
-          messages::send_pairwise<true>(node);
+          messages::send_from_pairwise_to_unary<true>(node);
         else
-          messages::send_pairwise<false>(node);
+          messages::send_from_pairwise_to_unary<false>(node);
       }
     }
   }

@@ -79,7 +79,7 @@ struct messages {
   }
 
   template<bool forward, typename PAIRWISE_NODE>
-  static void send_pairwise(const PAIRWISE_NODE* pairwise_node)
+  static void send_from_pairwise_to_unary(const PAIRWISE_NODE* pairwise_node)
   {
     const auto no_labels_to = std::get<forward ? 1 : 0>(pairwise_node->factor.size());
     for (index l = 0; l < no_labels_to; ++l) {
