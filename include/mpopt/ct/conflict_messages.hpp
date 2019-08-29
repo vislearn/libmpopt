@@ -6,17 +6,6 @@ namespace ct {
 
 struct conflict_messages {
 
-#ifndef NDEBUG
-  template<typename CONFLICT_NODE>
-  static cost local_lower_bound(const CONFLICT_NODE* node)
-  {
-    cost result = node->factor.lower_bound();
-    for (const auto& edge: node->detections)
-      result += edge.node->factor.lower_bound();
-    return result;
-  }
-#endif
-
   template<typename CONFLICT_NODE>
   static void send_messages_to_conflict(const CONFLICT_NODE* node)
   {
@@ -135,6 +124,17 @@ struct conflict_messages {
       if (slot != c.primal().get())
         d.primal().set_detection_off();
     });
+  }
+
+private:
+
+  template<typename CONFLICT_NODE>
+  static cost local_lower_bound(const CONFLICT_NODE* node)
+  {
+    cost result = node->factor.lower_bound();
+    for (const auto& edge: node->detections)
+      result += edge.node->factor.lower_bound();
+    return result;
   }
 
 };
