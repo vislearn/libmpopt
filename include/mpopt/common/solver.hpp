@@ -1,5 +1,5 @@
-#ifndef foo
-#define foo
+#ifndef LIBMPOPT_COMMON_SOLVER_HPP
+#define LIBMPOPT_COMMON_SOLVER_HPP
 
 namespace mpopt {
 
