@@ -21,15 +21,15 @@ def construct_gm_model(model):
     # does this bookkeeping action anyway.
     edges = create_pairwise_data(model, create_new_edges=True)[0]
 
-    u_map = []
-    idx_map = {}
-    for idx in range(model._no_left):
-        if idx in model._unaries_left:
-            idx_map[idx] = len(u_map)
-            u_map.append(idx)
+    unary_to_left = []
+    left_to_unary = {}
+    for left in range(model._no_left):
+        if left in model._unaries_left:
+            left_to_unary[left] = len(unary_to_left)
+            unary_to_left.append(left)
 
     gm_model = GmModel()
-    for u, idx in enumerate(u_map):
+    for u, idx in enumerate(unary_to_left):
         costs = [model._assignments[ass_id].cost for ass_id in model._unaries_left[idx]]
         costs.append(0.0)
         gm_model.add_unary(costs)
@@ -46,15 +46,15 @@ def construct_solver(model, with_uniqueness=True):
 
     edges, no_forward, no_backward = create_pairwise_data(model, create_new_edges=not with_uniqueness)
 
-    u_map = []
-    idx_map = {}
-    for idx in range(model._no_left):
-        if idx in model._unaries_left:
-            idx_map[idx] = len(u_map)
-            u_map.append(idx)
+    unary_to_left = []
+    left_to_unary = {}
+    for left in range(model._no_left):
+        if left in model._unaries_left:
+            left_to_unary[left] = len(unary_to_left)
+            unary_to_left.append(left)
 
     # insert unary factors
-    for u, idx in enumerate(u_map):
+    for u, idx in enumerate(unary_to_left):
         f = lib.graph_add_unary(g, u, len(model._unaries_left[idx]) + 1,
                 no_forward[idx], no_backward[idx])
         for i, ass_id in enumerate(model._unaries_left[idx]):
@@ -69,12 +69,12 @@ def construct_solver(model, with_uniqueness=True):
                 assignment = model._assignments[assignment_idx]
                 assert assignment.right == right
                 label = model._unaries_left[assignment.left].index(assignment_idx) # FIXME: O(n) is best avoided.
-                lib.graph_add_uniqueness_link(g, idx_map[assignment.left], label, idx_uniqueness, slot)
+                lib.graph_add_uniqueness_link(g, left_to_unary[assignment.left], label, idx_uniqueness, slot)
 
     # insert pairwise factors
     for i, (idx1, idx2) in enumerate(edges): # use items()
         f = lib.graph_add_pairwise(g, i, edges[idx1, idx2].shape[0], edges[idx1, idx2].shape[1])
-        lib.graph_add_pairwise_link(g, idx_map[idx1], idx_map[idx2], i)
+        lib.graph_add_pairwise_link(g, left_to_unary[idx1], left_to_unary[idx2], i)
         for l_u in range(len(model._unaries_left[idx1]) + 1):
             for l_v in range(len(model._unaries_left[idx2]) + 1):
                 lib.pairwise_set_cost(f, l_u, l_v, edges[idx1, idx2][l_u, l_v])
