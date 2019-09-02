@@ -83,7 +83,7 @@ foreach(sublibrary ct gm qap)
 endforeach()
 
 install(DIRECTORY python/mpopt DESTINATION "${Python3_SITELIB}")
-install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi bin/gm_uai bin/qap_dd DESTINATION bin)
+install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi bin/dd_to_uai bin/gm_uai bin/qap_dd DESTINATION bin)
 
 #
 # Bytecompile Python code
