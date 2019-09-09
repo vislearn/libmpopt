@@ -12,6 +12,7 @@ public:
 
   unary_factor(index number_of_labels, const ALLOCATOR& allocator = ALLOCATOR())
   : costs_(number_of_labels, initial_cost, allocator)
+  , primal_(primal_unset)
 #ifndef NDEBUG
   , index_(-1)
 #endif
