@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Optimizer for *.dd quadratic assignment models.')
     parser.add_argument('--relaxation', choices=('gm', 'gm-unordered', 'qap-pw', 'qap'), default='qap')
     parser.add_argument('--maxIterations', type=int, default=1000)
+    parser.add_argument('--ilp', action='store_true', help='Solves the ILP after reparametrizing.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
     args = parser.parse_args()
 
@@ -31,3 +32,7 @@ if __name__ == '__main__':
 
     print('initial lower bound: {}'.format(solver.lower_bound()), flush=True)
     solver.run(args.maxIterations)
+
+    if args.ilp:
+        solver.solve_ilp()
+        print('exact solution: {}'.format(solver.evaluate_primal()))
