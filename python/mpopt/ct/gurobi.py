@@ -175,6 +175,10 @@ class Gurobi:
             self._gurobi.addConstr(v_left == v_right_1)
             self._gurobi.addConstr(v_left == v_right_2)
 
+    def update_upper_bound(self):
+        ub = self._tracker.evaluate_primal()
+        self._gurobi.Params.CutOff = ub
+
     def run(self):
         """Runs the Gurobi optimizer.
 
