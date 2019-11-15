@@ -1,5 +1,6 @@
 from ..common.solver import BaseSolver
 from . import libmpopt_ct as lib
+from .primals import Primals
 
 for member in dir(lib):
     if member[:8] == 'tracker_':
@@ -83,3 +84,52 @@ def construct_tracker(model):
     lib.tracker_finalize(t.tracker)
 
     return t
+
+
+def extract_primals_from_tracker(model, tracker):
+    incoming_slot_to_transition = {}
+    outgoing_slot_to_transition = {}
+    for key, (slot_left, slot_right, _) in model._transitions.items():
+        timestep, detection_left, detection_right = key
+        outgoing_slot_to_transition[timestep, detection_left, slot_left] = key
+        incoming_slot_to_transition[timestep+1, detection_right, slot_right] = key
+
+    incoming_slot_to_division = {}
+    outgoing_slot_to_division = {}
+    for key, (slot_left, slot_right_1, slot_right_2, _) in model._divisions.items():
+        timestep, detection_left, detection_right_1, detection_right_2 = key
+        outgoing_slot_to_division[timestep, detection_left, slot_left] = key
+        incoming_slot_to_division[timestep+1, detection_right_1, slot_right_1] = key
+        incoming_slot_to_division[timestep+1, detection_right_2, slot_right_2] = key
+
+    g = lib.tracker_get_graph(tracker.tracker)
+    primals = Primals(model)
+    for timestep in range(model.no_timesteps()):
+        for detection in range(model.no_detections(timestep)):
+            factor = lib.graph_get_detection(g, timestep, detection)
+            incoming_primal = lib.detection_get_incoming_primal(factor)
+            outgoing_primal = lib.detection_get_outgoing_primal(factor)
+
+            assert (incoming_primal == -1) == (outgoing_primal == -1)
+            primals.detection(timestep, detection, (incoming_primal != -1) and (outgoing_primal != -1))
+
+            if incoming_primal >= 0 and incoming_primal < model.no_incoming_edges(timestep, detection):
+                key = incoming_slot_to_transition.get((timestep, detection, incoming_primal))
+                if key is not None:
+                    primals.transition(*key, True)
+
+                key = incoming_slot_to_division.get((timestep, detection, incoming_primal))
+                if key is not None:
+                    primals.division(*key, True)
+
+            if outgoing_primal >= 0 and outgoing_primal < model.no_outgoing_edges(timestep, detection):
+                key = outgoing_slot_to_transition.get((timestep, detection, outgoing_primal))
+                if key is not None:
+                    primals.transition(*key, True)
+
+                key = outgoing_slot_to_division.get((timestep, detection, outgoing_primal))
+                if key is not None:
+                    primals.division(*key, True)
+
+    assert primals.check_consistency()
+    return primals

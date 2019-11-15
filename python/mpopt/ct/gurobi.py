@@ -3,6 +3,7 @@ from gurobipy import GRB
 from collections import namedtuple
 
 from . import libmpopt_ct as lib
+from .primals import Primals
 
 
 class GurobiBase:
@@ -10,7 +11,7 @@ class GurobiBase:
     def __init__(self, model, ilp_mode=True):
         self.model = model
         self.gurobi = None
-        self.ilp_mode = False
+        self.ilp_mode = ilp_mode
 
     def _add_gurobi_variable(self, obj=0.0, disable_ub=False):
         """Adds a single Gurobi variable.
@@ -39,20 +40,25 @@ class GurobiBase:
         self.gurobi.setParam('Threads', 1)
         self.gurobi.optimize()
 
+    def get_primals(self):
+        raise NotImplementedError()
+
 
 class GurobiStandardModel(GurobiBase):
 
     def construct(self):
-        detections = {}
+        self.gurobi = gurobipy.Model()
+        self._detections = {}
+        self._transitions = {}
+        self._divisions = {}
+
         incoming = {}
         outgoing = {}
-        conflicts = {}
-        self.gurobi = gurobipy.Model()
 
         for t in range(self.model.no_timesteps()):
             for d in range(self.model.no_detections(t)):
                 c_det, c_app, c_dis = self.model._detections[t, d]
-                detections[t, d] = self._add_gurobi_variable(c_det)
+                self._detections[t, d] = self._add_gurobi_variable(c_det)
                 incoming[t, d] = [self._add_gurobi_variable(c_app)]
                 outgoing[t, d] = [self._add_gurobi_variable(c_dis)]
 
@@ -61,6 +67,7 @@ class GurobiStandardModel(GurobiBase):
             slot_left, slot_right, cost = v
 
             v = self._add_gurobi_variable(cost)
+            self._transitions[k] = v
             outgoing[timestep, index_from].append(v)
             incoming[timestep+1, index_to].append(v)
 
@@ -69,21 +76,36 @@ class GurobiStandardModel(GurobiBase):
             slot_left, slot_right_1, slot_right_2, cost = v
 
             v = self._add_gurobi_variable(cost)
+            self._divisions[k] = v
             outgoing[timestep, index_from].append(v)
             incoming[timestep+1, index_to_1].append(v)
             incoming[timestep+1, index_to_2].append(v)
 
         for t in range(self.model.no_timesteps()):
             for d in range(self.model.no_detections(t)):
-                var_det = detections[t, d]
+                var_det = self._detections[t, d]
 
                 self.gurobi.addConstr(sum(incoming[t, d]) == var_det)
                 self.gurobi.addConstr(sum(outgoing[t, d]) == var_det)
 
         for t in range(self.model.no_timesteps()):
             for c in range(self.model.no_conflicts(t)):
-                variables = [detections[t, d] for d in self.model._conflicts[t, c]]
+                variables = [self._detections[t, d] for d in self.model._conflicts[t, c]]
                 self.gurobi.addConstr(sum(variables) <= 1)
+
+    def get_primals(self):
+        primals = Primals(self.model)
+        for k, v in self._detections.items():
+            if v.X > .9:
+                primals.detection(*k, True)
+        for k, v in self._transitions.items():
+            if v.X > .9:
+                primals.transition(*k, True)
+        for k, v in self._divisions.items():
+            if v.X > .9:
+                primals.division(*k, True)
+        assert primals.check_consistency()
+        return primals
 
 
 class GurobiDecomposedModel(GurobiBase):
@@ -249,6 +271,33 @@ class GurobiDecomposedModel(GurobiBase):
             v_right_2 = self._detections[t_right, detection_right_2].incoming[slot_right_2]
             self.gurobi.addConstr(v_left == v_right_1)
             self.gurobi.addConstr(v_left == v_right_2)
+
+    def get_primals(self):
+        primals = Primals(self.model)
+
+        for k, v in self._detections.items():
+            if v.detection.X > .9:
+                primals.detection(*k, True)
+
+        for k, v in self.model._transitions.items():
+            timestep, detection_left, detection_right = k
+            slot_left, slot_right, _ = v
+            v_left = self._detections[timestep, detection_left].outgoing[slot_left]
+            v_right = self._detections[timestep+1, detection_right].incoming[slot_right]
+            if v_left.X > .9 or v_right.X > .9:
+                primals.transition(*k, True)
+
+        for k, v in self.model._divisions.items():
+            timestep, detection_left, detection_right_1, detection_right_2 = k
+            slot_left, slot_right_1, slot_right_2, _ = v
+            v_left = self._detections[timestep, detection_left].outgoing[slot_left]
+            v_right_1 = self._detections[timestep+1, detection_right_1].incoming[slot_right_1]
+            v_right_2 = self._detections[timestep+1, detection_right_2].incoming[slot_right_2]
+            if v_left.X > .9 or v_right_1.X > .9 or v_right_2.X > .9:
+                primals.division(*k, True)
+
+        assert primals.check_consistency()
+        return primals
 
     def update_upper_bound(self):
         super().update_upper_bound(self.tracker)

@@ -218,6 +218,7 @@ def convert_jug_to_ct(jug_model):
 
 
 def format_jug_primals(primals, bimaps, out):
+    assert primals.check_consistency()
     model_to_id, id_to_model = bimaps
 
     def unique_id(*args):
@@ -225,30 +226,15 @@ def format_jug_primals(primals, bimaps, out):
         assert tag == 'H' if args[0] == 'H' else 'A'
         return unique_id
 
-    for timestep in range(primals.model.no_timesteps()):
-        for detection in range(primals.model.no_detections(timestep)):
-            if primals.detection(timestep, detection):
-                if primals.incoming(timestep, detection) is None:
-                    out.write('APP {}\n'.format(unique_id('APP', timestep, detection)))
-                out.write('H {}\n'.format(unique_id('H', timestep, detection)))
-                if primals.outgoing(timestep, detection) is None:
-                    out.write('DISAPP {}\n'.format(unique_id('DISAPP', timestep, detection)))
+    for timestep, detection in primals._detections:
+        if primals.appearance(timestep, detection):
+            out.write('APP {}\n'.format(unique_id('APP', timestep, detection)))
+        out.write('H {}\n'.format(unique_id('H', timestep, detection)))
+        if primals.disappearance(timestep, detection):
+            out.write('DISAPP {}\n'.format(unique_id('DISAPP', timestep, detection)))
 
-    for k, v in primals.model._transitions.items():
-        timestep, detection_left, detection_right = k
-        slot_left, slot_right, cost = v
-        is_left_active = primals.outgoing(timestep, detection_left) == slot_left
-        is_right_active = primals.incoming(timestep+1, detection_right) == slot_right
-        assert is_left_active == is_right_active
-        if is_left_active and is_right_active:
-            out.write('MOVE {}\n'.format(unique_id('MOVE', timestep, detection_left, detection_right)))
+    for timestep, detection_left, detection_right in primals._transitions:
+        out.write('MOVE {}\n'.format(unique_id('MOVE', timestep, detection_left, detection_right)))
 
-    for k, v in primals.model._divisions.items():
-        timestep, detection_left, detection_right_1, detection_right_2 = k
-        slot_left, slot_right_1, slot_right_2, cost = v
-        is_left_active = primals.outgoing(timestep, detection_left) == slot_left
-        is_right_1_active = primals.incoming(timestep+1, detection_right_1) == slot_right_1
-        is_right_2_active = primals.incoming(timestep+1, detection_right_2) == slot_right_2
-        assert is_left_active == is_right_1_active and is_left_active == is_right_2_active
-        if is_left_active and is_right_1_active and is_right_2_active:
-            out.write('DIV {}\n'.format(unique_id('DIV', timestep, detection_left, detection_right_1, detection_right_2)))
+    for timestep, detection_left, detection_right_1, detection_right_2 in primals._divisions:
+        out.write('DIV {}\n'.format(unique_id('DIV', timestep, detection_left, detection_right_1, detection_right_2)))

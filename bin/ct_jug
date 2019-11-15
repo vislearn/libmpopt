@@ -29,9 +29,10 @@ if __name__ == '__main__':
             gurobi.construct()
             gurobi.update_upper_bound()
         gurobi.run()
-        primals = ct.extract_primals_from_gurobi(gurobi)
+        primals = gurobi.get_primals()
     else:
         primals = ct.extract_primals_from_tracker(model, tracker)
 
+    print('final solution:', primals.evaluate())
     with open('tracking.sol', 'w') as f:
         ct.format_jug_primals(primals, bimap, f)
