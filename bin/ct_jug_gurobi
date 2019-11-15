@@ -10,9 +10,9 @@ if __name__ == '__main__':
     input_filename, = sys.argv[1:]
     with utils.smart_open(input_filename, 'rt') as f:
         model, bimap = ct.convert_jug_to_ct(ct.parse_jug_model(f))
-    tracker = ct.construct_tracker(model)
-    gurobi = ct.Gurobi()
-    gurobi.construct(model, tracker)
+
+    gurobi = ct.Gurobi(model)
+    gurobi.construct()
     gurobi.run()
 
     primals = ct.extract_primals_from_gurobi(gurobi)
