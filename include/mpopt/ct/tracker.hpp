@@ -170,11 +170,13 @@ protected:
   template<bool forward, bool rounding>
   void single_step(const timestep_type& t)
   {
-    for (const auto* node : t.conflicts)
-      conflict_messages::send_messages_to_conflict(node);
+    for (int i = 0; i < 5; ++i) {
+      for (const auto* node : t.conflicts)
+        conflict_messages::send_messages_to_conflict(node);
 
-    for (const auto* node : t.conflicts)
-      conflict_messages::send_messages_to_detection(node);
+      for (const auto* node : t.conflicts)
+        conflict_messages::send_messages_to_detection(node);
+    }
 
     if constexpr (rounding) {
       // We drain the conflict factors here.
