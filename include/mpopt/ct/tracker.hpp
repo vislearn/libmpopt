@@ -177,10 +177,12 @@ protected:
       conflict_messages::send_messages_to_detection(node);
 
     if constexpr (rounding) {
-      std::vector<cost> original;
-      for (const auto* node : t.detections)
-        original.push_back(node->factor.detection());
-
+      // We drain the conflict factors here.
+      // BIG FAT WARNING: This operation here is not a real reparametrization,
+      // because we do only change the values of the detection factors. It is
+      // okay here, because we do the reverse operation directly afterwards.
+      // This means that within this block the computation of total costs are a
+      // no-go!
       for (const auto* node : t.conflicts)
         for (size_t i = 0; i < node->detections.size(); ++i)
           node->detections[i].node->factor.repam_detection(node->factor.get(i));
@@ -195,8 +197,6 @@ protected:
       for (const auto* node : t.detections)
         if (!subsolver.assignment(node))
           node->factor.primal().set_detection_off();
-
-      auto it = original.cbegin();
 
       // FIXME: Pre-allocate scratch space and do not resort to dynamic
       // memory allocation.
@@ -231,9 +231,11 @@ protected:
         }
       }
 
-      it = original.cbegin();
-      for (const auto* node : t.detections)
-        node->factor.set_detection_cost(*it++);
+      // Here we restore the property of a reparametrization again. We execute
+      // the inverse cost manipulation operation on all detection factors.
+      for (const auto* node : t.conflicts)
+        for (size_t i = 0; i < node->detections.size(); ++i)
+          node->detections[i].node->factor.repam_detection(-node->factor.get(i));
     }
 
     for (const auto* node : t.detections)
