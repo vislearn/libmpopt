@@ -1,16 +1,19 @@
 #!/bin/bash
 set -eu -o pipefail
 
+temp_dir=$(mktemp -d)
+trap 'rm -rf "${temp_dir}"' EXIT
+
 source_dir=$(pwd)
-build_dir=$(mktemp -d)
-install_dir=$(mktemp -d)
-trap 'rm -rf "${build_dir}" "${install_dir}"' EXIT
+build_dir="${temp_dir}/build"
+install_dir="${temp_dir}/install"
 
 custom_sitelib="${install_dir}/lib/python/site-packages"
 export PYTHONPATH="${custom_sitelib}${PYTHONPATH:+:${PYTHONPATH}}"
 export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export PATH="${install_dir}/bin${PATH:+:${PATH}}"
 
+mkdir "${build_dir}"
 cd "${build_dir}"
 cmake \
 	-GNinja \
