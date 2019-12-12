@@ -6,6 +6,34 @@ namespace dbg {
 
 template<typename...> struct get_type_of;
 
+struct timer {
+  using clock_type = std::chrono::steady_clock;
+  static_assert(clock_type::is_steady);
+
+  timer(bool auto_start=true)
+  {
+    if (auto_start)
+      start();
+  }
+
+  void start() { begin = clock_type::now(); }
+  void stop() { end = clock_type::now(); }
+
+  auto duration() const { return end - begin; }
+
+  template<typename DURATION>
+  auto duration_count() const
+  {
+    return std::chrono::duration_cast<DURATION>(duration()).count();
+  }
+
+  auto milliseconds() const { return duration_count<std::chrono::milliseconds>(); }
+  auto seconds() const { return duration_count<std::chrono::seconds>(); }
+
+  clock_type::time_point begin, end;
+};
+
+
 template<typename T>
 bool are_identical(const T a, const T b)
 {
@@ -16,6 +44,7 @@ bool are_identical(const T a, const T b)
 
   return std::abs(a - b) < epsilon;
 }
+
 
 template<typename ITERATOR>
 struct print_iterator_helper {
