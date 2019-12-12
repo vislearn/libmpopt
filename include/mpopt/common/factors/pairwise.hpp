@@ -214,21 +214,28 @@ public:
 
   void update_primal() const
   {
+    update_primal([](GRBVar v) { return v.get(GRB_DoubleAttr_X); });
+  }
+
+  template<typename FUNCTOR>
+  void update_primal(FUNCTOR f) const
+  {
     auto [size0, size1] = factor_->size();
     two_dimension_array_accessor a(size0, size1);
 
     auto [p0, p1] = factor_->primal();
     p0 = p1 = factor_type::primal_unset;
+    double max = -std::numeric_limits<double>::infinity();
 
     for (size_t i = 0; i < vars_.size(); ++i) {
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
-        assert(p0 == factor_type::primal_unset && p1 == factor_type::primal_unset);
+      const auto val = f(vars_[i]);
+      if (val > max) {
+        max = val;
         const auto indices = a.to_nonlinear(i);
         p0 = std::get<0>(indices);
         p1 = std::get<1>(indices);
       }
     }
-
     assert(p0 != factor_type::primal_unset && p1 != factor_type::primal_unset);
   }
 

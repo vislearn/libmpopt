@@ -130,11 +130,19 @@ public:
 
   void update_primal() const
   {
+    update_primal([](GRBVar v) { return v.get(GRB_DoubleAttr_X); });
+  }
+
+  template<typename FUNCTOR>
+  void update_primal(FUNCTOR f) const
+  {
     auto& p = factor_->primal();
     p = factor_type::primal_unset;
+    double max = -std::numeric_limits<double>::infinity();
     for (size_t i = 0; i < vars_.size(); ++i) {
-      if (vars_[i].get(GRB_DoubleAttr_X) >= 0.5) {
-        assert(p == factor_type::primal_unset);
+      const auto val = f(vars_[i]);
+      if (val > max) {
+        max = val;
         p = i;
       }
     }

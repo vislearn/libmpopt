@@ -326,19 +326,38 @@ public:
 
   void update_primal() const
   {
+    update_primal([](GRBVar v) { return v.get(GRB_DoubleAttr_X); });
+  }
+
+  template<typename FUNCTOR>
+  void update_primal(FUNCTOR f) const
+  {
     auto& p = detection_->primal();
     p.reset();
 
-    if (var_detection_.get(GRB_DoubleAttr_X) <= 0.5) {
+    if (f(var_detection_) <= 0.5) {
       p.set_detection_off();
     } else {
-      for (size_t i = 0; i < var_incoming_.size(); ++i)
-        if (var_incoming_[i].get(GRB_DoubleAttr_X) >= 0.5)
-          p.set_incoming(i);
+      index argmax = 0;
+      double max = -std::numeric_limits<double>::infinity();
+      for (size_t i = 0; i < var_incoming_.size(); ++i) {
+        double current = f(var_incoming_[i]);
+        if (current > max) {
+          argmax = i;
+          max = current;
+        }
+      }
+      p.set_incoming(argmax);
 
-      for (size_t i = 0; i < var_outgoing_.size(); ++i)
-        if (var_outgoing_[i].get(GRB_DoubleAttr_X) >= 0.5)
-          p.set_outgoing(i);
+      max = -std::numeric_limits<double>::infinity();
+      for (size_t i = 0; i < var_outgoing_.size(); ++i) {
+        double current = f(var_outgoing_[i]);
+        if (current > max) {
+          argmax = i;
+          max = current;
+        }
+      }
+      p.set_outgoing(argmax);
     }
 
     assert(!p.is_undecided());
