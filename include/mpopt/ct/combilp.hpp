@@ -15,11 +15,15 @@ public:
   combilp(const graph_type& graph)
   : graph_(&graph)
   , iterations_(0)
+  , ilp_time_(0)
   {
   }
 
+  auto ilp_time() const { return ilp_time_; }
+
   void run()
   {
+    dbg::timer t;
     GRBEnv env;
     gurobi_model_builder<allocator_type> builder(env);
     preprocess();
@@ -32,11 +36,14 @@ public:
       output_mask_size();
 
       builder.finalize();
+      t.start();
       builder.optimize();
+      t.stop();
       builder.update_primals();
 
       changed = process_mismatches();
       ++iterations_;
+      ilp_time_ += t.seconds();
     }
 
 #ifndef NDEBUG
@@ -202,6 +209,7 @@ protected:
 
   const graph_type* graph_;
   int iterations_;
+  double ilp_time_;
   std::map<const detection_node_type*, bool> mask_sac_d_;
   std::map<const conflict_node_type*, bool> mask_sac_c_;
 };

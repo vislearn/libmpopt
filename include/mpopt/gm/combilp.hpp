@@ -14,28 +14,35 @@ public:
 
   combilp(const graph_type& graph)
   : graph_(&graph)
+  , iterations_(0)
+  , ilp_time_(0)
   { }
+
+  auto ilp_time() const { return ilp_time_; }
 
   void run()
   {
+    dbg::timer t;
     GRBEnv env;
     gurobi_model_builder<allocator_type> builder(env);
 
     preprocess();
 
-    int iterations = 0;
+    iterations_ = 0;
     bool changed = true;
     while (changed) {
       reparametrize_border();
 
       const auto inconsistent = populate_builder(builder);
 
-      std::cout << "\n== CombiLP iteration " << (iterations+1)
+      std::cout << "\n== CombiLP iteration " << (iterations_+1)
                 << " (" << inconsistent << "/" << graph_->unaries().size() << ", "
                 << (100.0f * inconsistent / graph_->unaries().size()) << "%)" << std::endl;
 
       builder.finalize();
+      t.start();
       builder.optimize();
+      t.stop();
       builder.update_primals();
 
 #ifndef NDEBUG
@@ -47,7 +54,8 @@ public:
 #endif
 
       changed = process_mismatches();
-      ++iterations;
+      ++iterations_;
+      ilp_time_ += t.seconds();
     }
 
 #ifndef NDEBUG
@@ -204,6 +212,8 @@ protected:
   }
 
   const graph_type* graph_;
+  int iterations_;
+  double ilp_time_;
   std::map<const unary_node_type*, bool> mask_sac_;
 };
 

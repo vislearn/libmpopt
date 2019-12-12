@@ -15,34 +15,41 @@ public:
   combilp(const graph_type& graph, cost constant = 0)
   : graph_(&graph)
   , constant_(constant)
+  , iterations_(0)
+  , ilp_time_(0)
   { }
+
+  auto ilp_time() const { return ilp_time_; }
 
   void run()
   {
+    dbg::timer t;
     gurobi_model_builder<allocator_type> builder(gurobi_env_);
     preprocess();
 
-    int iterations = 0;
     bool changed = true;
     while (changed) {
       const auto inconsistent = populate_builder(builder);
 
-      std::cout << "\n== CombiLP iteration " << (iterations+1)
+      std::cout << "\n== CombiLP iteration " << (iterations_+1)
                 << " (" << inconsistent << "/" << graph_->pairwise().size() << ", "
                 << (100.0f * inconsistent / graph_->pairwise().size()) << "%)" << std::endl;
 
       builder.finalize();
+      t.start();
       builder.optimize();
+      t.stop();
       builder.update_primals();
 
       auto [lb, ub] = compute_bounds();
-      std::cout << "clp-it=" << iterations << " "
+      std::cout << "clp-it=" << iterations_ << " "
                 << "lb=" << lb << " "
                 << "ub=" << ub << " "
                 << "gap=" << (100.0 * (ub-lb) / std::abs(lb)) << "%" << std::endl;
 
       changed = process_mismatches();
-      ++iterations;
+      ++iterations_;
+      ilp_time_ += t.seconds();
     }
 
 #ifndef NDEBUG
@@ -179,6 +186,8 @@ protected:
 
   const graph_type* graph_;
   std::map<const pairwise_node_type*, bool> mask_sac_;
+  int iterations_;
+  double ilp_time_;
   cost constant_;
   GRBEnv gurobi_env_;
 };
