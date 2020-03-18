@@ -62,6 +62,14 @@ struct unary_node {
       assert(link.node == nullptr || link.node->unaries[link.slot].slot == slot);
       ++slot;
     }
+
+    // TODO: We should also check cycle consistency, i.e. that if we have a
+    // forward edge, the opposite side should have a backward edge.
+    for (const auto* node : forward)
+      assert(node != nullptr);
+
+    for (const auto* node : backward)
+      assert(node != nullptr);
   }
 
   template<typename FUNCTOR>
@@ -185,6 +193,8 @@ public:
     return node;
   }
 
+  unary_node_type* get_unary(index idx) const { return unaries_[idx]; }
+
   uniqueness_node_type* add_uniqueness(index idx, index number_of_unaries)
   {
     assert(number_of_unaries >= 0);
@@ -203,6 +213,8 @@ public:
     return node;
   }
 
+  uniqueness_node_type* get_uniqueness(index idx) const { return uniqueness_[idx]; }
+
   pairwise_node_type* add_pairwise(index idx, index number_of_labels0, index number_of_labels1)
   {
     assert(number_of_labels0 >= 0 && number_of_labels1 >= 0);
@@ -216,6 +228,8 @@ public:
 
     return node;
   }
+
+  pairwise_node_type* get_pairwise(index idx) const { return pairwise_[idx]; }
 
   void add_pairwise_link(index idx_unary0, index idx_unary1, index idx_pairwise)
   {

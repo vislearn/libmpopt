@@ -72,6 +72,10 @@ void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, 
   from_graph(graph)->add_uniqueness_link(idx_unary, label, idx_uniqueness, slot);
 }
 
+mpopt_qap_unary_node* mpopt_qap_graph_get_unary(mpopt_qap_graph* graph, int idx) { return to_unary(from_graph(graph)->get_unary(idx)); }
+mpopt_qap_uniqueness_node* mpopt_qap_graph_get_uniqueness(mpopt_qap_graph* graph, int idx) { return to_uniqueness(from_graph(graph)->get_uniqueness(idx)); }
+mpopt_qap_pairwise_node* mpopt_qap_graph_get_pairwise(mpopt_qap_graph* graph, int idx) { return to_pairwise(from_graph(graph)->get_pairwise(idx)); }
+
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations) { s->solver.run(max_iterations); }
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s) { s->solver.solve_ilp(); }
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s) {s->solver.execute_combilp(); }
@@ -79,12 +83,51 @@ double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lowe
 double mpopt_qap_solver_evaluate_primal(mpopt_qap_solver* s) { return s->solver.evaluate_primal(); }
 
 //
-// factor API
+// unary factor API
 //
 
 void mpopt_qap_unary_set_cost(mpopt_qap_unary_node* n, int label, double cost) { from_unary(n)->factor.set(label, cost); }
+double mpopt_qap_unary_get_cost(mpopt_qap_unary_node* n, int label) { return from_unary(n)->factor.get(label); }
+
+int mpopt_qap_unary_get_primal(mpopt_qap_unary_node* n)
+{
+  auto& f = from_unary(n)->factor;
+  auto p = f.primal();
+  if (p == std::decay_t<decltype(f)>::primal_unset)
+    return -1;
+  return p;
+}
+
+//
+// uniqueness factor API
+//
+
 void mpopt_qap_uniqueness_set_cost(mpopt_qap_uniqueness_node* n, int unary, double cost) { from_uniqueness(n)->factor.set(unary, cost); }
+double mpopt_qap_uniqueness_get_cost(mpopt_qap_uniqueness_node* n, int unary) { return from_uniqueness(n)->factor.get(unary); }
+
+int mpopt_qap_uniqueness_get_primal(mpopt_qap_uniqueness_node* n) {
+  auto& f = from_uniqueness(n)->factor;
+  auto p = f.primal();
+  if (p == std::decay_t<decltype(f)>::primal_unset)
+    return -1;
+  return p;
+}
+
+//
+// pairwise factor API
+//
+
 void mpopt_qap_pairwise_set_cost(mpopt_qap_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->factor.set(l0, l1, cost); }
+double mpopt_qap_pairwise_get_cost(mpopt_qap_pairwise_node* n, int l0, int l1) { return from_pairwise(n)->factor.get(l0, l1); }
+
+int mpopt_qap_pairwise_get_primal(mpopt_qap_pairwise_node* n, char left_side) {
+  auto& f = from_pairwise(n)->factor;
+  auto [p0, p1] = f.primal();
+  auto p = left_side ? p0 : p1;
+  if (p == std::decay_t<decltype(f)>::primal_unset)
+    return -1;
+  return p;
+}
 
 }
 
