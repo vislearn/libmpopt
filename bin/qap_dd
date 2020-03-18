@@ -11,6 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('--relaxation', choices=('gm', 'gm-unordered', 'qap-pw', 'qap'), default='qap')
     parser.add_argument('--maxIterations', type=int, default=1000)
     parser.add_argument('--ilp', action='store_true', help='Solves the ILP after reparametrizing.')
+    parser.add_argument('--unary-side', choices=('left', 'right'), default='left', help='Choose side where quadratic terms will be instantiated.')
     parser.add_argument('--combilp', action='store_true', help='Runs CombiLP after reparametrizing.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
     args = parser.parse_args()
@@ -18,8 +19,9 @@ if __name__ == '__main__':
     with utils.smart_open(args.input_filename, 'rt') as f:
         model = qap.parse_dd_model(f)
 
+    deco = qap.ModelDecomposition(model, with_uniqueness=args.relaxation=='qap', unary_side=args.unary_side)
     if args.relaxation in ('gm', 'gm-unordered'):
-        gm_model = qap.construct_gm_model(model)
+        gm_model = qap.construct_gm_model(deco)
         if args.relaxation != 'gm-unordered':
             ordered = utils.breadth_first_search(
                 len(gm_model.unaries),
@@ -27,7 +29,7 @@ if __name__ == '__main__':
             gm_model.reorder_unaries(ordered)
         solver = gm.construct_solver(gm_model)
     elif args.relaxation in ('qap', 'qap-pw'):
-        solver = qap.construct_solver(model, with_uniqueness=args.relaxation=='qap')
+        solver = qap.construct_solver(deco)
     else:
         raise NotImplementedError
 

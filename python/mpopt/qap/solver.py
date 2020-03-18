@@ -1,11 +1,141 @@
 from ..common.solver import BaseSolver
 from . import libmpopt_qap as lib
-from .model import sort_ids
 
 import numpy
 
 
 INFINITY_COST = 1e99
+
+
+class ModelDecomposition:
+
+    def __init__(self, model, with_uniqueness, unary_side='left'):
+        """A helper for gathering information useful for a Lagrange-dual based
+        decomposition of a graph matching problem.
+
+        The argument `unary_side` (either `left` or `right`) determines which
+        point set of the underlying model is used as a unary node set. The
+        other one is used as label universe for all unary nodes. When a unary
+        node is created only labels for which a possible assignment is
+        available will be added to the node's label space. A bidirectional
+        mapping is remembered.
+
+        The argument `with_uniqueness` determines whether uniqueness constraints
+        will be inserted. If uniqueness constraints are inserted then no
+        additional infinity edges will be included in the decomposition, i.e.
+        the call to `add_infinity_edge_arcs` will not add new edges.
+        Without uniqueness constraints we have to insert additional infinity
+        edges to disallow impossible configurations that would have been
+        otherwise forbidden by the uniqueness constraints.
+
+        Note that currently `with_uniqueness` has no further impact. The
+        downstream code must check `with_uniqueness` to see if it should insert
+        uniqueness constraints into the solver or not.
+        """
+        assert unary_side in ('left', 'right')
+
+        self.model = model
+        self.with_uniqueness = with_uniqueness
+        self.unary_side = unary_side
+        self.label_side = 'right' if unary_side == 'left' else 'left'
+
+        self.unary_to_nodeside = [] # unary solver index -> graph matching node index (left or right)
+        self.nodeside_to_unary = {} # same as above, only the other way around
+        for node in range(self.number_of_nodes):
+            if node in self.unary_set:
+                self.nodeside_to_unary[node] = len(self.unary_to_nodeside)
+                self.unary_to_nodeside.append(node)
+
+        self.pairwise = {}
+        self.no_forward = [0] * self.number_of_nodes
+        self.no_backward = [0] * self.number_of_nodes
+
+        for edge in self.model.edges:
+            self._insert_pairwise(*edge)
+
+        self._add_infinity_edge_arcs()
+
+    @property
+    def unary_set(self):
+        """Returns the unary node set of the underlying graph matching model.
+
+        The result is a dict of lists of assignment-ids, detailing for each
+        unary in which assignments it is involved.
+
+        The unaries are indexed as in the original model, indices not occuring
+        in any assignment do also not occur in the dict.
+        """
+        return getattr(self.model, self.unary_side)
+
+    @property
+    def number_of_nodes(self):
+        """Returns the number of nodes of the underlying graph matching model.
+
+        The result is either the number of left or right points depending on
+        the side where we build the model.
+        """
+        return getattr(self.model, 'no_' + self.unary_side)
+
+    @property
+    def label_set(self):
+        """Returns the label set of the underlying graph matching model.
+
+        The result is a dict of lists of assignment-ids, detailing for each
+        label in which assignments it is involved.
+
+        The labels are indexed as in the original model, indices not occuring
+        in any assignment do also not occur in the dict.
+        """
+        return getattr(self.model, self.label_side)
+
+    def _insert_pairwise(self, id_assignment1, id_assignment2, cost, create_new_edges=True):
+        """Inserts a pairwise cost between the two assignments.
+
+        This method finds the corresponding unary nodes and creates an empty
+        edge if necessary. Afterwards the cost on the corresponding arc of the
+        edge are set to the cost.
+
+        New edges are only inserted if `create_new_edges` is set to `True`. If this
+        method creates a new edge, the forward and backward edge counter is updated.
+
+        Note that depending on `self.unary_side` the quadratic term will be
+        inserted between two left points or two right points of the underlying
+        graph matching model.
+        """
+        node1 = getattr(self.model.assignments[id_assignment1], self.unary_side)
+        node2 = getattr(self.model.assignments[id_assignment2], self.unary_side)
+        pos_in_node1 = self.unary_set[node1].index(id_assignment1)
+        pos_in_node2 = self.unary_set[node2].index(id_assignment2)
+        idx1, idx2, pos1, pos2 = sort_ids(node1, node2, pos_in_node1, pos_in_node2)
+
+        if (idx1, idx2) not in self.pairwise and create_new_edges:
+            self.no_forward[idx1] += 1
+            self.no_backward[idx2] += 1
+            # The node set does not contain the dummy label. The pairwise edges
+            # will insert later need to have space for the dummy label. Hence
+            # we add +1 here for both dimensions.
+            shape = (len(self.unary_set[idx1]) + 1, len(self.unary_set[idx2]) + 1)
+            self.pairwise[idx1, idx2] = numpy.zeros(shape)
+
+        if (idx1, idx2) in self.pairwise:
+            assert self.pairwise[idx1, idx2][pos1, pos2] == 0.0
+            self.pairwise[idx1, idx2][pos1, pos2] = cost
+
+    def _add_infinity_edge_arcs(self):
+        """Set pairwise edge cost to infinity for prohibiting assignment constraints.
+
+        If `self.with_uniqueness` is set to `True`, only existing edges will
+        get updated. Otherwise, non-existing edges will get created (costs are
+        initialized to zero). The later is needed for building a purely pairwise
+        graphical model.
+        """
+        for label in self.label_set:
+            assigned_in = self.label_set[label]
+            for i in range(len(assigned_in) - 1):
+                for j in range(i+1, len(assigned_in)):
+                    ass1 = assigned_in[i]
+                    ass2 = assigned_in[j]
+                    self._insert_pairwise(ass1, ass2, INFINITY_COST, create_new_edges=not self.with_uniqueness)
 
 
 class Solver(BaseSolver):
@@ -14,113 +144,58 @@ class Solver(BaseSolver):
         super().__init__(lib)
 
 
-def construct_gm_model(model):
+def construct_gm_model(deco):
     from ..gm.model import Model as GmModel
 
-    # We ignore the no_forward and no_backward info, as the GM model
-    # does this bookkeeping action anyway.
-    edges = create_pairwise_data(model, create_new_edges=True)[0]
-
-    unary_to_left = []
-    left_to_unary = {}
-    for left in range(model._no_left):
-        if left in model._unaries_left:
-            left_to_unary[left] = len(unary_to_left)
-            unary_to_left.append(left)
+    edges = deco.pairwise
 
     gm_model = GmModel()
-    for u, idx in enumerate(unary_to_left):
-        costs = [model._assignments[ass_id].cost for ass_id in model._unaries_left[idx]]
+    for u, idx in enumerate(deco.unary_to_nodeside):
+        costs = [deco.model.assignments[ass_id].cost for ass_id in deco.unary_set[idx]]
         costs.append(0.0)
         gm_model.add_unary(costs)
 
-    for (idx1, idx2), costs in edges.items():
+    for (idx1, idx2), costs in deco.pairwise.items():
         gm_model.add_pairwise(idx1, idx2, costs)
 
     return gm_model
 
 
-def construct_solver(model, with_uniqueness=True):
+def construct_solver(deco):
     s = Solver()
     g = lib.solver_get_graph(s.solver)
 
-    edges, no_forward, no_backward = create_pairwise_data(model, create_new_edges=not with_uniqueness)
-
-    unary_to_left = []
-    left_to_unary = {}
-    for left in range(model._no_left):
-        if left in model._unaries_left:
-            left_to_unary[left] = len(unary_to_left)
-            unary_to_left.append(left)
-
     # insert unary factors
-    for u, idx in enumerate(unary_to_left):
-        f = lib.graph_add_unary(g, u, len(model._unaries_left[idx]) + 1,
-                no_forward[idx], no_backward[idx])
-        for i, ass_id in enumerate(model._unaries_left[idx]):
-            lib.unary_set_cost(f, i, model._assignments[ass_id].cost)
+    for u, idx in enumerate(deco.unary_to_nodeside):
+        f = lib.graph_add_unary(g, u, len(deco.unary_set[idx]) + 1, deco.no_forward[idx], deco.no_backward[idx])
+        for i, ass_id in enumerate(deco.unary_set[idx]):
+            lib.unary_set_cost(f, i, deco.model.assignments[ass_id].cost)
         lib.unary_set_cost(f, i+1, 0.0)
 
     # insert uniqueness factors
-    if with_uniqueness:
-        for idx_uniqueness, (right, assigned_in) in enumerate(model._unaries_right.items()):
+    if deco.with_uniqueness:
+        for idx_uniqueness, (label_idx, assigned_in) in enumerate(deco.label_set.items()):
             f = lib.graph_add_uniqueness(g, idx_uniqueness, len(assigned_in))
             for slot, assignment_idx in enumerate(assigned_in):
-                assignment = model._assignments[assignment_idx]
-                assert assignment.right == right
-                label = model._unaries_left[assignment.left].index(assignment_idx) # FIXME: O(n) is best avoided.
-                lib.graph_add_uniqueness_link(g, left_to_unary[assignment.left], label, idx_uniqueness, slot)
+                assignment = deco.model.assignments[assignment_idx]
+                assert getattr(assignment, deco.label_side) == label_idx
+                label = deco.unary_set[getattr(assignment, deco.unary_side)].index(assignment_idx) # FIXME: O(n) is best avoided.
+                lib.graph_add_uniqueness_link(g, deco.nodeside_to_unary[getattr(assignment, deco.unary_side)], label, idx_uniqueness, slot)
 
     # insert pairwise factors
-    for i, (idx1, idx2) in enumerate(edges): # use items()
-        f = lib.graph_add_pairwise(g, i, edges[idx1, idx2].shape[0], edges[idx1, idx2].shape[1])
-        lib.graph_add_pairwise_link(g, left_to_unary[idx1], left_to_unary[idx2], i)
-        for l_u in range(len(model._unaries_left[idx1]) + 1):
-            for l_v in range(len(model._unaries_left[idx2]) + 1):
-                lib.pairwise_set_cost(f, l_u, l_v, edges[idx1, idx2][l_u, l_v])
+    for i, ((idx1, idx2), cost) in enumerate(deco.pairwise.items()): # use items()
+        f = lib.graph_add_pairwise(g, i, cost.shape[0], cost.shape[1])
+        lib.graph_add_pairwise_link(g, deco.nodeside_to_unary[idx1], deco.nodeside_to_unary[idx2], i)
+        for l_u in range(len(deco.unary_set[idx1]) + 1):
+            for l_v in range(len(deco.unary_set[idx2]) + 1):
+                lib.pairwise_set_cost(f, l_u, l_v, cost[l_u, l_v])
 
     lib.solver_finalize(s.solver)
     return s
 
 
-def create_pairwise_data(model, create_new_edges=False):
-    edges = {}
-    for i, (idx1, idx2) in enumerate(model._pairwise_left):
-        data = numpy.zeros((len(model._unaries_left[idx1]) + 1,
-            len(model._unaries_left[idx2]) + 1))
-        data[:len(model._unaries_left[idx1]),:len(model._unaries_left[idx2])] = model._pairwise_left[idx1, idx2]
-        edges[idx1, idx2] = data
-
-    # Copy forward/backward edge stats from original model.
-    # If we insert additional infinity edges, we will update these counters.
-    no_forward = list(model._no_forward_left)
-    no_backward = list(model._no_backward_left)
-
-    # Insert infinities, add necessary edges.
-    for label in model._unaries_right:
-        assigned_in = model._unaries_right[label]
-        for i in range(len(assigned_in) - 1):
-            for j in range(i+1, len(assigned_in)):
-                ass1 = assigned_in[i]
-                ass2 = assigned_in[j]
-                node1 = model._assignments[ass1].left
-                node2 = model._assignments[ass2].left
-                pos_in_node1 = model._unaries_left[node1].index(ass1)
-                pos_in_node2 = model._unaries_left[node2].index(ass2)
-
-                idx1, idx2, pos1, pos2 = sort_ids(node1, node2, pos_in_node1, pos_in_node2)
-                if (idx1, idx2) in edges:
-                    edges[idx1, idx2][pos1, pos2] = INFINITY_COST
-                elif create_new_edges:
-                    data = numpy.zeros((len(model._unaries_left[idx1]) + 1,
-                        len(model._unaries_left[idx2]) + 1))
-                    data[pos1, pos2] = INFINITY_COST
-                    edges[idx1, idx2] = data
-                    no_forward[idx1] += 1
-                    no_backward[idx2] += 1
-
-    if not create_new_edges:
-        assert no_forward == model._no_forward_left
-        assert no_backward == model._no_backward_left
-
-    return edges, no_forward, no_backward
+def sort_ids(id1, id2, pos1, pos2):
+    if id1 < id2:
+        return id1, id2, pos1, pos2
+    else:
+        return id2, id1, pos2, pos1

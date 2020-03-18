@@ -31,7 +31,7 @@ def parse_dd_model(f):
         if not m:
             assert False, "unknown input line"
 
-    assert model._no_assignments == len(model._assignments)
-    assert model._no_edges == len(model._edges)
+    assert model.no_assignments == len(model.assignments)
+    assert model.no_edges == len(model.edges)
 
     return model
