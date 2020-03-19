@@ -35,3 +35,14 @@ def parse_dd_model(f):
     assert model.no_edges == len(model.edges)
 
     return model
+
+
+def parse_sol(f):
+    sol = []
+    for line in f:
+        line = line.rstrip()
+        line = line.split()
+        if line != []:
+            assert int(line[0]) == len(sol)
+            sol.append(int(line[1]))
+    return sol

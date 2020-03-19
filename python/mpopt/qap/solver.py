@@ -1,5 +1,6 @@
 from ..common.solver import BaseSolver
 from . import libmpopt_qap as lib
+from . primals import Primals
 
 import numpy
 
@@ -192,6 +193,22 @@ def construct_solver(deco):
 
     lib.solver_finalize(s.solver)
     return s
+
+
+def extract_primals(deco, solver):
+    primals = Primals(deco.model)
+    g = lib.solver_get_graph(solver.solver)
+
+    for u, idx in enumerate(deco.unary_to_nodeside):
+        lib_primal = lib.unary_get_primal(lib.graph_get_unary(g, u))
+        if lib_primal < len(deco.unary_set[idx]):
+            assignment_idx = deco.unary_set[idx][lib_primal]
+            assignment = deco.model.assignments[assignment_idx]
+            primals[idx] = getattr(assignment, deco.label_side)
+        else:
+            assert lib_primal == len(deco.unary_set[idx])
+
+    return primals
 
 
 def sort_ids(id1, id2, pos1, pos2):
