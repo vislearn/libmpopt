@@ -57,6 +57,7 @@ public:
 
   void solve_ilp()
   {
+#ifdef ENABLE_GUROBI
     // We do not reset the primal as they will be used as a MIP start.
     typename DERIVED_TYPE::gurobi_model_builder_type builder(gurobi_env_);
     builder.set_constant(constant_);
@@ -68,12 +69,19 @@ public:
     builder.finalize();
     builder.optimize();
     builder.update_primals();
+#else
+    std::cerr << "Abort: ENABLE_GUROBI was unset during configuration of libmpopt.";
+    std::abort();
+#endif
   }
 
 protected:
   int iterations_;
   cost constant_;
+
+#ifdef ENABLE_GUROBI
   GRBEnv gurobi_env_;
+#endif
 };
 
 }

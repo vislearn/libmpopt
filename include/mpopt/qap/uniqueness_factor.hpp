@@ -40,6 +40,8 @@ public:
 };
 
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class gurobi_uniqueness_factor : public ::mpopt::gurobi_unary_factor<ALLOCATOR> {
 public:
@@ -50,6 +52,8 @@ public:
   : ::mpopt::gurobi_unary_factor<ALLOCATOR>(factor, model)
   { }
 };
+
+#endif
 
 }
 }

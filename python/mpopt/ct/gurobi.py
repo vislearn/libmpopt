@@ -1,9 +1,9 @@
-import gurobipy
-from gurobipy import GRB
 from collections import namedtuple
 
 from . import libmpopt_ct as lib
 from .primals import Primals
+from ..common import gurobi
+from ..common.gurobi import GRB
 
 
 class GurobiBase:
@@ -47,7 +47,7 @@ class GurobiBase:
 class GurobiStandardModel(GurobiBase):
 
     def construct(self):
-        self.gurobi = gurobipy.Model()
+        self.gurobi = gurobi.Model()
         self._detections = {}
         self._transitions = {}
         self._divisions = {}
@@ -216,7 +216,7 @@ class GurobiDecomposedModel(GurobiBase):
         only a subset of all timesteps. By default (or by passing None) the
         full model is built.
         """
-        self.gurobi = gurobipy.Model()
+        self.gurobi = gurobi.Model()
         self._detections = {}
         self._conflicts = {}
         self._timesteps = timesteps

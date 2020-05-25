@@ -12,7 +12,10 @@ public:
   using timestep_type = typename graph_type::timestep_type;
   using detection_node_type = typename graph_type::detection_node_type;
   using conflict_node_type = typename graph_type::conflict_node_type;
+
+#ifdef ENABLE_GUROBI
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
+#endif
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
@@ -137,10 +140,14 @@ public:
 
   void execute_combilp()
   {
+#ifdef ENABLE_GUROBI
     this->reset_primal();
     combilp subsolver(graph_);
     subsolver.run();
     backward_pass<false>();
+#else
+    abort_on_disabled_gurobi();
+#endif
   }
 
 protected:
@@ -189,6 +196,7 @@ protected:
         for (size_t i = 0; i < node->detections.size(); ++i)
           node->detections[i].node->factor.repam_detection(node->factor.get(i));
 
+#ifdef ENABLE_GUROBI
       conflict_subsolver<graph_type> subsolver(this->gurobi_env_);
       for (const auto* node : t.detections)
         subsolver.add_detection(node);
@@ -199,6 +207,7 @@ protected:
       for (const auto* node : t.detections)
         if (!subsolver.assignment(node))
           node->factor.primal().set_detection_off();
+#endif
 
       // FIXME: Pre-allocate scratch space and do not resort to dynamic
       // memory allocation.

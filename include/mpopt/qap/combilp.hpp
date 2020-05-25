@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace qap {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class combilp {
 public:
@@ -191,6 +193,8 @@ protected:
   cost constant_;
   GRBEnv gurobi_env_;
 };
+
+#endif
 
 }
 }

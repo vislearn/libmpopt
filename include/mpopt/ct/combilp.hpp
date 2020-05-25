@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace ct {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class combilp {
 public:
@@ -213,6 +215,8 @@ protected:
   std::map<const detection_node_type*, bool> mask_sac_d_;
   std::map<const conflict_node_type*, bool> mask_sac_c_;
 };
+
+#endif
 
 }
 }

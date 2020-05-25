@@ -11,7 +11,10 @@ public:
   using graph_type = graph<allocator_type>;
   using unary_node_type = typename graph_type::unary_node_type;
   using pairwise_node_type = typename graph_type::pairwise_node_type;
+
+#ifdef ENABLE_GUROBI
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
+#endif
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
@@ -59,10 +62,14 @@ public:
 
   void execute_combilp()
   {
+#ifdef ENABLE_GUROBI
     this->reset_primal();
     combilp subsolver(graph_);
     subsolver.run();
     backward_pass<false>();
+#else
+    abort_on_disabled_gurobi();
+#endif
   }
 
 protected:

@@ -106,6 +106,8 @@ protected:
 };
 
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class gurobi_unary_factor {
 public:
@@ -156,6 +158,8 @@ protected:
   factor_type* factor_;
   std::vector<GRBVar> vars_;
 };
+
+#endif
 
 }
 

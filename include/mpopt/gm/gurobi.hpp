@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace gm {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class gurobi_model_builder {
 public:
@@ -90,6 +92,8 @@ protected:
   std::map<const unary_node_type*, gurobi_unary_type> unaries_;
   std::map<const pairwise_node_type*, gurobi_pairwise_type> pairwise_;
 };
+
+#endif
 
 }
 }

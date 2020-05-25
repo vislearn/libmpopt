@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace gm {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class combilp {
 public:
@@ -216,6 +218,8 @@ protected:
   double ilp_time_;
   std::map<const unary_node_type*, bool> mask_sac_;
 };
+
+#endif
 
 }
 }

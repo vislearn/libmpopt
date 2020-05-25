@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace qap {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR>
 class gurobi_model_builder {
 public:
@@ -116,6 +118,8 @@ protected:
   std::map<const uniqueness_node_type*, gurobi_uniqueness_type> uniqueness_;
   std::map<const pairwise_node_type*, gurobi_pairwise_type> pairwise_;
 };
+
+#endif
 
 }
 }

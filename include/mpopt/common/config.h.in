@@ -1,0 +1,9 @@
+#cmakedefine ENABLE_GUROBI
+
+#ifndef ENABLE_GUROBI
+void abort_on_disabled_gurobi()
+{
+	std::cerr << "Aborting! ENABLE_GUROBI was disabled during configuration of libmpopt." << std::endl;
+	std::abort();
+}
+#endif

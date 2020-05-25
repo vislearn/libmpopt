@@ -12,7 +12,10 @@ public:
   using unary_node_type = typename graph_type::unary_node_type;
   using uniqueness_node_type = typename graph_type::uniqueness_node_type;
   using pairwise_node_type = typename graph_type::pairwise_node_type;
+
+#ifdef ENABLE_GUROBI
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
+#endif
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
@@ -53,13 +56,18 @@ public:
 
   void execute_combilp()
   {
+#ifdef ENABLE_GUROBI
     this->reset_primal();
     combilp subsolver(graph_, this->constant_);
     subsolver.run();
+#else
+    abort_on_disabled_gurobi();
+#endif
   }
 
   void solve_lap_as_ilp()
   {
+#ifdef ENABLE_GUROBI
     // We do not reset the primals and use the currently set ones as MIP start.
     gurobi_model_builder<allocator_type> builder(this->gurobi_env_);
 
@@ -82,6 +90,9 @@ public:
       node->factor.primal() = std::tuple(
         node->unary0->factor.primal(),
         node->unary1->factor.primal());
+#else
+    abort_on_disabled_gurobi();
+#endif
   }
 
 protected:

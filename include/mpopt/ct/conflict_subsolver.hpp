@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace ct {
 
+#ifdef ENABLE_GUROBI
+
 template<typename GRAPH_TYPE>
 class conflict_subsolver {
 public:
@@ -45,6 +47,8 @@ private:
   GRBModel model_;
   std::map<const detection_node_type*, GRBVar> factor_to_variable_;
 };
+
+#endif
 
 }
 }

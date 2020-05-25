@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace ct {
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class gurobi_model_builder
 {
@@ -132,6 +134,8 @@ protected:
   std::vector<const detection_node_type*> new_detections_;
   std::vector<const conflict_node_type*> new_conflicts_;
 };
+
+#endif
 
 }
 }

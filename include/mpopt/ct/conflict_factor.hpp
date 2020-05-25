@@ -119,6 +119,8 @@ protected:
 };
 
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class gurobi_conflict_factor {
 public:
@@ -165,6 +167,8 @@ protected:
   conflict_type* conflict_;
   std::vector<GRBVar> variables_;
 };
+
+#endif
 
 }
 }

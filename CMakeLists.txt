@@ -11,12 +11,22 @@ set(MPOPT_VERSION_PATCH 0)
 set(MPOPT_VERSION_STRING "${MPOPT_VERSION_MAJOR}.${MPOPT_VERSION_MINOR}.${MPOPT_VERSION_PATCH}")
 
 #
+# Customizable choices
+#
+
+set(ENABLE_GUROBI OFF CACHE BOOL "Enable Gurobi LP/ILP support")
+
+#
 # C++ settings
 #
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+configure_file(include/mpopt/common/config.h.in include/mpopt/common/config.h @ONLY)
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/include")
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/include/mpopt" DESTINATION include)
 
 #
 # Python settings
@@ -36,7 +46,12 @@ include(UseSWIG)
 # native libraries
 #
 
-find_package(GUROBI REQUIRED)
+if(ENABLE_GUROBI)
+  find_package(GUROBI REQUIRED)
+else()
+  set(GUROBI_INCLUDE_DIRS "")
+  set(GUROBI_LIBRARIES "")
+endif()
 
 foreach(sublibrary ct gm qap)
   foreach(kind shared static)
@@ -58,6 +73,9 @@ install(DIRECTORY include/mpopt DESTINATION include)
 #
 # Python bindings
 #
+
+configure_file(python/mpopt/common/config.py.in python/mpopt/common/config.py @ONLY)
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/python/mpopt" DESTINATION "${Python3_SITELIB}")
 
 foreach(sublibrary ct gm qap)
   set_source_files_properties(swig/${sublibrary}.i PROPERTIES DEPENDS include/mpopt/${sublibrary}.h)

@@ -15,7 +15,11 @@
 #include <sstream>
 #include <vector>
 
-#include <gurobi_c++.h>
+#include <mpopt/common/config.h>
+
+#ifdef ENABLE_GUROBI
+#  include <gurobi_c++.h>
+#endif
 
 #endif
 

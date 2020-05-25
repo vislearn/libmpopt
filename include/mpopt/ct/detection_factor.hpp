@@ -274,6 +274,8 @@ protected:
 };
 
 
+#ifdef ENABLE_GUROBI
+
 template<typename ALLOCATOR = std::allocator<cost>>
 class gurobi_detection_factor {
 public:
@@ -384,6 +386,8 @@ protected:
   std::vector<GRBVar> var_incoming_;
   std::vector<GRBVar> var_outgoing_;
 };
+
+#endif
 
 }
 }
