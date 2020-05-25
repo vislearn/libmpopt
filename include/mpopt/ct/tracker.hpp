@@ -19,7 +19,14 @@ public:
 
   tracker(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  { }
+  {
+#ifndef ENABLE_GUROBI
+    std::cerr << "!!!!!!!!!!\n"
+              << "ENABLE_GUROBI was not deactivated during configuration of libmpopt.\n"
+              << "The quality of the computed primal variable assignmed will be highly degraded.\n"
+              << "!!!!!!!!!!\n" << std::endl;
+#endif
+  }
 
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
