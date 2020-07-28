@@ -79,6 +79,7 @@ mpopt_qap_pairwise_node* mpopt_qap_graph_get_pairwise(mpopt_qap_graph* graph, in
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations) { s->solver.run(max_iterations); }
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s) { s->solver.solve_ilp(); }
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s) {s->solver.execute_combilp(); }
+double mpopt_qap_solver_runtime(mpopt_qap_solver* s) { return s->solver.runtime(); }
 double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s) { return s->solver.lower_bound(); }
 double mpopt_qap_solver_evaluate_primal(mpopt_qap_solver* s) { return s->solver.evaluate_primal(); }
 

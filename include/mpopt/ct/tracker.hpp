@@ -13,6 +13,9 @@ public:
   using detection_node_type = typename graph_type::detection_node_type;
   using conflict_node_type = typename graph_type::conflict_node_type;
 
+  // import from base class
+  using typename solver<tracker<ALLOCATOR>>::clock_type;
+
 #ifdef ENABLE_GUROBI
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
 #endif
@@ -113,10 +116,10 @@ public:
     };
 
     signal_handler h;
-    using clock_type = std::chrono::high_resolution_clock;
-    const auto clock_start = clock_type::now();
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
+      const auto clock_start = clock_type::now();
+
       for (int j = 0; j < batch_size-1; ++j) {
         forward_pass<false>();
         backward_pass<false>();
@@ -130,16 +133,17 @@ public:
       backward_pass<true>();
       remember_best_primals();
 
-      const auto clock_now = clock_type::now();
-      const std::chrono::duration<double> seconds = clock_now - clock_start;
-
       const auto lb = this->lower_bound();
       this->iterations_ += batch_size;
+
+      const auto clock_end = clock_type::now();
+      this->duration_ += clock_end - clock_start;
+
       std::cout << "it=" << this->iterations_ << " "
                 << "lb=" << lb << " "
                 << "ub=" << best_ub << " "
                 << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
-                << "t=" << seconds.count() << std::endl;
+                << "t=" << this->runtime() << std::endl;
     }
 
     restore_best_primals();

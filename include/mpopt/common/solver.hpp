@@ -6,6 +6,8 @@ namespace mpopt {
 template<typename DERIVED_TYPE>
 class solver {
 public:
+  using clock_type = std::chrono::steady_clock;
+
   solver()
   : iterations_(0)
   , constant_(0)
@@ -55,6 +57,12 @@ public:
     assert(false && "Not implemented!");
   }
 
+  double runtime() const
+  {
+    using seconds = std::chrono::duration<double>;
+    return std::chrono::duration_cast<seconds>(duration_).count();
+  }
+
   void solve_ilp()
   {
 #ifdef ENABLE_GUROBI
@@ -77,6 +85,7 @@ public:
 
 protected:
   int iterations_;
+  clock_type::duration duration_;
   cost constant_;
 
 #ifdef ENABLE_GUROBI

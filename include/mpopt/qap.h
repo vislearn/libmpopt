@@ -26,6 +26,7 @@ mpopt_qap_pairwise_node* mpopt_qap_graph_get_pairwise(mpopt_qap_graph* graph, in
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int max_iterations);
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s);
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s);
+double mpopt_qap_solver_runtime(mpopt_qap_solver* t);
 double mpopt_qap_solver_lower_bound(mpopt_qap_solver* s);
 double mpopt_qap_solver_evaluate_primal(mpopt_qap_solver* s);
 

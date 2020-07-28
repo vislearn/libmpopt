@@ -21,6 +21,9 @@ class BaseSolver:
     def run(self, max_iterations=1000):
         self.lib.solver_run(self.solver, max_iterations)
 
+    def runtime(self):
+        return self.lib.solver_runtime(self.solver)
+
     def solve_ilp(self):
         self.lib.solver_solve_ilp(self.solver)
 

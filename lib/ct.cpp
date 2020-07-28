@@ -80,6 +80,7 @@ mpopt_ct_conflict* mpopt_ct_graph_get_conflict(mpopt_ct_graph* g, int timestep, 
 }
 
 void mpopt_ct_tracker_run(mpopt_ct_tracker* t, int max_iterations) { t->tracker.run(max_iterations); }
+double mpopt_ct_tracker_runtime(mpopt_ct_tracker* t) { return t->tracker.runtime(); }
 double mpopt_ct_tracker_lower_bound(mpopt_ct_tracker* t) { return t->tracker.lower_bound(); }
 double mpopt_ct_tracker_evaluate_primal(mpopt_ct_tracker* t) { return t->tracker.evaluate_primal(); }
 void mpopt_ct_tracker_forward_step(mpopt_ct_tracker* t, int timestep) { t->tracker.single_step<true>(timestep); }
