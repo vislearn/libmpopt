@@ -59,7 +59,7 @@ public:
   {
 #ifdef ENABLE_GUROBI
     // We do not reset the primal as they will be used as a MIP start.
-    typename DERIVED_TYPE::gurobi_model_builder_type builder(gurobi_env_);
+    typename DERIVED_TYPE::gurobi_model_builder_type builder(gurobi_env());
     builder.set_constant(constant_);
 
     static_cast<DERIVED_TYPE*>(this)->for_each_node([&builder](const auto* node) {
@@ -80,7 +80,15 @@ protected:
   cost constant_;
 
 #ifdef ENABLE_GUROBI
-  GRBEnv gurobi_env_;
+  std::optional<GRBEnv> gurobi_env_;
+
+  GRBEnv& gurobi_env()
+  {
+    if (gurobi_env_)
+      return *gurobi_env_;
+    else
+      return gurobi_env_.emplace();
+  }
 #endif
 };
 

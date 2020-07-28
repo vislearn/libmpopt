@@ -69,7 +69,7 @@ public:
   {
 #ifdef ENABLE_GUROBI
     // We do not reset the primals and use the currently set ones as MIP start.
-    gurobi_model_builder<allocator_type> builder(this->gurobi_env_);
+    gurobi_model_builder<allocator_type> builder(this->gurobi_env());
 
     for (const auto* node : graph_.unaries())
       builder.add_factor(node);
