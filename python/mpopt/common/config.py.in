@@ -1,1 +1,3 @@
+# This file was automatically generated during CMake configuration.
+
 ENABLE_GUROBI = '@ENABLE_GUROBI@' == 'ON'
