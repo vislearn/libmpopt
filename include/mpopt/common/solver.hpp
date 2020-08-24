@@ -9,8 +9,9 @@ public:
   using clock_type = std::chrono::steady_clock;
 
   solver()
-  : iterations_(0)
-  , constant_(0)
+  : constant_(0)
+  , iterations_(0)
+  , duration_(0)
   { }
 
   cost lower_bound() const
@@ -84,9 +85,9 @@ public:
   }
 
 protected:
+  cost constant_;
   int iterations_;
   clock_type::duration duration_;
-  cost constant_;
 
 #ifdef ENABLE_GUROBI
   std::optional<GRBEnv> gurobi_env_;
