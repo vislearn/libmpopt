@@ -39,6 +39,15 @@ if(NOT "${SUPERSEDE_PYTHON_SITELIB}" STREQUAL "")
   set(Python3_SITEARCH "${SUPERSEDE_PYTHON_SITELIB}")
 endif()
 
+set(Python3_OPTIMIZEFLAG "-OO")
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+  set(Python3_OPTIMIZEFLAG "")
+endif()
+
+#
+# SWIG
+#
+
 find_package(SWIG REQUIRED)
 include(UseSWIG)
 
@@ -101,12 +110,30 @@ foreach(sublibrary ct gm qap)
 endforeach()
 
 install(DIRECTORY python/mpopt DESTINATION "${Python3_SITELIB}")
-install(PROGRAMS bin/ct_test bin/ct_jug bin/ct_jug_2ts bin/ct_jug_gurobi bin/dd_to_uai bin/gm_uai bin/qap_dd DESTINATION bin)
 
 #
 # Bytecompile Python code
 #
 
-install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -m compileall \"${Python3_SITELIB}/mpopt\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\"     -m compileall \"${Python3_SITELIB}/mpopt\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -O  -m compileall \"${Python3_SITELIB}/mpopt\")")
+install(CODE "execute_process(COMMAND \"${Python3_EXECUTABLE}\" -OO -m compileall \"${Python3_SITELIB}/mpopt\")")
+
+#
+# Command line scripts
+#
+
+function(process_pywrapper cmdline_script module)
+  configure_file("bin/pywrapper.in" "bin/${cmdline_script}" @ONLY)
+  install(PROGRAMS "${CMAKE_CURRENT_BINARY_DIR}/bin/${cmdline_script}" DESTINATION bin)
+endfunction()
+
+process_pywrapper(ct_jug        mpopt.ct.cmdline.jug)
+process_pywrapper(ct_jug_2ts    mpopt.ct.cmdline.jug2_ts)
+process_pywrapper(ct_jug_gurobi mpopt.ct.cmdline.jug_gurobi)
+process_pywrapper(ct_test       mpopt.ct.cmdline.test)
+process_pywrapper(gm_uai        mpopt.gm.cmdline.uai)
+process_pywrapper(dd_to_uai     mpopt.qap.cmdline.dd_to_uai)
+process_pywrapper(qap_dd        mpopt.qap.cmdline.dd)
 
 # vim: ts=8 sts=2 sw=2 et:

@@ -7,7 +7,7 @@ from mpopt import gm, qap, utils
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Optimizer for *.dd quadratic assignment models.')
+    parser = argparse.ArgumentParser(prog='qap_dd', description='Optimizer for *.dd quadratic assignment models.')
     parser.add_argument('--relaxation', choices=('gm', 'gm-unordered', 'qap-pw', 'qap'), default='qap')
     parser.add_argument('--maxIterations', type=int, default=1000)
     parser.add_argument('--ilp', action='store_true', help='Solves the ILP after reparametrizing.')

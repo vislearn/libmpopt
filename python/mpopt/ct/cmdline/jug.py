@@ -7,7 +7,7 @@ from mpopt import ct, utils
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Optimizer for *.jug cell tracking models.')
+    parser = argparse.ArgumentParser(prog='ct_jug', description='Optimizer for *.jug cell tracking models.')
     parser.add_argument('--maxIterations', type=int, default=200)
     parser.add_argument('--ilp', choices=('standard', 'decomposed'), help='Solves the ILP after reparametrizing.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.jug input file.')
