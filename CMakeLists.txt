@@ -58,8 +58,7 @@ include(UseSWIG)
 if(ENABLE_GUROBI)
   find_package(GUROBI REQUIRED)
 else()
-  set(GUROBI_INCLUDE_DIRS "")
-  set(GUROBI_LIBRARIES "")
+  add_library(GUROBI INTERFACE) # dummy empty library
 endif()
 
 foreach(sublibrary ct gm qap)
@@ -67,8 +66,7 @@ foreach(sublibrary ct gm qap)
     set(target libmpopt_${sublibrary}_${kind})
     string(TOUPPER ${kind} KIND)
     add_library(${target} ${KIND} lib/${sublibrary}.cpp)
-    target_include_directories(${target} PUBLIC ${GUROBI_INCLUDE_DIRS})
-    target_link_libraries(${target} PUBLIC ${GUROBI_LIBRARIES})
+    target_link_libraries(${target} PUBLIC GUROBI)
     set_target_properties(${target} PROPERTIES
       OUTPUT_NAME mpopt_${sublibrary}
       POSITION_INDEPENDENT_CODE ON

@@ -1,7 +1,7 @@
 set(GUROBI_HOME "$ENV{GUROBI_HOME}" CACHE PATH "GUROBI root directory.")
 
 set(GUROBI_LIBRARY_POSSIBLE_NAMES libgurobi.so)
-foreach(major RANGE 8 7 -1)
+foreach(major RANGE 9 7 -1)
   foreach(minor RANGE 9 0 -1)
     list(APPEND GUROBI_LIBRARY_POSSIBLE_NAMES "libgurobi${major}${minor}.so")
   endforeach(minor)
@@ -19,5 +19,9 @@ if(GUROBI_FOUND)
   set(GUROBI_INCLUDE_DIRS "${GUROBI_INCLUDE_DIR}")
   set(GUROBI_LIBRARIES "${GUROBI_CPP_LIBRARY}" "${GUROBI_C_LIBRARY}")
 endif()
+
+add_library(GUROBI INTERFACE)
+target_include_directories(GUROBI INTERFACE ${GUROBI_INCLUDE_DIRS})
+target_link_libraries(GUROBI INTERFACE ${GUROBI_LIBRARIES})
 
 # vim: set ts=8 sts=2 sw=2 et:
