@@ -1,0 +1,6 @@
+#!/bin/bash
+set -eu -o pipefail
+
+podman build --layers -f Containerfile.base -t libmpopt_base
+podman build --layers -f Containerfile      -t libmpopt
+podman run --rm -ti libmpopt

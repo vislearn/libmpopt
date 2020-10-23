@@ -15,7 +15,11 @@ export PATH="${install_dir}/bin${PATH:+:${PATH}}"
 
 mkdir "${build_dir}"
 cd "${build_dir}"
-meson -Dprefix="${install_dir}" -Db_ndebug=if-release "${source_dir}"
+meson \
+	-Dprefix="${install_dir}" \
+	-Db_ndebug=if-release \
+	-Dbuildtype=debugoptimized \
+	"${source_dir}"
 
 ninja
 ninja install
