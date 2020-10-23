@@ -8,19 +8,14 @@ source_dir=$(pwd)
 build_dir="${temp_dir}/build"
 install_dir="${temp_dir}/install"
 
-custom_sitelib="${install_dir}/lib/python/site-packages"
-export PYTHONPATH="${custom_sitelib}${PYTHONPATH:+:${PYTHONPATH}}"
+custom_sitelibs=$(scripts/print-python-libpath "${install_dir}")
+export PYTHONPATH="${custom_sitelibs}${PYTHONPATH:+:${PYTHONPATH}}"
 export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export PATH="${install_dir}/bin${PATH:+:${PATH}}"
 
 mkdir "${build_dir}"
 cd "${build_dir}"
-cmake \
-	-GNinja \
-	-DCMAKE_INSTALL_PREFIX="${install_dir}" \
-	-DSUPERSEDE_PYTHON_SITELIB="${custom_sitelib}" \
-	-DCMAKE_BUILD_TYPE=Debug \
-	"${source_dir}"
+meson -Dprefix="${install_dir}" -Db_ndebug=if-release "${source_dir}"
 
 ninja
 ninja install

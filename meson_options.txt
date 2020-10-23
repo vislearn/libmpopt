@@ -1,0 +1,2 @@
+option('gurobi', type: 'feature', value: 'disabled',
+       description: 'Enable Gurobi support (needs pkg-config file)')

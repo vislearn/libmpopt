@@ -1,4 +1,4 @@
-#cmakedefine ENABLE_GUROBI
+#mesondefine ENABLE_GUROBI
 
 #ifndef ENABLE_GUROBI
 void abort_on_disabled_gurobi()
