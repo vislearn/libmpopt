@@ -1,0 +1,81 @@
+#!/bin/bash
+#
+# We can only run the tests if the project is fully installed. We cannot run
+# the programs from inside the build directory without installation, because
+# the Python modules need to be located in a specific location, the native
+# libraries have to be placed there and we would have to mangle $PYTHON_PATH
+# and $LD_LIBRARY_PATH. Meson does not make this convenient.
+#
+
+set -u
+
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "${tmpdir}"' EXIT
+
+bold=$(tput bold)
+red=$(tput setaf 1)
+green=$(tput setaf 2)
+normal=$(tput sgr0)
+
+
+cmd_hash() {
+	printf '%s\0' "$@" | base64
+}
+
+
+print_result() {
+	local res="$1"
+	shift
+
+	if [[ "${res}" -eq 0 ]]; then
+		local status="${green}[ OK ]${normal}"
+	else
+		local status="${red}[FAIL]${normal}"
+	fi
+
+	printf '%s%s %s\n' "${bold}" "${status}" "$*"
+}
+
+
+runner() {
+	local d="${tmpdir}/$(cmd_hash "$@")"
+	mkdir "${d}"
+	"$@" >"${d}/stdout" 2>"${d}/stderr"
+	local res=$?
+
+	cat "${d}/stderr" | fgrep -v "RuntimeWarning: compiletime version 3.7 of module 'gurobipy' does not match runtime version" >"${d}/stderr.new"
+	mv "${d}/stderr.new" "${d}/stderr"
+
+	if [[ $res -eq 0 ]] && [[ -s "${d}/stderr" ]]; then
+		local res=1
+	fi
+
+	print_result "${res}" "$@"
+	rm -rf "${d}"
+}
+
+
+main() {
+	local model=tests/instances/ct_000.jug.xz
+	runner ct_jug "${model}" &
+	runner ct_jug --ilp standard "${model}" &
+	runner ct_jug --ilp decomposed "${model}" &
+
+	local model=tests/instances/gm_000.uai.xz
+	runner gm_uai "${model}" &
+
+	local model=tests/instances/qap_000.dd.xz
+	for relaxation in gm gm-unordered qap-pw qap; do
+		for side in left right; do
+			runner qap_dd --relaxation "${relaxation}" --unary-side "${side}" "${model}" &
+		done
+	done
+	runner qap_dd --ilp "${model}" &
+	runner qap_dd --combilp "${model}" &
+
+	wait
+}
+
+
+main "$@"
