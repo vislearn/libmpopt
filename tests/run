@@ -25,16 +25,19 @@ cmd_hash() {
 
 
 print_result() {
-	local res="$1"
-	shift
+	local res="$1"; shift
+	local lb="$1"; shift
+	local ub="$1"; shift
+	local cmd=( "${@}" )
+	unset cmd[-1]
 
 	if [[ "${res}" -eq 0 ]]; then
-		local status="${green}[ OK ]${normal}"
+		printf '%s[ ok ]%s %+12e / %+12e - %s\n' \
+			"${bold}${green}" "${normal}" "${lb}" "${ub}" "${cmd[*]}"
 	else
-		local status="${red}[FAIL]${normal}"
+		printf '%s[FAIL]%s % 13s / % 13s - %s\n' \
+			"${bold}${red}" "${normal}" NaN NaN "${cmd[*]}"
 	fi
-
-	printf '%s%s %s\n' "${bold}" "${status}" "$*"
 }
 
 
@@ -51,7 +54,11 @@ runner() {
 		local res=1
 	fi
 
-	print_result "${res}" "$@"
+	local line=$(egrep '^it=' "${d}/stdout" | tail -n1)
+	lb=$(sed -rne 's/.* lb=([^ ]+) .*/\1/p' <<<"${line}")
+	ub=$(sed -rne 's/.* ub=([^ ]+) .*/\1/p' <<<"${line}")
+
+	print_result "${res}" "${lb}" "${ub}" "$@"
 	rm -rf "${d}"
 }
 
