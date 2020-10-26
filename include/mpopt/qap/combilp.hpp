@@ -16,9 +16,9 @@ public:
 
   combilp(const graph_type& graph, cost constant = 0)
   : graph_(&graph)
-  , constant_(constant)
   , iterations_(0)
   , ilp_time_(0)
+  , constant_(constant)
   { }
 
   auto ilp_time() const { return ilp_time_; }

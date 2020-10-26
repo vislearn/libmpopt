@@ -32,6 +32,7 @@ struct unary_node {
 
   void check_structure() const
   {
+#ifndef NDEBUG
     assert(factor.is_prepared());
 
     for (const auto* pairwise : forward)
@@ -39,6 +40,7 @@ struct unary_node {
 
     for (const auto* pairwise : backward)
       assert(pairwise != nullptr);
+#endif
   }
 };
 
@@ -151,11 +153,13 @@ public:
 
   void check_structure() const
   {
+#ifndef NDEBUG
     for (auto* node : unaries_)
       node->check_structure();
 
     for (auto* node : pairwise_)
       node->check_structure();
+#endif
   }
 
 protected:

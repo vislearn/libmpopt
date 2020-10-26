@@ -151,6 +151,7 @@ struct detection_node {
 
   void check_structure() const
   {
+#ifndef NDEBUG
     assert(factor.is_prepared());
 
     for (const auto& edge : incoming) {
@@ -175,6 +176,7 @@ struct detection_node {
       assert(edge.is_prepared());
       assert(edge.node->detections[edge.slot].node == this);
     }
+#endif
   }
 };
 
@@ -206,12 +208,14 @@ struct conflict_node {
 
   void check_structure() const
   {
+#ifndef NDEBUG
     assert(factor.is_prepared());
 
     for (const auto& edge : detections) {
       assert(edge.is_prepared());
       assert(edge.node->conflicts[edge.slot].node == this);
     }
+#endif
   }
 };
 
@@ -375,6 +379,7 @@ public:
 
   void check_structure() const
   {
+#ifndef NDEBUG
     for (auto& timestep : timesteps_) {
       for (auto* node : timestep.detections)
         node->check_structure();
@@ -382,6 +387,7 @@ public:
       for (auto* node : timestep.conflicts)
         node->check_structure();
     }
+#endif
   }
 
 protected:

@@ -46,6 +46,7 @@ struct unary_node {
 
   void check_structure() const
   {
+#ifndef NDEBUG
     assert(factor.is_prepared());
 
     index slot = 0;
@@ -70,6 +71,7 @@ struct unary_node {
 
     for (const auto* node : backward)
       assert(node != nullptr);
+#endif
   }
 
   template<typename FUNCTOR>
@@ -103,6 +105,7 @@ struct uniqueness_node {
 
   void check_structure() const
   {
+#ifndef NDEBUG
     assert(factor.is_prepared());
 
     index slot = 0;
@@ -112,6 +115,7 @@ struct uniqueness_node {
       assert(link.node == nullptr || link.node->uniqueness[link.slot].slot == slot);
       ++slot;
     }
+#endif
   }
 
   template<typename FUNCTOR>
@@ -281,6 +285,7 @@ public:
 
   void check_structure() const
   {
+#ifndef NDEBUG
     for (auto* node : unaries_)
       node->check_structure();
 
@@ -289,6 +294,7 @@ public:
 
     for (auto* node : pairwise_)
       node->check_structure();
+#endif
   }
 
 protected:
