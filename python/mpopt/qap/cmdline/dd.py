@@ -44,7 +44,10 @@ if __name__ == '__main__':
         solver.execute_combilp()
         print('exact solution: {}'.format(solver.evaluate_primal()))
 
-    primals = qap.extract_primals(deco, solver)
-    print('primals consistent: {}'.format('yes' if primals.check_consistency else 'no'))
-    print('primals.evaluate: {}'.format(primals.evaluate()))
-    print('primals.labeling: {}'.format(primals.labeling))
+    # FIXME: This is only implemented for the QAP solver and not for the GM
+    #        one...
+    if args.relaxation == 'qap':
+        primals = qap.extract_primals(deco, solver)
+        print('primals consistent: {}'.format('yes' if primals.check_consistency else 'no'))
+        print('primals.evaluate: {}'.format(primals.evaluate()))
+        print('primals.labeling: {}'.format(primals.labeling))
