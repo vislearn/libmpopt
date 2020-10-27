@@ -89,7 +89,7 @@ public:
     if (primal_.is_set())
       return costs_[primal_.get()];
     else
-      return std::numeric_limits<cost>::infinity();
+      return infinity;
   }
 
   auto& primal() { return primal_; }

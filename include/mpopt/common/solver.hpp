@@ -26,18 +26,27 @@ public:
     return result;
   }
 
+  bool check_primal_consistency() const
+  {
+    bool result = true;
+    const auto* derived = static_cast<const DERIVED_TYPE*>(this);
+    derived->for_each_node([&](const auto* node) {
+      result = result && derived->check_primal_consistency(node);
+    });
+    return result;
+  }
+
   cost evaluate_primal() const
   {
     const auto* derived = static_cast<const DERIVED_TYPE*>(this);
 
     derived->graph_.check_structure();
-    const cost inf = std::numeric_limits<cost>::infinity();
     cost result = constant_;
 
     derived->for_each_node(
       [&](const auto* node) {
         if (!derived->check_primal_consistency(node))
-          result += inf;
+          result += infinity;
         result += node->factor.evaluate_primal();
       });
 

@@ -52,7 +52,7 @@ public:
         if (mask_sac_.at(node))
           assert(messages::check_unary_primal_consistency(node));
         else
-          assert(node->factor.primal() != decltype(node->factor)::primal_unset);
+          assert(node->factor.is_primal_set());
 #endif
 
       changed = process_mismatches();
@@ -125,7 +125,7 @@ protected:
       is_sac = true;
     }
 
-    is_sac = unary_node->factor.primal() != decltype(unary_node->factor)::primal_unset;
+    is_sac = unary_node->factor.is_primal_set();
     assert(!is_sac || messages::check_unary_primal_consistency(unary_node));
     return is_sac;
   }

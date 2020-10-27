@@ -5,6 +5,7 @@ namespace mpopt {
 
 using cost = double;
 constexpr const cost epsilon = 1e-8;
+constexpr const cost infinity = std::numeric_limits<cost>::infinity();
 static_assert(std::numeric_limits<cost>::has_infinity);
 static_assert(std::numeric_limits<cost>::has_signaling_NaN);
 static_assert(std::numeric_limits<cost>::has_quiet_NaN);

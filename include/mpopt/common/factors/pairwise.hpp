@@ -73,7 +73,7 @@ public:
   cost min_marginal0(const index idx0) const
   {
     two_dimension_array_accessor a(no_labels0_, no_labels1_);
-    cost minimum = std::numeric_limits<cost>::infinity();
+    cost minimum = infinity;
     for (index idx1 = 0; idx1 < no_labels1_; ++idx1) {
       minimum = std::min(minimum, costs_[a.to_linear(idx0, idx1)]);
     }
@@ -83,7 +83,7 @@ public:
   cost min_marginal1(const index idx1) const
   {
     two_dimension_array_accessor a(no_labels0_, no_labels1_);
-    cost minimum = std::numeric_limits<cost>::infinity();
+    cost minimum = infinity;
     for (index idx0 = 0; idx0 < no_labels0_; ++idx0) {
       minimum = std::min(minimum, costs_[a.to_linear(idx0, idx1)]);
     }
@@ -136,7 +136,7 @@ public:
     if (primal0_ != primal_unset && primal1_ != primal_unset)
       return costs_[a.to_linear(primal0_, primal1_)];
     else
-      return std::numeric_limits<cost>::infinity();
+      return infinity;
   }
 
   void round_independently()
@@ -162,6 +162,7 @@ public:
 
   auto primal() { return std::tie(primal0_, primal1_); }
   const auto primal() const { return std::tuple(primal0_, primal1_); }
+  bool is_primal_set() const { return primal0_ != primal_unset && primal1_ != primal_unset; }
 
 protected:
   void assert_index(const index idx0, const index idx1) const
@@ -196,7 +197,7 @@ public:
   , vars_(factor.no_labels0_ * factor.no_labels1_)
   {
     std::optional<size_t> linear_primal_idx;
-    if (factor_->primal() != std::tuple(factor_type::primal_unset, factor_type::primal_unset)) {
+    if (factor_->is_primal_set()) {
       two_dimension_array_accessor a(factor_->no_labels0_, factor_->no_labels1_);
       const auto [p0, p1] = factor_->primal();
       linear_primal_idx = a.to_linear(p0, p1);

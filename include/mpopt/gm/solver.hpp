@@ -30,7 +30,7 @@ public:
   {
     graph_.check_structure();
     const int max_batches = (max_iterations + batch_size - 1) / batch_size;
-    cost best_ub = std::numeric_limits<cost>::infinity();
+    cost best_ub = infinity;
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);

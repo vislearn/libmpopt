@@ -71,7 +71,7 @@ public:
     if (primal_ != primal_unset)
       return costs_[primal_];
     else
-      return std::numeric_limits<cost>::infinity();
+      return infinity;
   }
 
   void round_independently()
@@ -93,6 +93,7 @@ public:
 
   auto& primal() { return primal_; }
   const auto& primal() const { return primal_; }
+  bool is_primal_set() const { return primal_ != primal_unset; }
 
 protected:
   void assert_index(const index idx) const { assert(idx >= 0 && idx < costs_.size()); }
@@ -121,7 +122,7 @@ public:
     std::vector<double> coeffs(vars_.size(), 1.0);
     for (size_t i = 0; i < factor_->size(); ++i) {
       vars_[i] = model.addVar(0.0, 1.0, factor_->get(i), GRB_BINARY);
-      if (factor_->primal() != factor_type::primal_unset)
+      if (factor_->is_primal_set())
         vars_[i].set(GRB_DoubleAttr_Start, factor_->primal() == i ? 1.0 : 0.0);
     }
 

@@ -84,7 +84,7 @@ public:
 
     std::vector<detection_primal> best_detection_primals(graph_.number_of_detections());
     std::vector<conflict_primal> best_conflict_primals(graph_.number_of_conflicts());
-    cost best_ub = std::numeric_limits<cost>::infinity();
+    cost best_ub = infinity;
 
     auto visit_primal_storage = [&](auto functor) {
       auto it_detection = best_detection_primals.begin();

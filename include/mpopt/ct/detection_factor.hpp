@@ -203,7 +203,7 @@ public:
     else if (primal_.is_incoming_set() && primal_.is_outgoing_set())
       result = incoming_[primal_.incoming()] + detection_ + outgoing_[primal_.outgoing()];
     else
-      result = std::numeric_limits<cost>::infinity();
+      result = infinity;
     return result;
   }
 

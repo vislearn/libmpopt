@@ -92,7 +92,7 @@ struct messages {
   template<bool forward, typename UNARY_NODE>
   static void trws_style_rounding(const UNARY_NODE* unary_node)
   {
-    std::tuple<index, cost> best(0, std::numeric_limits<cost>::infinity());
+    std::tuple<index, cost> best(0, infinity);
     for (index i = 0; i < unary_node->factor.size(); ++i) {
       cost value = unary_node->factor.get(i);
       for (auto* edge : unary_node->template edges<!forward>()) {

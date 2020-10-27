@@ -93,10 +93,10 @@ double mpopt_qap_unary_get_cost(mpopt_qap_unary_node* n, int label) { return fro
 int mpopt_qap_unary_get_primal(mpopt_qap_unary_node* n)
 {
   auto& f = from_unary(n)->factor;
-  auto p = f.primal();
-  if (p == std::decay_t<decltype(f)>::primal_unset)
+  if (f.is_primal_set())
+    return f.primal();
+  else
     return -1;
-  return p;
 }
 
 //
@@ -108,10 +108,10 @@ double mpopt_qap_uniqueness_get_cost(mpopt_qap_uniqueness_node* n, int unary) { 
 
 int mpopt_qap_uniqueness_get_primal(mpopt_qap_uniqueness_node* n) {
   auto& f = from_uniqueness(n)->factor;
-  auto p = f.primal();
-  if (p == std::decay_t<decltype(f)>::primal_unset)
+  if (f.is_primal_set())
+    return f.primal();
+  else
     return -1;
-  return p;
 }
 
 //
