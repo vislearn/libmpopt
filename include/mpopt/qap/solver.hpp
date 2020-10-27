@@ -94,8 +94,6 @@ public:
       node->factor.primal() = std::tuple(
         node->unary0->factor.primal(),
         node->unary1->factor.primal());
-#else
-    abort_on_disabled_gurobi();
 #endif
   }
 
