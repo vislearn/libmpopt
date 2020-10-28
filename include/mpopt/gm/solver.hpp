@@ -7,6 +7,7 @@ namespace gm {
 template<typename ALLOCATOR>
 class solver : public ::mpopt::solver<solver<ALLOCATOR>> {
 public:
+  using base_type = ::mpopt::solver<solver<ALLOCATOR>>;
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
   using unary_node_type = typename graph_type::unary_node_type;
@@ -17,7 +18,7 @@ public:
 #endif
 
   // import from base class
-  using typename ::mpopt::solver<solver<ALLOCATOR>>::clock_type;
+  using typename base_type::clock_type;
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)

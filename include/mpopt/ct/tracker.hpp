@@ -7,6 +7,7 @@ namespace ct {
 template<typename ALLOCATOR = std::allocator<cost>>
 class tracker : public solver<tracker<ALLOCATOR>> {
 public:
+  using base_type = solver<tracker<ALLOCATOR>>;
   using allocator_type = ALLOCATOR;
   using graph_type = graph<allocator_type>;
   using timestep_type = typename graph_type::timestep_type;
@@ -14,7 +15,7 @@ public:
   using conflict_node_type = typename graph_type::conflict_node_type;
 
   // import from base class
-  using typename solver<tracker<ALLOCATOR>>::clock_type;
+  using typename base_type::clock_type;
 
 #ifdef ENABLE_GUROBI
   using gurobi_model_builder_type = gurobi_model_builder<allocator_type>;
