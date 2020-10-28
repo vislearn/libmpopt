@@ -5,6 +5,7 @@ from . primals import Primals
 import numpy
 
 
+DEFAULT_GREEDY_GENERATIONS = 10
 INFINITY_COST = 1e99
 
 
@@ -143,6 +144,12 @@ class Solver(BaseSolver):
 
     def __init__(self):
         super().__init__(lib)
+
+    def run(self, batch_size=DEFAULT_BATCH_SIZE, max_batches=DEFAULT_MAX_BATCHES, greedy_generations=DEFAULT_GREEDY_GENERATIONS):
+        return self.lib.solver_run(self.solver, batch_size, max_batches, greedy_generations)
+
+    def compute_greedy_assignment(self):
+        return self.lib.compute_greedy_assignment(self.solver)
 
 
 def construct_gm_model(deco):

@@ -1,8 +1,5 @@
 FROM libmpopt_base
 
-USER user
-WORKDIR /home/user
-
 COPY --chown=user:user . libmpopt
 
 RUN mkdir libmpopt-build \
@@ -10,6 +7,7 @@ RUN mkdir libmpopt-build \
 && meson setup \
     -Db_ndebug=if-release \
     -Dbuildtype=debugoptimized \
+    -Dqpbo=enabled \
     /home/user/libmpopt \
 && ninja \
 && sudo meson install

@@ -5,6 +5,7 @@ RUN export DEBIAN_FRONTEND="noninteractive" \
 && apt-get upgrade -y \
 && apt-get install -y \
     build-essential \
+    curl \
     gdb \
     meson \
     ninja-build \
@@ -26,5 +27,17 @@ RUN cd /usr/local/lib/python3.8 \
 
 RUN useradd -ms /bin/bash user \
 && echo 'user ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/user
+
+USER user
+WORKDIR /home/user
+
+# Fetch and install libqpbo dependency.
+RUN curl -LOJ 'https://github.com/fgrsnau/libqpbo/archive/v1.4.0.tar.gz' \
+&& tar -xf libqpbo-*.tar.gz \
+&& mkdir libqpbo-build \
+&& cd libqpbo-build \
+&& meson setup ../libqpbo-*/ \
+&& ninja \
+&& sudo meson install
 
 # vim: set ts=8 sts=4 sw=4 et ft=dockerfile:

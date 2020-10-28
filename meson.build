@@ -52,14 +52,16 @@ python_sources = [
 #
 
 feature_gurobi = get_option('gurobi')
+feature_qpbo = get_option('qpbo')
 
 #
 # Dependencies.
 #
 
 fs = import('fs')
-python3 = import('python').find_installation('python3')
 gurobi = dependency('gurobi-cpp', required: feature_gurobi)
+python3 = import('python').find_installation('python3')
+qpbo = dependency('libqpbo', required: feature_qpbo)
 swig = find_program('swig', required: true)
 
 #
@@ -70,6 +72,9 @@ configuration = configuration_data()
 
 configuration.set('ENABLE_GUROBI', gurobi.found())
 configuration.set10('ENABLE_GUROBI_INT', gurobi.found())
+
+configuration.set('ENABLE_QPBO', qpbo.found())
+configuration.set10('ENABLE_QPBO_INT', qpbo.found())
 
 configuration.set('PYTHON_EXECUTABLE', python3.path())
 configuration.set('PYTHON_OPTIMIZEFLAG', '')
@@ -98,7 +103,7 @@ foreach sublibrary : sublibraries
     version: meson.project_version(),
     soversion: '0',
     pie: true,
-    dependencies: [gurobi],
+    dependencies: [gurobi, qpbo],
     install: true)
 
   lib_py = custom_target('lib' + sublibrary + '_py',

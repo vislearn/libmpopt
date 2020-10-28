@@ -4,6 +4,8 @@
 namespace mpopt {
 namespace qap {
 
+constexpr int default_greedy_generations = 10;
+
 template<typename ALLOCATOR>
 class solver : public ::mpopt::solver<solver<ALLOCATOR>> {
 public:
@@ -22,12 +24,19 @@ public:
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  { }
+  {
+#ifndef ENABLE_QPBO
+    std::cerr << "!!!!!!!!!!\n"
+              << "ENABLE_QPBO was not deactivated during configuration of libmpopt.\n"
+              << "No fusion moves are performed and the the quality of the computed upper bound is degraded.\n"
+              << "!!!!!!!!!!\n" << std::endl;
+#endif
+  }
 
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
 
-  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
+  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
     graph_.check_structure();
     cost best_ub = infinity;
@@ -38,9 +47,9 @@ public:
       const auto clock_start = clock_type::now();
 
       for (int j = 0; j < batch_size-1; ++j)
-        single_pass<false>();
+        single_pass<false>(greedy_generations);
 
-      single_pass<true>();
+      single_pass<true>(greedy_generations);
 
       best_ub = std::min(best_ub, this->evaluate_primal());
       const auto lb = this->lower_bound();
@@ -57,6 +66,13 @@ public:
     }
   }
 
+  void compute_greedy_assignment()
+  {
+    greedy g(graph_);
+    g.run();
+    assert(this->check_primal_consistency());
+  }
+
   void execute_combilp()
   {
 #ifdef ENABLE_GUROBI
@@ -65,34 +81,6 @@ public:
     subsolver.run();
 #else
     abort_on_disabled_gurobi();
-#endif
-  }
-
-  void solve_lap_as_ilp()
-  {
-#ifdef ENABLE_GUROBI
-    // We do not reset the primals and use the currently set ones as MIP start.
-    gurobi_model_builder<allocator_type> builder(this->gurobi_env());
-
-    for (const auto* node : graph_.unaries())
-      builder.add_factor(node);
-
-    for (const auto* node : graph_.uniqueness())
-      builder.add_factor(node);
-
-#ifndef NDEBUG
-    for (const auto* node : graph_.pairwise())
-      assert(dbg::are_identical(node->factor.lower_bound(), 0.0));
-#endif
-
-    builder.finalize();
-    builder.optimize();
-    builder.update_primals();
-
-    for (const auto* node : graph_.pairwise())
-      node->factor.primal() = std::tuple(
-        node->unary0->factor.primal(),
-        node->unary1->factor.primal());
 #endif
   }
 
@@ -126,7 +114,7 @@ protected:
   }
 
   template<bool rounding>
-  void single_pass()
+  void single_pass(int greedy_generations)
   {
 #ifndef NDEBUG
     auto lb_before = this->lower_bound();
@@ -135,8 +123,50 @@ protected:
     for (const auto* node : graph_.pairwise())
       pairwise_messages::update(node);
 
-    if constexpr (rounding)
-      solve_lap_as_ilp();
+    if constexpr (rounding) {
+      for (int i = 0; i < greedy_generations; ++i) {
+        const auto previous_ub = this->evaluate_primal();
+        primal_storage previous(graph_);
+        previous.save();
+
+        compute_greedy_assignment();
+        auto current_ub = this->evaluate_primal();
+        primal_storage current(graph_);
+        current.save();
+
+#ifdef ENABLE_QPBO
+        if (previous_ub != infinity) {
+          qpbo_model_builder builder(graph_);
+
+          index idx = 0;
+          for (const auto* node : graph_.unaries()) {
+            builder.add_factor(node, previous.get(idx), current.get(idx));
+            ++idx;
+          }
+
+          for (const auto* node : graph_.uniqueness())
+            builder.add_factor(node);
+
+          for (const auto* node : graph_.pairwise())
+            builder.add_factor(node);
+
+          builder.finalize();
+          builder.optimize();
+          builder.update_primals();
+          assert(this->check_primal_consistency());
+          const auto fused_ub = this->evaluate_primal();
+
+          if (fused_ub < current_ub)
+            current_ub = fused_ub;
+          else
+            current.restore();
+        }
+#endif
+
+        if (previous_ub < current_ub)
+          previous.restore();
+      }
+    }
 
     for (const auto* node : graph_.unaries()) {
       this->constant_ += node->factor.normalize();

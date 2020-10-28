@@ -22,8 +22,11 @@
 #include <mpopt/qap/pairwise_messages.hpp>
 #include <mpopt/qap/unary_messages.hpp>
 #include <mpopt/qap/uniqueness_messages.hpp>
+#include <mpopt/qap/primal_storage.hpp>
 #include <mpopt/qap/gurobi.hpp>
+#include <mpopt/qap/qpbo.hpp>
 #include <mpopt/qap/combilp.hpp>
+#include <mpopt/qap/greedy.hpp>
 #include <mpopt/qap/solver.hpp>
 
 #endif

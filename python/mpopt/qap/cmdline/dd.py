@@ -13,6 +13,7 @@ def parse_arguments():
     parser.add_argument('-r', '--relaxation', choices=('gm', 'gm-unordered', 'qap-pw', 'qap'), default='qap')
     parser.add_argument('-B', '--batch-size', type=int, default=qap.DEFAULT_BATCH_SIZE)
     parser.add_argument('-b', '--max-batches', type=int, default=qap.DEFAULT_MAX_BATCHES)
+    parser.add_argument('-g', '--greedy-generations', type=int, default=qap.DEFAULT_GREEDY_GENERATIONS, help='Specify number of greedy generation passes per batch.')
     parser.add_argument('-u', '--unary-side', choices=('left', 'right'), default='left', help='Choose side where quadratic terms will be instantiated.')
     parser.add_argument('-o', '--output', help='Output file for resulting labeling.')
     parser.add_argument('--ilp', action='store_true', help='Solves the ILP after reparametrizing.')
@@ -29,7 +30,11 @@ def construct_solver(deco, args):
                 len(gm_model.unaries),
                 list((u, v) for u, v, c in gm_model.pairwise))
             gm_model.reorder_unaries(ordered)
-        return gm.construct_solver(gm_model)
+        solver = gm.construct_solver(gm_model)
+        # We hot patch the run method to make it behave like the qap one.
+        old_func = solver.run
+        solver.run = lambda batch_size, max_batches, _: old_func(batch_size, max_batches)
+        return solver
     elif args.relaxation in ('qap', 'qap-pw'):
         return qap.construct_solver(deco)
     else:
@@ -56,7 +61,7 @@ def main():
 
     solver = construct_solver(deco, args)
     print('initial lower bound: {}'.format(solver.lower_bound()), flush=True)
-    solver.run(args.batch_size, args.max_batches)
+    solver.run(args.batch_size, args.max_batches, args.greedy_generations)
 
     if args.ilp:
         print('Running ILP solver...', flush=True)

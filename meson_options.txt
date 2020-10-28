@@ -1,2 +1,6 @@
 option('gurobi', type: 'feature', value: 'disabled',
        description: 'Enable Gurobi support (requires a pkg-config file)')
+option('qpbo', type: 'feature', value: 'disabled',
+       description: 'Enable QPBO support (requires libqpbo)')
+
+# vim: set ts=8 sts=2 sw=2 et:
