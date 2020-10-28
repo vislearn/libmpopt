@@ -65,21 +65,21 @@ runner() {
 
 main() {
 	local model=tests/instances/ct_000.jug.xz
-	runner ct_jug "${model}" &
-	runner ct_jug --ilp standard "${model}" &
-	runner ct_jug --ilp decomposed "${model}" &
+	runner ct_jug -b 10 "${model}" &
+	runner ct_jug -b 10 --ilp standard "${model}" &
+	runner ct_jug -b 10 --ilp decomposed "${model}" &
 
 	local model=tests/instances/gm_000.uai.xz
-	runner gm_uai "${model}" &
+	runner gm_uai -b 10 "${model}" &
 
 	local model=tests/instances/qap_000.dd.xz
 	for relaxation in gm gm-unordered qap-pw qap; do
 		for side in left right; do
-			runner qap_dd --relaxation "${relaxation}" --unary-side "${side}" "${model}" &
+			runner qap_dd -b 10 --relaxation "${relaxation}" --unary-side "${side}" "${model}" &
 		done
 	done
-	runner qap_dd --ilp "${model}" &
-	runner qap_dd --combilp "${model}" &
+	runner qap_dd -b 10 --ilp "${model}" &
+	runner qap_dd -B 1000 -b 1 --combilp "${model}" &
 
 	wait
 }
