@@ -27,7 +27,7 @@ void mpopt_ct_graph_add_division(mpopt_ct_graph* g, int timestep_from, int detec
 void mpopt_ct_graph_add_conflict_link(mpopt_ct_graph* g, int timestep, int conflict, int conflict_slot, int detection, int detection_slot);
 mpopt_ct_conflict* mpopt_ct_graph_get_conflict(mpopt_ct_graph* g, int timestep, int conflict);
 
-void mpopt_ct_tracker_run(mpopt_ct_tracker* t, int max_iterations);
+void mpopt_ct_tracker_run(mpopt_ct_tracker* t, int batch_size, int max_batches);
 double mpopt_ct_tracker_runtime(mpopt_ct_tracker* t);
 double mpopt_ct_tracker_lower_bound(mpopt_ct_tracker* t);
 double mpopt_ct_tracker_evaluate_primal(mpopt_ct_tracker* t);

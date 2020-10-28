@@ -13,8 +13,6 @@ static_assert(std::numeric_limits<cost>::has_quiet_NaN);
 using index = unsigned int;
 using short_index = unsigned char;
 
-static constexpr int batch_size = 100;
-
 }
 
 #endif

@@ -27,10 +27,9 @@ public:
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
 
-  void run(const int max_iterations = 1000)
+  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
     graph_.check_structure();
-    const int max_batches = (max_iterations + batch_size - 1) / batch_size;
     cost best_ub = infinity;
 
     signal_handler h;

@@ -3,6 +3,9 @@
 
 namespace mpopt {
 
+constexpr int default_batch_size = 10;
+constexpr int default_max_batches = 100;
+
 template<typename DERIVED_TYPE>
 class solver {
 public:
@@ -62,7 +65,7 @@ public:
     });
   }
 
-  void run(const int max_iterations)
+  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
     assert(false && "Not implemented!");
   }

@@ -8,7 +8,9 @@ from mpopt import ct, utils
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='ct_jug', description='Optimizer for *.jug cell tracking models.')
-    parser.add_argument('--maxIterations', type=int, default=200)
+    parser.add_argument('-B', '--batch-size', type=int, default=ct.DEFAULT_BATCH_SIZE)
+    parser.add_argument('-b', '--max-batches', type=int, default=ct.DEFAULT_MAX_BATCHES)
+    parser.add_argument('-o', '--output', default=None, help='Specifies the output file.')
     parser.add_argument('--ilp', choices=('standard', 'decomposed'), help='Solves the ILP after reparametrizing.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.jug input file.')
     args = parser.parse_args()
@@ -17,7 +19,7 @@ if __name__ == '__main__':
         model, bimap = ct.convert_jug_to_ct(ct.parse_jug_model(f))
 
     tracker = ct.construct_tracker(model)
-    tracker.run(args.maxIterations)
+    tracker.run(args.batch_size, args.max_batches)
 
     if args.ilp:
         if args.ilp == 'standard':
@@ -34,5 +36,6 @@ if __name__ == '__main__':
         primals = ct.extract_primals_from_tracker(model, tracker)
 
     print('final solution:', primals.evaluate())
-    with open('tracking.sol', 'w') as f:
-        ct.format_jug_primals(primals, bimap, f)
+    if args.output:
+        with open(args.output, 'w') as f:
+            ct.format_jug_primals(primals, bimap, f)

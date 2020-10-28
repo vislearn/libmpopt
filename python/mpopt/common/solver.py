@@ -1,3 +1,7 @@
+DEFAULT_BATCH_SIZE = 10
+DEFAULT_MAX_BATCHES = 100
+
+
 class BaseSolver:
 
     def __init__(self, lib):
@@ -18,8 +22,8 @@ class BaseSolver:
     def evaluate_primal(self):
         return self.lib.solver_evaluate_primal(self.solver)
 
-    def run(self, max_iterations=1000):
-        self.lib.solver_run(self.solver, max_iterations)
+    def run(self, batch_size=DEFAULT_BATCH_SIZE, max_batches=DEFAULT_MAX_BATCHES):
+        self.lib.solver_run(self.solver, batch_size, max_batches)
 
     def runtime(self):
         return self.lib.solver_runtime(self.solver)

@@ -1,4 +1,4 @@
-from ..common.solver import BaseSolver
+from ..common.solver import BaseSolver, DEFAULT_BATCH_SIZE, DEFAULT_MAX_BATCHES
 from . import libmpopt_qap as lib
 from . primals import Primals
 

@@ -57,7 +57,7 @@ void mpopt_gm_graph_add_pairwise_link(mpopt_gm_graph* graph, int idx_unary0, int
   from_graph(graph)->add_pairwise_link(idx_unary0, idx_unary1, idx_pairwise);
 }
 
-void mpopt_gm_solver_run(mpopt_gm_solver* s, int max_iterations) { s->solver.run(max_iterations); }
+void mpopt_gm_solver_run(mpopt_gm_solver* s, int batch_size, int max_batches) { s->solver.run(batch_size, max_batches); }
 void mpopt_gm_solver_solve_ilp(mpopt_gm_solver* s) { s->solver.solve_ilp(); }
 void mpopt_gm_solver_execute_combilp(mpopt_gm_solver* s) {s->solver.execute_combilp(); }
 double mpopt_gm_solver_runtime(mpopt_gm_solver* s) { return s->solver.runtime(); }

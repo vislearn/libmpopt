@@ -76,10 +76,9 @@ public:
   template<bool rounding=false> void forward_pass() { single_pass<true, rounding>(); }
   template<bool rounding=false> void backward_pass() { single_pass<false, rounding>(); }
 
-  void run(const int max_iterations = 1000)
+  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
     graph_.check_structure();
-    const int max_batches = (max_iterations + batch_size - 1) / batch_size;
     const auto& timesteps = graph_.timesteps();
 
     std::vector<detection_primal> best_detection_primals(graph_.number_of_detections());
