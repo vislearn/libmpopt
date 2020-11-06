@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu -o pipefail
+
+container=$(buildah from libmpopt)
+mountpoint=$(buildah mount "${container}")
+mksquashfs "${mountpoint}" /tmp/libmpopt.squashfs -noappend -reproducible
+buildah umount "${container}"
+buildah rm "${container}"

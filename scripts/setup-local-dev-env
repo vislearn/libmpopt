@@ -14,23 +14,26 @@ export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}
 export PATH="${install_dir}/bin${PATH:+:${PATH}}"
 export PKG_CONFIG_PATH="${install_dir}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 
+meson_args=(
+	-Dprefix="${install_dir}"
+	-Db_ndebug=if-release
+	-Dbuildtype=debugoptimized
+	-Dc_args='-march=native -mtune=native'
+	-Dcpp_args='-march=native -mtune=native'
+)
+
 cd "${temp_dir}"
 curl -LJO https://github.com/fgrsnau/libqpbo/archive/v1.4.0.tar.gz
 tar -xf libqpbo-1.4.0.tar.gz
 
 mkdir "${build_dir}"
 cd "${build_dir}"
-meson setup -Dprefix="${install_dir}" -Db_nbdebug=true -Dbuildtype=release ../libqpbo-1.4.0
+meson setup "${meson_args[@]}" ../libqpbo-1.4.0
 ninja install
 
 find "${build_dir}" -mindepth 1 -delete
 
-meson \
-	-Dprefix="${install_dir}" \
-	-Db_ndebug=if-release \
-	-Dbuildtype=debugoptimized \
-	-Dqpbo=enabled \
-	"${source_dir}"
+meson setup "${meson_args[@]}" -Dqpbo=enabled -Dgurobi=auto "${source_dir}"
 
 ninja
 ninja install

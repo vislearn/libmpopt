@@ -8,8 +8,10 @@ RUN mkdir libmpopt-build \
     -Db_ndebug=if-release \
     -Dbuildtype=debugoptimized \
     -Dqpbo=enabled \
+    -Dgurobi=auto \
     /home/user/libmpopt \
 && ninja \
-&& sudo meson install
+&& sudo meson install \
+&& sudo ldconfig
 
 # vim: set ts=8 sts=4 sw=4 et ft=dockerfile:
