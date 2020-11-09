@@ -35,7 +35,7 @@ WORKDIR /home/user
 
 # Fetch and install more recent meson dependency.
 RUN curl -LOJ 'https://github.com/mesonbuild/meson/releases/download/0.56.0/meson-0.56.0.tar.gz' \
-&& tar -xvf meson-*.tar.gz \
+&& tar -xf meson-*.tar.gz \
 && cd meson-* \
 && sudo pip3 install .
 
