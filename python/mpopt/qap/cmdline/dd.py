@@ -45,7 +45,7 @@ def write_primals(deco, solver, args, f):
     if args.relaxation.startswith('gm'):
         raise NotImplementedError('Export of primals for GM currently not implemented')
 
-    primals = qap.extract_primals(solver)
+    primals = qap.extract_primals(deco, solver)
     json.dump(primals.labeling, f)
     f.write('\n')
 
