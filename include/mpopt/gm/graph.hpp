@@ -77,8 +77,9 @@ struct pairwise_node {
 
 
 template<typename ALLOCATOR>
-class graph {
+class graph : public ::mpopt::graph<graph<ALLOCATOR>> {
 public:
+  using base_type = ::mpopt::graph<graph<ALLOCATOR>>;
   using allocator_type = ALLOCATOR;
   using unary_node_type = unary_node<ALLOCATOR>;
   using pairwise_node_type = pairwise_node<ALLOCATOR>;
@@ -151,15 +152,26 @@ public:
 #endif
   }
 
-  void check_structure() const
+  template<typename FUNCTOR>
+  void for_each_node(FUNCTOR f) const
   {
-#ifndef NDEBUG
-    for (auto* node : unaries_)
-      node->check_structure();
+    for (const auto* node : unaries_)
+      f(node);
 
-    for (auto* node : pairwise_)
-      node->check_structure();
-#endif
+    for (const auto* node : pairwise_)
+      f(node);
+  }
+
+  using base_type::check_primal_consistency;
+
+  bool check_primal_consistency(const unary_node_type* node) const
+  {
+    return messages::check_unary_primal_consistency(node);
+  }
+
+  bool check_primal_consistency(const pairwise_node_type* node) const
+  {
+    return messages::check_pairwise_primal_consistency(node);
   }
 
 protected:

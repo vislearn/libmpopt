@@ -77,7 +77,7 @@ public:
   {
 #ifdef ENABLE_GUROBI
     this->reset_primal();
-    combilp subsolver(graph_, this->constant_);
+    combilp subsolver(graph_, graph_.constant());
     subsolver.run();
 #else
     abort_on_disabled_gurobi();
@@ -85,33 +85,6 @@ public:
   }
 
 protected:
-
-  template<typename FUNCTOR>
-  void for_each_node(FUNCTOR f) const
-  {
-    for (const auto* node : graph_.unaries())
-      f(node);
-
-    for (const auto* node : graph_.uniqueness())
-      f(node);
-
-    for (const auto* node : graph_.pairwise())
-      f(node);
-  }
-
-  using base_type::check_primal_consistency;
-
-  template<typename NODE_TYPE>
-  bool check_primal_consistency(const NODE_TYPE* node) const
-  {
-    if constexpr (std::is_same_v<NODE_TYPE, unary_node_type>)
-      return unary_messages::check_primal_consistency(node);
-    else if constexpr (std::is_same_v<NODE_TYPE, uniqueness_node_type>)
-      return uniqueness_messages::check_primal_consistency(node);
-    else if constexpr (std::is_same_v<NODE_TYPE, pairwise_node_type>)
-      return pairwise_messages::check_primal_consistency(node);
-    return false;
-  }
 
   template<bool rounding>
   void single_pass(int greedy_generations)
@@ -169,12 +142,12 @@ protected:
     }
 
     for (const auto* node : graph_.unaries()) {
-      this->constant_ += node->factor.normalize();
+      graph_.add_to_constant(node->factor.normalize());
       uniqueness_messages::send_messages_to_uniqueness(node);
     }
 
     for (const auto* node : graph_.uniqueness()) {
-      this->constant_ += node->factor.normalize();
+      graph_.add_to_constant(node->factor.normalize());
       uniqueness_messages::send_messages_to_unaries(node);
     }
 

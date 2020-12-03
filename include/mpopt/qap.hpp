@@ -14,14 +14,15 @@
 
 #include <mpopt/common/factors/unary.hpp>
 #include <mpopt/common/factors/pairwise.hpp>
+#include <mpopt/common/graph.hpp>
 #include <mpopt/common/solver.hpp>
 
 #include <mpopt/qap/unary_factor.hpp>
 #include <mpopt/qap/uniqueness_factor.hpp>
-#include <mpopt/qap/graph.hpp>
 #include <mpopt/qap/pairwise_messages.hpp>
 #include <mpopt/qap/unary_messages.hpp>
 #include <mpopt/qap/uniqueness_messages.hpp>
+#include <mpopt/qap/graph.hpp>
 #include <mpopt/qap/primal_storage.hpp>
 #include <mpopt/qap/gurobi.hpp>
 #include <mpopt/qap/qpbo.hpp>

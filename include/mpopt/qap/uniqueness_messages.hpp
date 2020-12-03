@@ -13,10 +13,8 @@ struct uniqueness_messages {
     const auto lb_before = local_unary_lower_bound(node);
 #endif
 
-    auto [it0, it1] = least_two_elements(node->factor.costs_.cbegin(), node->factor.costs_.cend());
-    assert(it0 != node->factor.costs_.cend());
-    assert(it1 != node->factor.costs_.cend());
-    const cost target = 0.5 * (*it0 + *it1);
+    auto [first, second] = least_two_values(node->factor.costs_.cbegin(), node->factor.costs_.cend());
+    const cost target = 0.5 * (first + second);
 
     // FIXME: This is not quite correct. Let's assume there is a label that has
     //        no uniqueness term connected. Then we cannot push away costs.
@@ -40,10 +38,8 @@ struct uniqueness_messages {
     const auto lb_before = local_uniqueness_lower_bound(node);
 #endif
 
-    auto [it0, it1] = least_two_elements(node->factor.costs_.cbegin(), node->factor.costs_.cend());
-    assert(it0 != node->factor.costs_.cend());
-    assert(it1 != node->factor.costs_.cend());
-    const cost target = 0.5 * (*it0 + *it1);
+    auto [first, second] = least_two_values(node->factor.costs_.cbegin(), node->factor.costs_.cend());
+    const cost target = 0.5 * (first + second);
 
     // FIXME: The same comment as above applies.
     node->traverse_unaries([&](const auto& link, index slot) {

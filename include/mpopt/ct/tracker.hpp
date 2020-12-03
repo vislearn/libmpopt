@@ -163,28 +163,6 @@ public:
 
 protected:
 
-  template<typename FUNCTOR>
-  void for_each_node(FUNCTOR f) const
-  {
-    for (const auto& timestep : graph_.timesteps()) {
-      for (const auto* node : timestep.detections)
-        f(node);
-
-      for (const auto* node : timestep.conflicts)
-        f(node);
-    }
-  }
-
-  bool check_primal_consistency(const detection_node_type* node) const
-  {
-    return transition_messages::check_primal_consistency(node);
-  }
-
-  bool check_primal_consistency(const conflict_node_type* node) const
-  {
-    return conflict_messages::check_primal_consistency(node);
-  }
-
   template<bool forward, bool rounding>
   void single_step(const timestep_type& t)
   {

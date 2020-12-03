@@ -6,6 +6,7 @@ class BaseSolver:
 
     def __init__(self, lib):
         self.lib = lib
+        self.solver = None
         self.solver = lib.solver_create()
 
     def __del__(self):

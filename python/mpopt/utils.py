@@ -1,4 +1,16 @@
+import functools
 import lzma
+
+
+def if_debug(func):
+    @functools.wraps(func)
+    def dummy(*args, **kwargs):
+        pass
+
+    if __debug__:
+        return func
+    else:
+        return dummy
 
 
 def smart_open(filename, *args, **kwargs):

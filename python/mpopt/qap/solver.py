@@ -149,7 +149,7 @@ class Solver(BaseSolver):
         return self.lib.solver_run(self.solver, batch_size, max_batches, greedy_generations)
 
     def compute_greedy_assignment(self):
-        return self.lib.compute_greedy_assignment(self.solver)
+        return self.lib.solver_compute_greedy_assignment(self.solver)
 
 
 def construct_gm_model(deco):

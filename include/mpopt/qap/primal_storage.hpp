@@ -22,7 +22,6 @@ public:
     for (const auto* node : graph_->unaries()) {
       assert(it != data_.end());
       *it++ = node->factor.primal();
-      //assert(*it >= 0 && *it < node->factor.size());
     }
     assert(it == data_.end());
   }
@@ -67,7 +66,6 @@ public:
   void set(index idx, index label)
   {
     assert(idx >= 0 && idx < data_.size());
-    //assert(label >= 0 && label < graph_->unaries()[idx]->factor.size());
     data_[idx] = label;
   }
 

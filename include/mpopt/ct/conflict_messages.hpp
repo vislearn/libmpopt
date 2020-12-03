@@ -36,8 +36,8 @@ struct conflict_messages {
 #endif
 
     auto& c = node->factor;
-    auto [it1, it2] = least_two_elements(c.costs_.cbegin(), c.costs_.cend());
-    const auto m = std::min(0.5 * (*it1 + *it2), 0.0);
+    auto [first, second] = least_two_values(c.costs_.cbegin(), c.costs_.cend());
+    const auto m = std::min(0.5 * (first + second), 0.0);
 
     node->traverse_detections([&](auto& edge, auto slot) {
       auto& d = edge.node->factor;

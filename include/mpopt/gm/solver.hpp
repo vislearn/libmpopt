@@ -78,26 +78,6 @@ public:
 
 protected:
 
-  template<typename FUNCTOR>
-  void for_each_node(FUNCTOR f) const
-  {
-    for (const auto* node : graph_.unaries())
-      f(node);
-
-    for (const auto* node : graph_.pairwise())
-      f(node);
-  }
-
-  bool check_primal_consistency(const unary_node_type* node) const
-  {
-    return messages::check_unary_primal_consistency(node);
-  }
-
-  bool check_primal_consistency(const pairwise_node_type* node) const
-  {
-    return messages::check_pairwise_primal_consistency(node);
-  }
-
   template<bool rounding> void forward_pass() { single_pass<true, rounding>(); }
   template<bool rounding> void backward_pass() { single_pass<false, rounding>(); }
 
@@ -111,7 +91,7 @@ protected:
     auto helper = [&](auto begin, auto end) {
       for (auto it = begin; it != end; ++it) {
         messages::receive<forward>(*it);
-        this->constant_ += (*it)->factor.normalize();
+        graph_.add_to_constant((*it)->factor.normalize());
 
         if constexpr (rounding) {
           messages::trws_style_rounding<forward>(*it);

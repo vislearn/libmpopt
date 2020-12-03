@@ -232,8 +232,9 @@ struct timestep {
 
 
 template<typename ALLOCATOR>
-class graph {
+class graph : public ::mpopt::graph<graph<ALLOCATOR>> {
 public:
+  using base_type = ::mpopt::graph<graph<ALLOCATOR>>;
   using allocator_type = ALLOCATOR;
   using detection_node_type = detection_node<ALLOCATOR>;
   using detection_type = typename detection_node_type::detection_type;
@@ -388,6 +389,30 @@ public:
         node->check_structure();
     }
 #endif
+  }
+
+  template<typename FUNCTOR>
+  void for_each_node(FUNCTOR f) const
+  {
+    for (const auto& timestep : timesteps_) {
+      for (const auto* node : timestep.detections)
+        f(node);
+
+      for (const auto* node : timestep.conflicts)
+        f(node);
+    }
+  }
+
+  using base_type::check_primal_consistency;
+
+  bool check_primal_consistency(const detection_node_type* node) const
+  {
+    return transition_messages::check_primal_consistency(node);
+  }
+
+  bool check_primal_consistency(const conflict_node_type* node) const
+  {
+    return conflict_messages::check_primal_consistency(node);
   }
 
 protected:
