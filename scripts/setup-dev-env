@@ -1,6 +1,12 @@
 #!/bin/bash
 set -eu -o pipefail
 
-podman build -f Containerfile.base -t libmpopt_base
-podman build -f Containerfile      -t libmpopt
+if [[ $# -ge 1 ]]; then
+	buildarg=(--build-arg BUILDTYPE="$1")
+else
+	buildarg=()
+fi
+
+podman build "${buildarg[@]}" -f Containerfile.base -t libmpopt_base
+podman build "${buildarg[@]}" -f Containerfile      -t libmpopt
 podman run --privileged --rm -ti libmpopt

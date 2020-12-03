@@ -39,12 +39,14 @@ RUN curl -LOJ 'https://github.com/mesonbuild/meson/releases/download/0.56.0/meso
 && cd meson-* \
 && sudo pip3 install .
 
+ARG BUILDTYPE=debugoptimized
+
 # Fetch and install libqpbo dependency.
 RUN curl -LOJ 'https://github.com/fgrsnau/libqpbo/archive/v1.4.0.tar.gz' \
 && tar -xf libqpbo-*.tar.gz \
 && mkdir libqpbo-build \
 && cd libqpbo-build \
-&& meson setup -Db_ndebug=if-release -Dbuildtype=debugoptimized ../libqpbo-*/ \
+&& meson setup -Db_ndebug=if-release -Dbuildtype=${BUILDTYPE} ../libqpbo-*/ \
 && ninja \
 && sudo meson install
 

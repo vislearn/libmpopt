@@ -1,6 +1,11 @@
 #!/bin/bash
 set -eu -o pipefail
 
+buildtype=debugoptimized
+if [[ $# -ge 1 ]]; then
+	buildtype="$1"
+fi
+
 temp_dir=$(mktemp -d)
 trap 'rm -rf "${temp_dir}"' EXIT
 
@@ -17,7 +22,7 @@ export PKG_CONFIG_PATH="${install_dir}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CO
 meson_args=(
 	-Dprefix="${install_dir}"
 	-Db_ndebug=if-release
-	-Dbuildtype=debugoptimized
+	-Dbuildtype="${buildtype}"
 	-Dc_args='-march=native -mtune=native'
 	-Dcpp_args='-march=native -mtune=native'
 )

@@ -2,11 +2,13 @@ FROM libmpopt_base
 
 COPY --chown=user:user . libmpopt
 
+ARG BUILDTYPE=debugoptimized
+
 RUN mkdir libmpopt-build \
 && cd libmpopt-build \
 && meson setup \
     -Db_ndebug=if-release \
-    -Dbuildtype=debugoptimized \
+    -Dbuildtype=${BUILDTYPE} \
     -Dqpbo=enabled \
     -Dgurobi=auto \
     /home/user/libmpopt \
