@@ -243,7 +243,8 @@ public:
     const auto p = value_relaxed_;
 
     const auto new_temp = (d - p) / (gamma * entropy());
-    temperature_ = std::min(temperature_, new_temp);
+    assert(new_temp >= 0);
+    temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
