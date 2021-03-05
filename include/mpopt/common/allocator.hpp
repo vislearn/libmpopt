@@ -11,24 +11,24 @@ public:
   static constexpr size_t size_1024gib = size_gib * 1024;
 
   memory_block()
-  : memory_(nullptr)
+  : memory_(0)
   , size_(size_1024gib)
-  , current_(nullptr)
+  , current_(0)
   , finalized_(false)
   {
-    while (memory_ == nullptr && size_ >= size_512mib) {
-      void* result = std::malloc(size_);
-      if (result == static_cast<void*>(0))
+    while (memory_ == 0 && size_ >= size_512mib) {
+      auto result = reinterpret_cast<uintptr_t>(std::malloc(size_));
+      if (result == 0)
         size_ -= size_512mib;
       else
-        memory_ = static_cast<char*>(result);
+        memory_ = result;
     }
 
 #ifndef NDEBUG
-      std::cout << "[mem] ctor: size=" << size_ << "B (" << (1.0f * size_ / size_gib) << "GiB) -> memory_=" << static_cast<void*>(memory_) << std::endl;
+      std::cout << "[mem] ctor: size=" << size_ << "B (" << (1.0f * size_ / size_gib) << "GiB) -> memory_=" << reinterpret_cast<void*>(memory_) << std::endl;
 #endif
 
-    if (memory_ == nullptr)
+    if (memory_ == 0)
       throw std::bad_alloc();
 
     current_ = memory_;
@@ -36,18 +36,24 @@ public:
 
   ~memory_block()
   {
-    if (memory_ != nullptr) {
-      std::free(memory_);
+    if (memory_ != 0) {
+      std::free(reinterpret_cast<void*>(memory_));
     }
   }
 
-  char* allocate(size_t s)
+  void align(size_t a)
+  {
+    if (memory_ % a != 0)
+      allocate(a - memory_ % a);
+  }
+
+  uintptr_t allocate(size_t s)
   {
     assert(!finalized_);
     if (current_ + s >= memory_ + size_)
       throw std::bad_alloc();
 
-    char* result = current_;
+    auto result = current_;
     current_ += s;
     return result;
   }
@@ -58,10 +64,10 @@ public:
   {
     assert(!finalized_);
     auto current_size = current_ - memory_;
-    void* result = std::realloc(memory_, current_size);
-    if (result == static_cast<void*>(0))
+    auto result = reinterpret_cast<uintptr_t>(std::realloc(reinterpret_cast<void*>(memory_), current_size));
+    // result could be 0 (error) or memory could have been relocated
+    if (result != memory_)
       throw std::bad_alloc();
-    assert(result == memory_);
     size_ = current_size;
 #ifndef NDEBUG
       std::cout << "[mem] finalize: size=" << size_ << " (" << (1.0f * size_ / size_mib) << " MiB)" << std::endl;
@@ -70,9 +76,9 @@ public:
   }
 
 protected:
-  char* memory_;
+  uintptr_t memory_;
   size_t size_;
-  char* current_;
+  uintptr_t current_;
   bool finalized_;
 };
 
@@ -93,7 +99,8 @@ public:
 
   T* allocate(size_t n = 1)
   {
-    auto* mem = block_->allocate(sizeof(T) * n);
+    block_->align(alignof(T));
+    auto mem = block_->allocate(sizeof(T) * n);
     assert(reinterpret_cast<std::uintptr_t>(mem) % alignof(T) == 0);
     return reinterpret_cast<T*>(mem);
   }
