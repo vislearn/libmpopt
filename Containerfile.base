@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bullseye
 #FROM gurobi
 
 RUN export DEBIAN_FRONTEND="noninteractive" \
@@ -24,7 +24,7 @@ RUN export DEBIAN_FRONTEND="noninteractive" \
 # In Debian the sysconfig Python module is reporting the wrong paths. Instead
 # of site-packages, Debian uses dist-packages. We fix this by creating a
 # symlink here.
-RUN cd /usr/local/lib/python3.7 \
+RUN cd /usr/local/lib/python3.* \
 && ln -nsf dist-packages site-packages
 
 RUN useradd -ms /bin/bash user \
@@ -32,12 +32,6 @@ RUN useradd -ms /bin/bash user \
 
 USER user
 WORKDIR /home/user
-
-# Fetch and install more recent meson dependency.
-RUN curl -LOJ 'https://github.com/mesonbuild/meson/releases/download/0.56.0/meson-0.56.0.tar.gz' \
-&& tar -xf meson-*.tar.gz \
-&& cd meson-* \
-&& sudo pip3 install .
 
 ARG BUILDTYPE=debugoptimized
 
