@@ -4,17 +4,25 @@ project('libmpopt', ['c', 'cpp'], version: '0.1.0', default_options: ['cpp_std=c
 # Project specific infos.
 #
 
-sublibraries = ['ct', 'gm', 'qap']
+sublibraries = ['ct', 'gm', 'mwis', 'qap']
 
 python_wrappers = {
-  'ct_jug':        'mpopt.ct.cmdline.jug',
-  'ct_jug_2ts':    'mpopt.ct.cmdline.jug2_ts',
-  'ct_jug_gurobi': 'mpopt.ct.cmdline.jug_gurobi',
-  'ct_test':       'mpopt.ct.cmdline.test',
-  'gm_uai':        'mpopt.gm.cmdline.uai',
-  'dd_to_uai':     'mpopt.qap.cmdline.dd_to_uai',
-  'qap_dd':        'mpopt.qap.cmdline.dd',
-  'qap_dd_gurobi': 'mpopt.qap.cmdline.dd_gurobi',
+  'ct_jug_2ts':             'mpopt.ct.cmdline.jug2_ts',
+  'ct_jug_gurobi':          'mpopt.ct.cmdline.jug_gurobi',
+  'ct_jug':                 'mpopt.ct.cmdline.jug',
+  'ct_test':                'mpopt.ct.cmdline.test',
+  'dd_to_uai':              'mpopt.qap.cmdline.dd_to_uai',
+  'gm_uai':                 'mpopt.gm.cmdline.uai',
+  'mwis_gm':                'mpopt.mwis.cmdline.gm',
+  'mwis_json':              'mpopt.mwis.cmdline.json',
+  'mwis_preprocess':        'mpopt.mwis.cmdline.preprocess',
+  'mwis_jug_batch_convert': 'mpopt.mwis.cmdline.jug_batch_convert',
+  'mwis_jug_to_dimacs':     'mpopt.mwis.cmdline.jug_to_dimacs',
+  'mwis_jug_to_mwis':       'mpopt.mwis.cmdline.jug_to_mwis',
+  'mwis_lp':                'mpopt.mwis.cmdline.lp',
+  'mwis_to_uai':            'mpopt.mwis.cmdline.to_uai',
+  'qap_dd':                 'mpopt.qap.cmdline.dd',
+  'qap_dd_gurobi':          'mpopt.qap.cmdline.dd_gurobi',
 }
 
 python_sources = [
@@ -48,7 +56,26 @@ python_sources = [
   'mpopt/qap/model.py',
   'mpopt/qap/primals.py',
   'mpopt/qap/solver.py',
-  'mpopt/utils.py']
+  'mpopt/utils.py',
+  'mpopt/mwis/__init__.py',
+  'mpopt/mwis/cmdline/__init__.py',
+  'mpopt/mwis/cmdline/gm.py',
+  'mpopt/mwis/cmdline/json.py',
+  'mpopt/mwis/cmdline/preprocess.py',
+  'mpopt/mwis/cmdline/jug_batch_convert.py',
+  'mpopt/mwis/cmdline/jug_to_dimacs.py',
+  'mpopt/mwis/cmdline/jug_to_mwis.py',
+  'mpopt/mwis/cmdline/lp.py',
+  'mpopt/mwis/cmdline/to_uai.py',
+  'mpopt/mwis/cbc.py',
+  'mpopt/mwis/dimacs.py',
+  'mpopt/mwis/gm.py',
+  'mpopt/mwis/gurobi.py',
+  'mpopt/mwis/jug.py',
+  'mpopt/mwis/model.py',
+  'mpopt/mwis/solver.py',
+  'mpopt/mwis/preprocess.py',
+  'mpopt/mwis/uai.py']
 
 #
 # Features and Options.

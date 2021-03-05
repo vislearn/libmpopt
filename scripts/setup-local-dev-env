@@ -43,6 +43,9 @@ tar -xf "meson-${MESON_VERSION}.tar.gz"
 mkdir -p "${prefix}/bin"
 ln -sT "${temp_dir}/meson-${MESON_VERSION}/meson.py" "${prefix}/bin/meson"
 
+# Install pulp to have a non-commercial LP solver available.
+python3 -m pip install --prefix="${install_dir}" pulp
+
 # libqpbo is an optional requirement, but used for various important things.
 # Therefore we fetch the latest version and install it into our temporary
 # prefix.
