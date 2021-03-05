@@ -248,15 +248,18 @@ public:
 
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
+    auto start = std::chrono::steady_clock::now();
     std::cout << "initial dual = " << dual_relaxed() << std::endl;
     signal_handler h;
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      auto start = std::chrono::steady_clock::now();
+      auto batch_start = std::chrono::steady_clock::now();
       for (int j = 0; j < batch_size; ++j)
         single_pass();
       update_integer_assignment();
-      auto end = std::chrono::steady_clock::now();
-      auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+      auto batch_end = std::chrono::steady_clock::now();
+
+      auto total_s = std::chrono::duration_cast<std::chrono::duration<float>>(batch_end - start).count();
+      auto batch_ms = std::chrono::duration_cast<std::chrono::milliseconds>(batch_end - batch_start).count();
 
       std::cout << "it=" << (i+1) * batch_size << " "
                 << "d=" << dual_relaxed() << " "
@@ -268,7 +271,8 @@ public:
                 << "p_T=" << primal_smoothed(assignment_relaxed_) << " "
 #endif
                 << "T=" << temperature_ << " "
-                << "t/it=" << ms / batch_size << std::endl;
+                << "t=" << total_s << "s "
+                << "t/it=" << batch_ms / batch_size << "ms" << std::endl;
     }
   }
 
