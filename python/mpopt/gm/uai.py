@@ -57,26 +57,26 @@ def parse_uai_file(f):
 
 def write_uai_file(model, f):
     f.write('MARKOV\n')
-    f.write('{}\n'.format(len(model.unaries)))
+    f.write(f'{len(model.unaries)}\n')
 
-    f.write('{}'.format(' '.join(str(len(x)) for x in model.unaries)))
+    f.write(' '.join(str(len(x)) for x in model.unaries))
     f.write('\n')
 
-    f.write('{}'.format(len(model.unaries) + len(model.pairwise)))
+    f.write(str(len(model.unaries) + len(model.pairwise)))
     f.write('\n')
 
     for u, _ in enumerate(model.unaries):
-        f.write('1 {}\n'.format(u))
+        f.write(f'1 {u}\n')
 
     for left, right, _ in model.pairwise:
-        f.write('2 {} {}\n'.format(left, right))
+        f.write(f'2 {left} {right}\n')
 
     for costs in model.unaries:
-        f.write('\n{}\n'.format(len(costs)))
+        f.write(f'\n{costs.size}\n')
         f.write(' '.join('{:e}'.format(c) for c in costs))
         f.write('\n')
 
     for left, right, costs in model.pairwise:
-        f.write('\n{}\n'.format(len(costs)))
-        f.write(' '.join('{:e}'.format(c) for c in numpy.nditer(costs, order='C')))
+        f.write(f'\n{costs.size}\n')
+        f.write(' '.join(f'{c:e}' for c in numpy.nditer(costs, order='C')))
         f.write('\n')

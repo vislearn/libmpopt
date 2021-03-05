@@ -46,6 +46,11 @@ mpopt_gm_unary_node* mpopt_gm_graph_add_unary(mpopt_gm_graph* graph, int idx, in
   return to_unary(node);
 }
 
+mpopt_gm_unary_node* mpopt_gm_graph_get_unary(mpopt_gm_graph* graph, int idx)
+{
+  return to_unary(from_graph(graph)->unaries()[idx]);
+}
+
 mpopt_gm_pairwise_node* mpopt_gm_graph_add_pairwise(mpopt_gm_graph* graph, int idx, int number_of_labels0, int number_of_labels1)
 {
   auto* node = from_graph(graph)->add_pairwise(idx, number_of_labels0, number_of_labels1);
@@ -69,6 +74,16 @@ double mpopt_gm_solver_evaluate_primal(mpopt_gm_solver* s) { return s->solver.ev
 //
 
 void mpopt_gm_unary_set_cost(mpopt_gm_unary_node* n, int label, double cost) { from_unary(n)->factor.set(label, cost); }
+
+int mpopt_gm_unary_get_primal(mpopt_gm_unary_node* n)
+{
+  auto &f = from_unary(n)->factor;
+  if (f.is_primal_set())
+    return f.primal();
+  else
+    return -1;
+}
+
 void mpopt_gm_pairwise_set_cost(mpopt_gm_pairwise_node* n, int l0, int l1, double cost) { from_pairwise(n)->factor.set(l0, l1, cost); }
 
 }

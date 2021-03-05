@@ -1,4 +1,5 @@
 import numpy
+import random
 
 from ..utils import create_permutation
 
@@ -47,3 +48,13 @@ class Model:
 
                 self.no_forward[v] += 1
                 self.no_backward[v] -= 1
+
+    def evaluate(self, labeling):
+        assert len(labeling) == len(self.unaries)
+        E_un = sum(costs[l] for costs, l in zip(self.unaries, labeling))
+        E_pw = sum(costs[labeling[u], labeling[v]] for u, v, costs in self.pairwise)
+        return E_un + E_pw
+
+
+def random_labeling(model):
+    return [random.randrange(c.size) for c in model.unaries]

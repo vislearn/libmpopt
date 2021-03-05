@@ -26,3 +26,14 @@ def construct_solver(model):
 
     lib.solver_finalize(s.solver)
     return s
+
+
+def extract_primals(model, solver):
+    labeling = [None] * len(model.unaries)
+    g = lib.solver_get_graph(solver.solver)
+
+    for u, _ in enumerate(model.unaries):
+        f = lib.graph_get_unary(g, u)
+        labeling[u] = lib.unary_get_primal(f)
+
+    return labeling
