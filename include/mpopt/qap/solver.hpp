@@ -140,6 +140,7 @@ protected:
           for (const auto* node : graph_.pairwise())
             qpbo_.add_factor(node);
 
+          qpbo_.enable_improve(true);
           qpbo_.finalize();
           qpbo_.optimize();
           qpbo_.update_primals();
