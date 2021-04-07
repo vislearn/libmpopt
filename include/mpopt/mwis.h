@@ -19,7 +19,18 @@ int mpopt_mwis_solver_add_node(mpopt_mwis_solver* s, double cost);
 int mpopt_mwis_solver_add_clique(mpopt_mwis_solver* s, int* indices, int size);
 
 void mpopt_mwis_solver_run(mpopt_mwis_solver* s, int batch_size, int max_batches);
-//double mpopt_mwis_solver_lower_bound(mpopt_mwis_solver* s);
+
+double mpopt_mwis_solver_get_constant(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_constant(mpopt_mwis_solver* s, double c);
+
+double mpopt_mwis_solver_get_node_cost(mpopt_mwis_solver* s, int i);
+void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c);
+
+double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i);
+void mpopt_mwis_set_clique_cost(mpopt_mwis_solver* s, int i, double c);
+
+double mpopt_mwis_solver_get_gamma(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_gamma(mpopt_mwis_solver* s, double g);
 
 #ifdef __cplusplus
 }

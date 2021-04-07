@@ -15,6 +15,7 @@ public:
 
   solver()
   : finalized_(false)
+  , constant_(0.0)
   , gamma_(2.0)
   , gen_(std::random_device()())
   , qpbo_(0, 0)
@@ -58,7 +59,6 @@ public:
     //
 
     temperature_ = 1;
-    constant_ = 0;
 
     //
     // Construct node to clique mapping.
@@ -147,6 +147,40 @@ public:
     update_temperature();
 
     finalized_ = true;
+  }
+
+  cost constant() const { return constant_; }
+  void constant(cost c) { constant_ = c; }
+
+  cost node_cost(index i) const {
+    assert(finalized_);
+    assert(i < no_nodes());
+    return costs_[i];
+  }
+
+  void node_cost(index i, cost c)
+  {
+    assert(finalized_);
+    assert(i < no_nodes());
+    costs_[i] = c;
+  }
+
+  cost clique_cost(index i) const
+  {
+    assert(finalized_);
+    assert(i < no_cliques());
+    const auto j = no_orig() + i;
+    assert(j < no_nodes());
+    return costs_[j];
+  }
+
+  void clique_cost(index i, cost c)
+  {
+    assert(finalized_);
+    assert(i < no_cliques());
+    const auto j = no_orig() + i;
+    assert(j < no_nodes());
+    costs_[j] = c;
   }
 
   cost dual_relaxed() const

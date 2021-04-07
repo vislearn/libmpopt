@@ -23,7 +23,18 @@ int mpopt_mwis_solver_add_clique(mpopt_mwis_solver* s, int* indices, int size)
 }
 
 void mpopt_mwis_solver_run(mpopt_mwis_solver* s, int batch_size, int max_batches) { s->solver.run(batch_size, max_batches); }
-//double mpopt_mwis_solver_lower_bound(mpopt_mwis_solver* s) { return s->solver.lower_bound(); }
+
+double mpopt_mwis_solver_get_constant(mpopt_mwis_solver* s) { return s->solver.constant(); }
+void mpopt_mwis_solver_set_constant(mpopt_mwis_solver* s, double c) { s->solver.constant(c); }
+
+double mpopt_mwis_solver_get_node_cost(mpopt_mwis_solver* s, int i) { return s->solver.node_cost(i); }
+void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c) { s->solver.node_cost(i, c); }
+
+double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i) { return s->solver.clique_cost(i); }
+void mpopt_mwis_set_clique_cost(mpopt_mwis_solver* s, int i, double c) { s->solver.clique_cost(i, c); }
+
+double mpopt_mwis_solver_get_gamma(mpopt_mwis_solver* s) { return s->solver.gamma(); }
+void mpopt_mwis_solver_set_gamma(mpopt_mwis_solver* s, double g) { s->solver.gamma(g); }
 
 }
 
