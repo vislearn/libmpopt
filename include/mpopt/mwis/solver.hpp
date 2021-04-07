@@ -15,6 +15,7 @@ public:
 
   solver()
   : finalized_(false)
+  , gamma_(2.0)
   , gen_(std::random_device()())
   , qpbo_(0, 0)
   {
@@ -238,11 +239,10 @@ public:
 
   void update_temperature()
   {
-    const double gamma = 2.0;
     const auto d = dual_relaxed();
     const auto p = value_relaxed_;
 
-    const auto new_temp = (d - p) / (gamma * entropy());
+    const auto new_temp = (d - p) / (gamma_ * entropy());
     assert(new_temp >= 0);
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
@@ -280,6 +280,9 @@ public:
   index no_nodes() const { return costs_.size(); }
   index no_orig() const { return orig_.size(); }
   index no_cliques() const { return clique_indices_.size(); }
+
+  double gamma() const { return gamma_; }
+  void gamma(double g) { gamma_ = g; }
 
 protected:
   void single_pass()
@@ -495,6 +498,7 @@ protected:
   std::vector<cost> costs_;
   std::vector<cost> orig_;
   cost constant_;
+  double gamma_;
 
   std::vector<range> clique_indices_;
   std::vector<index> clique_index_data_;
