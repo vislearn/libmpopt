@@ -240,7 +240,7 @@ public:
   void update_temperature()
   {
     const auto d = dual_relaxed();
-    const auto p = value_relaxed_;
+    const auto p = std::max(value_relaxed_, value_best_);
 
     const auto new_temp = (d - p) / (gamma_ * entropy());
     assert(new_temp >= 0);
