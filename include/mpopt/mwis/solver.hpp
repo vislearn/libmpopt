@@ -348,7 +348,7 @@ protected:
       const auto& nc = node_cliques_[node_idx];
       const auto x = std::exp(costs_[node_idx] / temperature_);
 
-      cost max_allowed_x = infinity;
+      cost max_allowed_x = 1.0;
       for (index idx = nc.begin; idx < nc.end; ++idx) {
         const auto clique_idx = node_cliques_data_[idx];
         max_allowed_x = std::min(max_allowed_x, *slack(clique_idx));
