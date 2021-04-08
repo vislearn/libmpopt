@@ -276,7 +276,15 @@ public:
     const auto d = dual_relaxed();
     const auto p = std::max(value_relaxed_, value_best_);
 
-    const auto new_temp = (d - p) / (gamma_ * entropy());
+    auto new_temp = (d - p) / (gamma_ * entropy());
+
+    // For new_temp == +/-nan the whole if expression yields true.
+    if (!(new_temp > 1e-10)) {
+#ifndef NDEBUG
+      std::cout << "WARNING: new_temp=" << new_temp << "\n";
+#endif
+      new_temp = 1e-10;
+    }
     assert(new_temp >= 0);
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
