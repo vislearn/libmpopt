@@ -32,6 +32,9 @@ void mpopt_mwis_set_clique_cost(mpopt_mwis_solver* s, int i, double c);
 double mpopt_mwis_solver_get_gamma(mpopt_mwis_solver* s);
 void mpopt_mwis_solver_set_gamma(mpopt_mwis_solver* s, double g);
 
+double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double t);
+
 #ifdef __cplusplus
 }
 #endif

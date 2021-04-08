@@ -239,6 +239,9 @@ public:
   double gamma() const { return gamma_; }
   void gamma(double g) { gamma_ = g; }
 
+  double temperature() const { return temperature_; }
+  void temperature(double t) { temperature_ = t; }
+
 protected:
 
   void finalize_graph()
