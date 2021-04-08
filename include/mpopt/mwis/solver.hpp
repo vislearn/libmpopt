@@ -14,7 +14,8 @@ class solver {
 public:
 
   solver()
-  : finalized_(false)
+  : finalized_graph_(false)
+  , finalized_costs_(false)
   , constant_(0.0)
   , gamma_(2.0)
   , gen_(std::random_device()())
@@ -24,7 +25,7 @@ public:
 
   index add_node(cost cost)
   {
-    assert(!finalized_);
+    assert(!finalized_graph_);
     assert(no_cliques() == 0);
     costs_.push_back(cost);
     orig_.push_back(cost);
@@ -33,7 +34,7 @@ public:
 
   index add_clique(std::vector<index> indices)
   {
-    assert(!finalized_);
+    assert(!finalized_graph_);
 
     range cl;
     cl.begin = clique_index_data_.size();
@@ -51,123 +52,33 @@ public:
   }
 
   void finalize() {
-    if (finalized_)
-      return;
-
-    //
-    // Initialize parameters.
-    //
-
     temperature_ = 1;
-
-    //
-    // Construct node to clique mapping.
-    //
-    //
-    std::vector<std::vector<index>> tmp(no_nodes());
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
-      const auto& cl = clique_indices_[clique_idx];
-      for (index idx = cl.begin; idx < cl.end; ++idx) {
-        const auto node_idx = clique_index_data_[idx];
-        tmp[node_idx].push_back(clique_idx);
-      }
-    }
-
-    node_cliques_.resize(no_nodes());
-    for (index nidx = 0; nidx < no_nodes(); ++nidx) {
-      auto& current = tmp[nidx];
-      auto& nc = node_cliques_[nidx];
-      nc.begin = node_cliques_data_.size();
-      node_cliques_data_.insert(node_cliques_data_.end(), current.begin(), current.end());
-      nc.end = node_cliques_data_.size();
-      nc.size = nc.end - nc.begin;
-    }
-
-    //
-    // Construct node neighborhood.
-    //
-
-    for (auto& vec : tmp)
-      vec.clear();
-
-    for (const auto& cl : clique_indices_) {
-      for (index idx0 = cl.begin; idx0 < cl.end; ++idx0)
-        for (index idx1 = cl.begin; idx1 < cl.end; ++idx1)
-          if (idx0 != idx1)
-            tmp[clique_index_data_[idx0]].push_back(clique_index_data_[idx1]);
-    }
-
-    node_neighs_.resize(no_nodes());
-    for (index nidx = 0; nidx < no_nodes(); ++nidx) {
-      auto& current = tmp[nidx];
-      std::sort(current.begin(), current.end());
-      auto end = std::unique(current.begin(), current.end());
-
-      auto& neighbors = node_neighs_[nidx];
-      neighbors.begin = node_neigh_data_.size();
-      node_neigh_data_.insert(node_neigh_data_.end(), current.begin(), end);
-      neighbors.end = node_neigh_data_.size();
-      neighbors.size = neighbors.end - neighbors.begin;
-    }
-
-    //
-    // Construct trivial labeling of zero cost.
-    //
-
-    assignment_latest_.resize(no_nodes());
-    for (index nidx = 0; nidx < no_nodes(); ++nidx)
-      assignment_latest_[nidx] = nidx < no_orig() ? 0 : 1;
-    value_latest_ = primal(assignment_latest_);
-    assert(std::abs(value_latest_) < 1e-8);
-
-    assignment_best_ = assignment_latest_;
-    value_best_ = value_latest_;
-
-    assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
-    value_relaxed_ = value_latest_;
-
-    //
-    // Update all lambdas (without smoothing, invariants do not hold) to ensure
-    // that invariants (negative node costs) hold.
-    //
-
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      update_lambda<false>(clique_idx);
-
-    //
-    // Try to improve naive assignment by greedily sampling an assignment.
-    // This will be used for inital temperature selection.
-    //
-
-    greedy();
-    if (value_latest_ > value_best_) {
-      value_best_ = value_latest_;
-      assignment_best_ = assignment_latest_;
-    }
-    update_temperature();
-
-    finalized_ = true;
+    finalize_graph();
+    finalize_costs();
   }
+
+  bool finalized() const { return finalized_graph_ && finalized_costs_; }
 
   cost constant() const { return constant_; }
   void constant(cost c) { constant_ = c; }
 
   cost node_cost(index i) const {
-    assert(finalized_);
+    assert(finalized_graph_);
     assert(i < no_nodes());
     return costs_[i];
   }
 
   void node_cost(index i, cost c)
   {
-    assert(finalized_);
+    assert(finalized_graph_);
     assert(i < no_nodes());
     costs_[i] = c;
+    finalized_costs_ = false;
   }
 
   cost clique_cost(index i) const
   {
-    assert(finalized_);
+    assert(finalized_graph_);
     assert(i < no_cliques());
     const auto j = no_orig() + i;
     assert(j < no_nodes());
@@ -176,11 +87,12 @@ public:
 
   void clique_cost(index i, cost c)
   {
-    assert(finalized_);
+    assert(finalized_graph_);
     assert(i < no_cliques());
     const auto j = no_orig() + i;
     assert(j < no_nodes());
     costs_[j] = c;
+    finalized_costs_ = false;
   }
 
   cost dual_relaxed() const
@@ -291,6 +203,7 @@ public:
 
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
+    assert(finalized());
     auto start = std::chrono::steady_clock::now();
     std::cout << "initial dual = " << dual_relaxed() << std::endl;
     signal_handler h;
@@ -327,6 +240,109 @@ public:
   void gamma(double g) { gamma_ = g; }
 
 protected:
+
+  void finalize_graph()
+  {
+    if (finalized_graph_)
+      return;
+
+    //
+    // Construct node to clique mapping.
+    //
+
+    std::vector<std::vector<index>> tmp(no_nodes());
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
+      const auto& cl = clique_indices_[clique_idx];
+      for (index idx = cl.begin; idx < cl.end; ++idx) {
+        const auto node_idx = clique_index_data_[idx];
+        tmp[node_idx].push_back(clique_idx);
+      }
+    }
+
+    node_cliques_.resize(no_nodes());
+    for (index nidx = 0; nidx < no_nodes(); ++nidx) {
+      auto& current = tmp[nidx];
+      auto& nc = node_cliques_[nidx];
+      nc.begin = node_cliques_data_.size();
+      node_cliques_data_.insert(node_cliques_data_.end(), current.begin(), current.end());
+      nc.end = node_cliques_data_.size();
+      nc.size = nc.end - nc.begin;
+    }
+
+    //
+    // Construct node neighborhood.
+    //
+
+    for (auto& vec : tmp)
+      vec.clear();
+
+    for (const auto& cl : clique_indices_) {
+      for (index idx0 = cl.begin; idx0 < cl.end; ++idx0)
+        for (index idx1 = cl.begin; idx1 < cl.end; ++idx1)
+          if (idx0 != idx1)
+            tmp[clique_index_data_[idx0]].push_back(clique_index_data_[idx1]);
+    }
+
+    node_neighs_.resize(no_nodes());
+    for (index nidx = 0; nidx < no_nodes(); ++nidx) {
+      auto& current = tmp[nidx];
+      std::sort(current.begin(), current.end());
+      auto end = std::unique(current.begin(), current.end());
+
+      auto& neighbors = node_neighs_[nidx];
+      neighbors.begin = node_neigh_data_.size();
+      node_neigh_data_.insert(node_neigh_data_.end(), current.begin(), end);
+      neighbors.end = node_neigh_data_.size();
+      neighbors.size = neighbors.end - neighbors.begin;
+    }
+
+    //
+    // Construct trivial labeling of zero cost.
+    //
+
+    assignment_latest_.resize(no_nodes());
+    for (index nidx = 0; nidx < no_nodes(); ++nidx)
+      assignment_latest_[nidx] = nidx < no_orig() ? 0 : 1;
+    value_latest_ = primal(assignment_latest_);
+    assert(std::abs(value_latest_) < 1e-8);
+
+    assignment_best_ = assignment_latest_;
+    value_best_ = value_latest_;
+
+    assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
+    value_relaxed_ = value_latest_;
+
+    finalized_graph_ = true;
+  }
+
+  void finalize_costs()
+  {
+    if (finalized_costs_)
+      return;
+
+    // Update all lambdas (without smoothing, invariants do not hold) to ensure
+    // that invariants (negative node costs) hold.
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+      update_lambda<false>(clique_idx);
+
+    // We update the cached values for the corresponding assignments (costs
+    // have most likely changed the assignment between calls to
+    // finalize_costs).
+    value_relaxed_ = primal_relaxed(assignment_relaxed_);
+    value_best_ = primal(assignment_best_);
+
+    // Try to improve naive assignment by greedily sampling an assignment.
+    // This will be used for inital temperature selection.
+    greedy();
+    if (value_latest_ > value_best_) {
+      value_best_ = value_latest_;
+      assignment_best_ = assignment_latest_;
+    }
+    update_temperature();
+
+    finalized_costs_ = true;
+  }
+
   void single_pass()
   {
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
@@ -536,7 +552,7 @@ protected:
 #endif
   }
 
-  bool finalized_;
+  bool finalized_graph_, finalized_costs_;
   std::vector<cost> costs_;
   std::vector<cost> orig_;
   cost constant_;
