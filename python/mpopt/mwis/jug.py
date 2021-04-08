@@ -11,7 +11,7 @@ def convert_jug_to_mwis(jug_model):
             if x.timestep == len(models):
                 models.append(Model())
             assert x.timestep == len(models) - 1, 'Non-consequetive time step in jug file!'
-            v = models[-1].add_node(x.cost)
+            v = models[-1].add_node(-x.cost)
             assert x.unique_id not in id_map
             id_map[x.unique_id] = (x.timestep, v)
         elif x.is_conf_set():

@@ -11,7 +11,7 @@ class Solver(BaseSolver):
         super().__init__(lib)
 
     def add_node(self, cost):
-        lib.solver_add_node(self.solver, -cost)
+        lib.solver_add_node(self.solver, cost)
 
     def add_clique(self, indices):
         indices = np.asarray(sorted(indices), dtype=np.int32)
