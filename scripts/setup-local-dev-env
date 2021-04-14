@@ -17,10 +17,12 @@ custom_sitelibs=$(scripts/print-python-libpath "${install_dir}")
 export PYTHONPATH="${custom_sitelibs}${PYTHONPATH:+:${PYTHONPATH}}"
 export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 export PATH="${install_dir}/bin${PATH:+:${PATH}}"
-export PKG_CONFIG_PATH="${install_dir}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 
 meson_args=(
-	-Dprefix="${install_dir}"
+	--prefix="${install_dir}"
+	--bindir=bin
+	--libdir=lib
+	--pkg-config-path="${install_dir}/lib/pkgconfig"
 	-Db_ndebug=if-release
 	-Dbuildtype="${buildtype}"
 	-Dc_args='-march=native -mtune=native'
