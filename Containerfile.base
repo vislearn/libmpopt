@@ -36,7 +36,7 @@ WORKDIR /home/user
 ARG BUILDTYPE=debugoptimized
 
 # Fetch and install libqpbo dependency.
-RUN curl -LOJ 'https://github.com/fgrsnau/libqpbo/archive/v1.4.0.tar.gz' \
+RUN curl -LOJ 'https://github.com/fgrsnau/libqpbo/archive/v1.4.1.tar.gz' \
 && tar -xf libqpbo-*.tar.gz \
 && mkdir libqpbo-build \
 && cd libqpbo-build \

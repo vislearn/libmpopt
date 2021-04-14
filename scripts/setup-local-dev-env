@@ -28,12 +28,12 @@ meson_args=(
 )
 
 cd "${temp_dir}"
-curl -LJO https://github.com/fgrsnau/libqpbo/archive/v1.4.0.tar.gz
-tar -xf libqpbo-1.4.0.tar.gz
+curl -LJO https://github.com/fgrsnau/libqpbo/archive/v1.4.1.tar.gz
+tar -xf libqpbo-1.4.1.tar.gz
 
 mkdir "${build_dir}"
 cd "${build_dir}"
-meson setup "${meson_args[@]}" ../libqpbo-1.4.0
+meson setup "${meson_args[@]}" ../libqpbo-1.4.1
 ninja install
 
 find "${build_dir}" -mindepth 1 -delete
