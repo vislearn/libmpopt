@@ -10,7 +10,7 @@ struct unary_messages {
   static void diffusion(const UNARY_NODE* unary_node)
   {
     unary_node->traverse_uniqueness([unary_node](const auto& link, const index slot) {
-      const auto msg = unary_node->factor.get(slot) * 0.25d;
+      const auto msg = unary_node->factor.get(slot) * 0.25;
       unary_node->factor.repam(slot, -msg);
       link.node->factor.repam(link.slot, msg);
     });
@@ -20,12 +20,12 @@ struct unary_messages {
     index split = unary_node->forward.size() + unary_node->backward.size();
     for (const auto* pairwise_node : unary_node->backward) {
       assert(split >= 1);
-      directed_send_helper<false>(unary_node, pairwise_node, 1.0d / split);
+      directed_send_helper<false>(unary_node, pairwise_node, 1.0 / split);
       --split;
     }
     for (const auto* pairwise_node : unary_node->forward) {
       assert(split >= 1);
-      directed_send_helper<true>(unary_node, pairwise_node, 1.0d / split);
+      directed_send_helper<true>(unary_node, pairwise_node, 1.0 / split);
       --split;
     }
     assert(split == 0);

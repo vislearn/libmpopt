@@ -16,7 +16,7 @@ struct conflict_messages {
     auto& c = node->factor;
     node->traverse_detections([&](auto& edge, auto slot) {
       auto& d = edge.node->factor;
-      const cost weight = 1.0d / (edge.node->conflicts.size() - edge.slot);
+      const cost weight = 1.0 / (edge.node->conflicts.size() - edge.slot);
       const auto msg = d.min_detection() * weight;
       d.repam_detection(-msg);
       c.repam(slot, msg);

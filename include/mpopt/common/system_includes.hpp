@@ -2,6 +2,7 @@
 #define LIBMPOPT_COMMON_SYSTEM_INCLUDES_HPP
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <chrono>
 #include <cmath>
