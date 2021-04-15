@@ -216,12 +216,21 @@ public:
       auto total_s = std::chrono::duration_cast<std::chrono::duration<float>>(batch_end - start).count();
       auto batch_ms = std::chrono::duration_cast<std::chrono::milliseconds>(batch_end - batch_start).count();
 
+      const auto d = dual_relaxed();
+      const auto gap    = (d - value_relaxed_) / d * 100.0;
+      const auto gap01  = (d - value_latest_)  / d * 100.0;
+      const auto gap01b = (d - value_best_)    / d * 100.0;
+
       std::cout << "it=" << (i+1) * batch_size << " "
-                << "d=" << dual_relaxed() << " "
+                << "d=" << d << " "
                 << "p=" << value_relaxed_ << " "
+                << "gap=" << gap << "% "
                 << "p01=" << value_latest_ << " "
+                << "gap01=" << gap01 << "% "
                 << "p01*=" << value_best_ << " "
+                << "gap01*=" << gap01b << "% "
 #ifndef NDEBUG
+                << "H=" << entropy() << " "
                 << "d_T=" << dual_smoothed() << " "
                 << "p_T=" << primal_smoothed(assignment_relaxed_) << " "
 #endif
