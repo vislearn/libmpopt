@@ -20,6 +20,12 @@ int mpopt_mwis_solver_add_clique(mpopt_mwis_solver* s, int* indices, int size);
 
 void mpopt_mwis_solver_run(mpopt_mwis_solver* s, int batch_size, int max_batches);
 
+double mpopt_mwis_solver_get_dual_relaxed(mpopt_mwis_solver* s);
+double mpopt_mwis_solver_get_primal_relaxed(mpopt_mwis_solver* s);
+double mpopt_mwis_solver_get_primal(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_get_assignment(mpopt_mwis_solver* s, int* assignment, int size);
+int mpopt_mwis_solver_get_node_assignment(mpopt_mwis_solver*, int node);
+
 double mpopt_mwis_solver_get_constant(mpopt_mwis_solver* s);
 void mpopt_mwis_solver_set_constant(mpopt_mwis_solver* s, double c);
 

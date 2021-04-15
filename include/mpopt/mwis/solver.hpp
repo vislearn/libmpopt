@@ -127,6 +127,8 @@ public:
     return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
   }
 
+  cost primal() const { return value_best_; }
+
   cost primal(const std::vector<int>& assignment) const
   {
     // Same as relaxed objective, we just check that $x_i \in {0, 1}$.
@@ -137,6 +139,8 @@ public:
 
     return primal_relaxed(assignment);
   }
+
+  cost primal_relaxed() const { return value_relaxed_; }
 
   template<typename T>
   cost primal_relaxed(const std::vector<T>& assignment) const
@@ -177,6 +181,22 @@ public:
     const auto H = -std::accumulate(assignment.cbegin(), assignment.cend(), 0.0, f);
 
     return relaxed + temperature_ * H;
+  }
+
+  template<typename OUTPUT_ITERATOR>
+  void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
+  {
+    assert(finalized_graph_);
+    assert(end - begin == orig_.end() - orig_.begin());
+    assert(assignment_best_.size() >= orig_.size());
+    std::copy(assignment_best_.begin(), assignment_best_.begin() + orig_.size(), begin);
+  }
+
+  bool assignment(index node_idx) const
+  {
+    assert(finalized_graph_);
+    assert(node_idx >= 0 && node_idx < orig_.size());
+    return assignment_best_[node_idx];
   }
 
   cost entropy() const
