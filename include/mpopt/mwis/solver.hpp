@@ -19,8 +19,16 @@ public:
   , constant_(0.0)
   , gamma_(2.0)
   , gen_(std::random_device()())
+#ifdef ENABLE_QPBO
   , qpbo_(0, 0)
+#endif
   {
+#ifndef ENABLE_QPBO
+    std::cerr << "!!!!!!!!!!\n"
+              << "ENABLE_QPBO was not activated during configuration of libmpopt.\n"
+              << "No fusion moves are performed and the the quality of the computed assignment is degraded.\n"
+              << "!!!!!!!!!!\n" << std::endl;
+#endif
   }
 
   index add_node(cost cost)
@@ -439,7 +447,7 @@ protected:
   void update_integer_assignment()
   {
     greedy();
-#ifndef LIBMPOPT_MWIS_DISABLE_FUSION_MOVES
+#ifdef ENABLE_QPBO
     fusion_move();
 #else
     if (value_latest_ > value_best_) {
@@ -484,6 +492,7 @@ protected:
       assignment_latest_[node_neigh_data_[idx]] = 0;
   }
 
+#ifdef ENABLE_QPBO
   void fuse_two_assignments(std::vector<int>& a0, const std::vector<int>& a1)
   {
     constexpr cost QPBO_INF = 1e20;
@@ -554,6 +563,7 @@ protected:
     value_best_ = primal(assignment_best_);
     assert(value_best_ >= value_best_old - 1e-8);
   }
+#endif
 
   void assert_negative_node_costs() const
   {
@@ -590,7 +600,9 @@ protected:
   std::vector<double> assignment_relaxed_;
 
   std::default_random_engine gen_;
+#ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
+#endif
 };
 
 }
