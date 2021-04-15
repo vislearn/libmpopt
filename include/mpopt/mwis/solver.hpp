@@ -185,7 +185,7 @@ public:
 
   void update_temperature()
   {
-    const auto d = dual_relaxed();
+    const auto d = dual_smoothed();
     const auto p = std::max(value_relaxed_, value_best_);
 
     auto new_temp = (d - p) / (gamma_ * entropy());
