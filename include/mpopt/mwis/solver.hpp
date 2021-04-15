@@ -116,7 +116,7 @@ public:
 
     // sum of all lambdas = constant_
     auto f = [this](const auto a, const auto c) { return a + std::exp(c / temperature_); };
-    return constant_ + temperature_ / std::exp(1) * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
+    return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
   }
 
   cost primal(const std::vector<int>& assignment) const
@@ -162,8 +162,9 @@ public:
 
     // Compute real entropy of `assignment` (not an estimated one like the
     // `entropy()`).
-    auto f = [](const auto a, const auto x) {
-      return a + (x > 1e-8 ? x * std::log(x) : 0.0);
+    auto f = [](const auto a, const auto x_i) {
+      const auto log = std::log(x_i);
+        return a + (std::isnormal(log) ? x_i * log : 0.0) - x_i;
     };
     const auto H = -std::accumulate(assignment.cbegin(), assignment.cend(), 0.0, f);
 
@@ -176,11 +177,16 @@ public:
     // Note that the fully simplified formula is more stable (log(0) impossible).
     assert_negative_node_costs();
 
-    auto f = [this](const auto a, const auto c_i) {
+    auto f1 = [this](const auto a, const auto c_i) {
+      return a + std::exp(c_i / temperature_);
+    };
+
+    auto f2 = [this](const auto a, const auto c_i) {
       return a + c_i * std::exp(c_i / temperature_);
     };
 
-    return -std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f) / temperature_;
+    return std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f1) -
+           std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
 
   void update_temperature()
@@ -189,15 +195,8 @@ public:
     const auto p = std::max(value_relaxed_, value_best_);
 
     auto new_temp = (d - p) / (gamma_ * entropy());
+    assert(std::isnormal(new_temp) && new_temp >= 0.0);
 
-    // For new_temp == +/-nan the whole if expression yields true.
-    if (!(new_temp > 1e-10)) {
-#ifndef NDEBUG
-      std::cout << "WARNING: new_temp=" << new_temp << "\n";
-#endif
-      new_temp = 1e-10;
-    }
-    assert(new_temp >= 0);
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
