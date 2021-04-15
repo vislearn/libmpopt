@@ -27,7 +27,7 @@ public:
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
-              << "ENABLE_QPBO was not deactivated during configuration of libmpopt.\n"
+              << "ENABLE_QPBO was not activated during configuration of libmpopt.\n"
               << "No fusion moves are performed and the the quality of the computed upper bound is degraded.\n"
               << "!!!!!!!!!!\n" << std::endl;
 #endif
