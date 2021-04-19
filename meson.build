@@ -119,7 +119,7 @@ foreach sublibrary : sublibraries
     install: true,
     install_dir: python3.get_install_dir(pure: false, subdir: 'mpopt' / sublibrary))
 
-  install_headers('include/mpopt/' + sublibrary + '.h')
+  install_headers('include/mpopt/' + sublibrary + '.h', subdir: 'mpopt')
 endforeach
 
 #
