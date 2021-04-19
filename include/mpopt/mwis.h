@@ -33,7 +33,6 @@ double mpopt_mwis_solver_get_node_cost(mpopt_mwis_solver* s, int i);
 void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c);
 
 double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i);
-void mpopt_mwis_set_clique_cost(mpopt_mwis_solver* s, int i, double c);
 
 double mpopt_mwis_solver_get_gamma(mpopt_mwis_solver* s);
 void mpopt_mwis_solver_set_gamma(mpopt_mwis_solver* s, double g);

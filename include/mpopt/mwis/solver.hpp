@@ -70,37 +70,31 @@ public:
   cost constant() const { return constant_; }
   void constant(cost c) { constant_ = c; }
 
+  template<bool reduced=false>
   cost node_cost(index i) const {
     assert(finalized_graph_);
-    assert(i < no_nodes());
-    return costs_[i];
+    assert(i < no_nodes() && i < no_orig());
+    return reduced ? costs_[i] : orig_[i];
   }
 
   void node_cost(index i, cost c)
   {
     assert(finalized_graph_);
-    assert(i < no_nodes());
-    costs_[i] = c;
+    assert(i < no_nodes() && i < no_orig());
+    const auto shift = c - orig_[i];
+    orig_[i] += shift;
+    costs_[i] += shift;
     finalized_costs_ = false;
   }
 
+  template<bool reduced=false>
   cost clique_cost(index i) const
   {
-    assert(finalized_graph_);
+    assert(finalized());
     assert(i < no_cliques());
     const auto j = no_orig() + i;
     assert(j < no_nodes());
-    return costs_[j];
-  }
-
-  void clique_cost(index i, cost c)
-  {
-    assert(finalized_graph_);
-    assert(i < no_cliques());
-    const auto j = no_orig() + i;
-    assert(j < no_nodes());
-    costs_[j] = c;
-    finalized_costs_ = false;
+    return reduced ? costs_[j] : 0.0;
   }
 
   cost dual_relaxed() const
