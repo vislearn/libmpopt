@@ -22,6 +22,9 @@ public:
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
 #endif
+  , limit_p01b_gap_(0.0)
+  , limit_best_iterations_(0)
+  , limit_runtime_(0.0)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -222,6 +225,12 @@ public:
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
+  void limit_runtime(double seconds) { limit_runtime_ = seconds; }
+  void limit_integer_primal_gap(double percentage) { limit_p01b_gap_ = percentage; }
+  void limit_integer_primal_stagnation(int iterations) { limit_best_iterations_ = iterations; }
+
+  int iterations() const { return iterations_; }
+
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
   {
     assert(finalized());
@@ -235,6 +244,7 @@ public:
       update_integer_assignment();
       auto batch_end = std::chrono::steady_clock::now();
 
+      iterations_ += batch_size;
       auto total_s = std::chrono::duration_cast<std::chrono::duration<float>>(batch_end - start).count();
       auto batch_ms = std::chrono::duration_cast<std::chrono::milliseconds>(batch_end - batch_start).count();
 
@@ -243,7 +253,7 @@ public:
       const auto gap01  = (d - value_latest_)  / d * 100.0;
       const auto gap01b = (d - value_best_)    / d * 100.0;
 
-      std::cout << "it=" << (i+1) * batch_size << " "
+      std::cout << "it=" << iterations_ << " "
                 << "d=" << d << " "
                 << "p=" << value_relaxed_ << " "
                 << "gap=" << gap << "% "
@@ -251,6 +261,7 @@ public:
                 << "gap01=" << gap01 << "% "
                 << "p01*=" << value_best_ << " "
                 << "gap01*=" << gap01b << "% "
+                << "p01*_since=" << best_since_ << " "
 #ifndef NDEBUG
                 << "H=" << entropy() << " "
                 << "d_T=" << dual_smoothed() << " "
@@ -258,8 +269,26 @@ public:
 #endif
                 << "T=" << temperature_ << " "
                 << "t=" << total_s << "s "
-                << "t/it=" << batch_ms / batch_size << "ms" << std::endl;
+                << "t/it=" << batch_ms / batch_size << "ms"
+                << "\n";
+
+      if (limit_runtime_ > 0.0 && total_s >= limit_runtime_) {
+        std::cout << "run time limit reached: " << total_s << "s" << std::endl;
+        return;
+      }
+
+      if (gap01b < limit_p01b_gap_) {
+        std::cout << "integer-primal / dual gap limit reached: " << gap01b << "%" << std::endl;
+        return;
+      }
+
+      if (limit_best_iterations_ > 0 && best_since_ >= limit_best_iterations_) {
+        std::cout << "p01* improvement limit reached: no improvement since " << best_since_ << " iterations" << std::endl;
+        return;
+      }
     }
+
+    std::cout << std::flush;
   }
 
   index no_nodes() const { return costs_.size(); }
@@ -363,6 +392,8 @@ protected:
     // finalize_costs).
     value_relaxed_ = primal_relaxed(assignment_relaxed_);
     value_best_ = primal(assignment_best_);
+    best_since_ = 0;
+    iterations_ = 0;
 
     // Try to improve naive assignment by greedily sampling an assignment.
     // This will be used for inital temperature selection.
@@ -460,13 +491,18 @@ protected:
 
   void update_integer_assignment()
   {
+    ++best_since_;
     greedy();
 #ifdef ENABLE_QPBO
+    const auto old_value_best_ = value_best_;
     fusion_move();
+    if (value_best_ > old_value_best_)
+      best_since_ = 0;
 #else
     if (value_latest_ > value_best_) {
       value_best_ = value_latest_;
       assignment_best_ = assignment_latest_;
+      best_since_ = 0;
     }
 #endif
   }
@@ -507,7 +543,7 @@ protected:
   }
 
 #ifdef ENABLE_QPBO
-  void fuse_two_assignments(std::vector<int>& a0, const std::vector<int>& a1)
+  bool fuse_two_assignments(std::vector<int>& a0, const std::vector<int>& a1)
   {
     constexpr cost QPBO_INF = 1e20;
     assert(a0.size() == no_nodes());
@@ -546,8 +582,12 @@ protected:
 
     qpbo_.Solve();
 
-    for (index nidx = 0; nidx < no_orig(); ++nidx)
+    bool changed = false;
+    for (index nidx = 0; nidx < no_orig(); ++nidx) {
+      const auto l = qpbo_.GetLabel(nidx);
+      changed = changed || l != 0;
       a0[nidx] = qpbo_.GetLabel(nidx) == 0 ? a0[nidx] : a1[nidx];
+    }
 
     // We have built the QPBO problem only with `no_orig()` nodes, so the
     // remaining "dummy" nodes of `costs_` are still unset. We set them to the
@@ -566,6 +606,8 @@ protected:
       const auto nidx = clique_index_data_[cl.end - 1];
       a0[nidx] = count == 1 ? 0 : 1;
     }
+
+    return changed;
   }
 
   void fusion_move()
@@ -573,8 +615,9 @@ protected:
 #ifndef NDEBUG
     const auto value_best_old = value_best_;
 #endif
-    fuse_two_assignments(assignment_best_, assignment_latest_);
-    value_best_ = primal(assignment_best_);
+    if (fuse_two_assignments(assignment_best_, assignment_latest_))
+      value_best_ = primal(assignment_best_);
+    assert(std::abs(value_best_ - primal(assignment_best_)) <= 1e-8);
     assert(value_best_ >= value_best_old - 1e-8);
   }
 #endif
@@ -602,6 +645,7 @@ protected:
   std::vector<range> node_neighs_;
   std::vector<index> node_neigh_data_;
 
+  int iterations_;
   double temperature_;
   mutable std::vector<cost> scratch_;
 
@@ -609,6 +653,7 @@ protected:
   std::vector<int> assignment_latest_;
   cost value_best_;
   std::vector<int> assignment_best_;
+  int best_since_;
 
   cost value_relaxed_;
   std::vector<double> assignment_relaxed_;
@@ -617,6 +662,10 @@ protected:
 #ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
 #endif
+
+  double limit_p01b_gap_;
+  int limit_best_iterations_;
+  double limit_runtime_;
 };
 
 }

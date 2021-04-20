@@ -21,6 +21,18 @@ class Solver(BaseSolver):
     def finalize(self):
         lib.solver_finalize(self.solver)
 
+    def limit_runtime(self, seconds):
+        lib.solver_limit_runtime(self.solver, seconds)
+
+    def limit_integer_primal_gap(self, percentage):
+        lib.solver_limit_integer_primal_gap(self.solver, percentage)
+
+    def limit_integer_primal_stagnation(self, iterations):
+        lib.solver_limit_integer_primal_stagnation(self.solver, iterations)
+
+    def iterations(self):
+        return lib.solver_get_iterations(self.solver)
+
     def constant(self, c=None):
         if c is None:
             return lib.solver_get_constant(self.solver)

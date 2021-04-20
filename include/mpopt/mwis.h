@@ -18,7 +18,12 @@ void mpopt_mwis_solver_finalize(mpopt_mwis_solver* s);
 int mpopt_mwis_solver_add_node(mpopt_mwis_solver* s, double cost);
 int mpopt_mwis_solver_add_clique(mpopt_mwis_solver* s, int* indices, int size);
 
+void mpopt_mwis_solver_limit_runtime(mpopt_mwis_solver* s, double seconds);
+void mpopt_mwis_solver_limit_integer_primal_gap(mpopt_mwis_solver* s, double percentage);
+void mpopt_mwis_solver_limit_integer_primal_stagnation(mpopt_mwis_solver* s, int iterations);
+
 void mpopt_mwis_solver_run(mpopt_mwis_solver* s, int batch_size, int max_batches);
+int mpopt_mwis_solver_get_iterations(mpopt_mwis_solver* s);
 
 double mpopt_mwis_solver_get_dual_relaxed(mpopt_mwis_solver* s);
 double mpopt_mwis_solver_get_primal_relaxed(mpopt_mwis_solver* s);
