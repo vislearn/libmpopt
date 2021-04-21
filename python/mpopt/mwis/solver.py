@@ -27,8 +27,8 @@ class Solver(BaseSolver):
     def limit_integer_primal_gap(self, percentage):
         lib.solver_limit_integer_primal_gap(self.solver, percentage)
 
-    def limit_integer_primal_stagnation(self, iterations):
-        lib.solver_limit_integer_primal_stagnation(self.solver, iterations)
+    def limit_integer_primal_stagnation(self, seconds):
+        lib.solver_limit_integer_primal_stagnation(self.solver, seconds)
 
     def iterations(self):
         return lib.solver_get_iterations(self.solver)

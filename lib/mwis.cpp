@@ -24,7 +24,7 @@ int mpopt_mwis_solver_add_clique(mpopt_mwis_solver* s, int* indices, int size)
 
 void mpopt_mwis_solver_limit_runtime(mpopt_mwis_solver* s, double seconds) { s->solver.limit_runtime(seconds); }
 void mpopt_mwis_solver_limit_integer_primal_gap(mpopt_mwis_solver* s, double percentage) { s->solver.limit_integer_primal_gap(percentage); }
-void mpopt_mwis_solver_limit_integer_primal_stagnation(mpopt_mwis_solver* s, int iterations) { s->solver.limit_integer_primal_stagnation(iterations); }
+void mpopt_mwis_solver_limit_integer_primal_stagnation(mpopt_mwis_solver* s, double seconds) { s->solver.limit_integer_primal_stagnation(seconds); }
 
 void mpopt_mwis_solver_run(mpopt_mwis_solver* s, int batch_size, int max_batches) { s->solver.run(batch_size, max_batches); }
 int mpopt_mwis_solver_get_iterations(mpopt_mwis_solver* s) { return s->solver.iterations(); }

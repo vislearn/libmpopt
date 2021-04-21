@@ -23,7 +23,7 @@ public:
   , qpbo_(0, 0)
 #endif
   , limit_p01b_gap_(0.0)
-  , limit_best_iterations_(0)
+  , limit_best_stagnation_(0.0)
   , limit_runtime_(0.0)
   {
 #ifndef ENABLE_QPBO
@@ -227,7 +227,7 @@ public:
 
   void limit_runtime(double seconds) { limit_runtime_ = seconds; }
   void limit_integer_primal_gap(double percentage) { limit_p01b_gap_ = percentage; }
-  void limit_integer_primal_stagnation(int iterations) { limit_best_iterations_ = iterations; }
+  void limit_integer_primal_stagnation(int seconds) { limit_best_stagnation_ = seconds; }
 
   int iterations() const { return iterations_; }
 
@@ -235,18 +235,25 @@ public:
   {
     assert(finalized());
     auto start = std::chrono::steady_clock::now();
+    auto best_since = start;
     std::cout << "initial dual = " << dual_relaxed() << std::endl;
     signal_handler h;
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
       auto batch_start = std::chrono::steady_clock::now();
       for (int j = 0; j < batch_size; ++j)
         single_pass();
-      update_integer_assignment();
+      bool best_improved = update_integer_assignment();
       auto batch_end = std::chrono::steady_clock::now();
-
       iterations_ += batch_size;
-      auto total_s = std::chrono::duration_cast<std::chrono::duration<float>>(batch_end - start).count();
-      auto batch_ms = std::chrono::duration_cast<std::chrono::milliseconds>(batch_end - batch_start).count();
+
+      if (best_improved)
+        best_since = batch_end;
+
+      using fsec = std::chrono::duration<float>;
+      using msec = std::chrono::milliseconds;
+      auto total_s      = std::chrono::duration_cast<fsec>(batch_end - start).count();
+      auto best_since_s = std::chrono::duration_cast<fsec>(batch_end - best_since).count();
+      auto batch_ms     = std::chrono::duration_cast<msec>(batch_end - batch_start).count();
 
       const auto d = dual_relaxed();
       const auto gap    = (d - value_relaxed_) / d * 100.0;
@@ -261,7 +268,7 @@ public:
                 << "gap01=" << gap01 << "% "
                 << "p01*=" << value_best_ << " "
                 << "gap01*=" << gap01b << "% "
-                << "p01*_since=" << best_since_ << " "
+                << "p01*_since=" << best_since_s << "s "
 #ifndef NDEBUG
                 << "H=" << entropy() << " "
                 << "d_T=" << dual_smoothed() << " "
@@ -277,13 +284,13 @@ public:
         return;
       }
 
-      if (gap01b < limit_p01b_gap_) {
+      if (gap01b <= limit_p01b_gap_) {
         std::cout << "integer-primal / dual gap limit reached: " << gap01b << "%" << std::endl;
         return;
       }
 
-      if (limit_best_iterations_ > 0 && best_since_ >= limit_best_iterations_) {
-        std::cout << "p01* improvement limit reached: no improvement since " << best_since_ << " iterations" << std::endl;
+      if (limit_best_stagnation_ > 0.0 && best_since_s >= limit_best_stagnation_) {
+        std::cout << "p01* improvement limit reached: " << best_since_s << "s" << std::endl;
         return;
       }
     }
@@ -392,7 +399,6 @@ protected:
     // finalize_costs).
     value_relaxed_ = primal_relaxed(assignment_relaxed_);
     value_best_ = primal(assignment_best_);
-    best_since_ = 0;
     iterations_ = 0;
 
     // Try to improve naive assignment by greedily sampling an assignment.
@@ -489,21 +495,20 @@ protected:
     value_relaxed_ = primal_relaxed(assignment_relaxed_);
   }
 
-  void update_integer_assignment()
+  bool update_integer_assignment()
   {
-    ++best_since_;
     greedy();
 #ifdef ENABLE_QPBO
     const auto old_value_best_ = value_best_;
     fusion_move();
-    if (value_best_ > old_value_best_)
-      best_since_ = 0;
+    return value_best_ > old_value_best_;
 #else
     if (value_latest_ > value_best_) {
       value_best_ = value_latest_;
       assignment_best_ = assignment_latest_;
-      best_since_ = 0;
+      return true;
     }
+    return false;
 #endif
   }
 
@@ -653,7 +658,6 @@ protected:
   std::vector<int> assignment_latest_;
   cost value_best_;
   std::vector<int> assignment_best_;
-  int best_since_;
 
   cost value_relaxed_;
   std::vector<double> assignment_relaxed_;
@@ -664,7 +668,7 @@ protected:
 #endif
 
   double limit_p01b_gap_;
-  int limit_best_iterations_;
+  double limit_best_stagnation_;
   double limit_runtime_;
 };
 
