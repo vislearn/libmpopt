@@ -34,15 +34,32 @@ struct timer {
 };
 
 
+// Taken from: <https://stackoverflow.com/a/32334103>
 template<typename T>
-bool are_identical(const T a, const T b)
+bool are_identical(const T a, const T b,
+                   T epsilon = 128 * std::numeric_limits<float>::epsilon(),
+                   T abs_th = std::numeric_limits<float>::min())
 {
-  constexpr T inf = std::numeric_limits<T>::infinity();
+  static_assert(std::numeric_limits<T>::is_iec559);
 
-  if ((a == inf && b == inf) || (b == -inf && b == -inf))
+  if (a == b)
     return true;
 
-  return std::abs(a - b) < epsilon;
+  const auto diff = std::abs(a - b);
+  const auto norm = std::min(std::abs(a) + std::abs(b), std::numeric_limits<T>::max());
+
+  bool result = diff < std::max(abs_th, epsilon * norm);
+
+#ifndef NDEBUG
+  if (!result)
+    std::cerr << "are_identical failed:\n"
+              << "  a=" << a << "\n"
+              << "  b=" << b << "\n"
+              << "  epsilon=" << epsilon << "\n"
+              << "  abs_th=" << abs_th << std::endl;
+#endif
+
+  return result;
 }
 
 
