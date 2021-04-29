@@ -315,6 +315,30 @@ protected:
     if (finalized_graph_)
       return;
 
+    // Look for nodes that are not part of any clique. If a node is not part of
+    // any clique, there is no lambda that can affect the reduced cost of the
+    // node. However, the code assumes that we can shift the reduced cost of
+    // any node below zero. To simplify the code we add a fake clique.
+    {
+      std::vector<bool> tmp(no_nodes(), false);
+      for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
+        const auto& cl = clique_indices_[clique_idx];
+        for (index idx = cl.begin; idx < cl.end; ++idx) {
+          const auto node_idx = clique_index_data_[idx];
+          tmp[node_idx] = true;
+        }
+      }
+
+      std::vector<index> clique;
+      for (index node_idx = 0; node_idx < no_orig(); ++node_idx) {
+        if (!tmp[node_idx]) {
+          clique.resize(1);
+          clique[0] = node_idx;
+          add_clique(clique);
+        }
+      }
+    }
+
     //
     // Construct node to clique mapping.
     //
@@ -599,7 +623,7 @@ protected:
     // correct value now.
 
     for (const auto& cl : clique_indices_) {
-      assert(cl.size >= 3);
+      assert(cl.size >= 2);
 
       int count = 0;
       for (index idx = cl.begin; idx < cl.end - 1; ++idx) {
