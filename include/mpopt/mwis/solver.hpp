@@ -476,10 +476,9 @@ protected:
     } else {
       msg = maximum;
     }
+    assert(std::isfinite(msg));
 
-    assert(!std::isnan(msg));
     constant_ += msg;
-    assert(!std::isnan(constant_));
     for (auto& c : scratch_)
       c -= msg;
 
