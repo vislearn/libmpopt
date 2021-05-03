@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='mwis_json', description='Optimizer for *.json maximum weighted independent set files.')
     parser.add_argument('-B', '--batch-size', type=int, default=mwis.DEFAULT_BATCH_SIZE)
     parser.add_argument('-b', '--max-batches', type=int, default=mwis.DEFAULT_MAX_BATCHES)
+    parser.add_argument('-g', '--greedy-generations', type=int, default=mwis.DEFAULT_GREEDY_GENERATIONS, help='Specify number of greedy generation passes per batch.')
     parser.add_argument('-p', '--preprocess', action='store_true', help='Ignores nodes with positive cost.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.jug input file.')
     args = parser.parse_args()
@@ -26,4 +27,4 @@ if __name__ == '__main__':
         print(f'Preprocessing: {original} -> {reduced} nodes ({reduced/original*100:.2f}%)')
 
     solver = mwis.construct_solver(model)
-    solver.run(args.batch_size, args.max_batches)
+    solver.run(args.batch_size, args.max_batches, args.greedy_generations)

@@ -10,6 +10,8 @@ struct range {
   index size;
 };
 
+constexpr int default_greedy_generations = 10;
+
 class solver {
 public:
 
@@ -231,7 +233,9 @@ public:
 
   int iterations() const { return iterations_; }
 
-  void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches)
+  void run(const int batch_size=default_batch_size,
+           const int max_batches=default_max_batches,
+           const int greedy_generations=default_greedy_generations)
   {
     assert(finalized());
     auto start = std::chrono::steady_clock::now();
@@ -242,7 +246,7 @@ public:
       auto batch_start = std::chrono::steady_clock::now();
       for (int j = 0; j < batch_size; ++j)
         single_pass();
-      bool best_improved = update_integer_assignment();
+      bool best_improved = update_integer_assignment(greedy_generations);
       auto batch_end = std::chrono::steady_clock::now();
       iterations_ += batch_size;
 
@@ -516,6 +520,14 @@ protected:
     }
 
     value_relaxed_ = primal_relaxed(assignment_relaxed_);
+  }
+
+  bool update_integer_assignment(int greedy_generations)
+  {
+    bool has_improved = false;
+    for (int i = 0; i < greedy_generations; ++i)
+      has_improved &= update_integer_assignment();
+    return has_improved;
   }
 
   bool update_integer_assignment()

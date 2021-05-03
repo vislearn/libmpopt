@@ -4,6 +4,8 @@ import numpy as np
 from ..common.solver import (DEFAULT_BATCH_SIZE, DEFAULT_MAX_BATCHES, BaseSolver)
 from . import libmpopt_mwis as lib
 
+DEFAULT_GREEDY_GENERATIONS = 10
+
 
 class Solver(BaseSolver):
 
@@ -20,6 +22,9 @@ class Solver(BaseSolver):
 
     def finalize(self):
         lib.solver_finalize(self.solver)
+
+    def run(self, batch_size=DEFAULT_BATCH_SIZE, max_batches=DEFAULT_MAX_BATCHES, greedy_generations=DEFAULT_GREEDY_GENERATIONS):
+        return self.lib.solver_run(self.solver, batch_size, max_batches, greedy_generations)
 
     def limit_runtime(self, seconds):
         lib.solver_limit_runtime(self.solver, seconds)
