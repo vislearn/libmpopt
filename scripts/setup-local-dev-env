@@ -22,7 +22,7 @@ meson_args=(
 	--prefix="${install_dir}"
 	--bindir=bin
 	--libdir=lib
-	--pkg-config-path="${install_dir}/lib/pkgconfig"
+	--pkg-config-path="${install_dir}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 	-Db_ndebug=if-release
 	-Dbuildtype="${buildtype}"
 	-Dc_args='-march=native -mtune=native'
