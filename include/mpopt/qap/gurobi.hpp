@@ -45,8 +45,10 @@ public:
   {
     assert(node != nullptr);
     bool did_insert = pairwise_.try_emplace(node, node->factor, model_).second;
-    if (did_insert)
+    if (did_insert) {
       add_linear_constraint(node);
+      fix_infinity_costs(node);
+    }
   }
 
   void finalize()
@@ -111,6 +113,23 @@ protected:
       auto& unary = unaries_.at(link.node);
       model_.addConstr(uniqueness.variable(slot) == unary.variable(link.slot));
     });
+  }
+
+  void fix_infinity_costs(const pairwise_node_type* node)
+  {
+    auto& gurobi_factor = pairwise_.at(node);
+    const auto [size0, size1] = node->factor.size();
+    two_dimension_array_accessor a(size0, size1);
+
+    for (index idx0 = 0; idx0 < size0; ++idx0) {
+      for (index idx1 = 0; idx1 < size1; ++idx1) {
+        const auto* uniqueness0 = node->unary0->uniqueness[idx0].node;
+        const auto* uniqueness1 = node->unary1->uniqueness[idx1].node;
+        if (uniqueness0 != nullptr && uniqueness1 != nullptr && uniqueness0 == uniqueness1) {
+          gurobi_factor.variable(a.to_linear(idx0, idx1)).set(GRB_DoubleAttr_Obj, 0.0);
+        }
+      }
+    }
   }
 
   GRBModel model_;
