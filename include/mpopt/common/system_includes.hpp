@@ -12,6 +12,7 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <random>
 #include <set>
 #include <sstream>
