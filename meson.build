@@ -14,6 +14,7 @@ python_wrappers = {
   'gm_uai':        'mpopt.gm.cmdline.uai',
   'dd_to_uai':     'mpopt.qap.cmdline.dd_to_uai',
   'qap_dd':        'mpopt.qap.cmdline.dd',
+  'qap_dd_gurobi': 'mpopt.qap.cmdline.dd_gurobi',
 }
 
 python_sources = [
@@ -40,8 +41,10 @@ python_sources = [
   'mpopt/qap/__init__.py',
   'mpopt/qap/cmdline/__init__.py',
   'mpopt/qap/cmdline/dd.py',
+  'mpopt/qap/cmdline/dd_gurobi.py',
   'mpopt/qap/cmdline/dd_to_uai.py',
   'mpopt/qap/dd.py',
+  'mpopt/qap/gurobi.py',
   'mpopt/qap/model.py',
   'mpopt/qap/primals.py',
   'mpopt/qap/solver.py',
