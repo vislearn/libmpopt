@@ -6,12 +6,34 @@ namespace qap {
 
 struct pairwise_messages {
 
-  // complete mplp++ edge update
+  template<typename UNARY_NODE>
+  static void send_messages_to_pairwise(const UNARY_NODE* node)
+  {
+    // get number of forward and backward edges
+    int number_of_neighbours = node->forward.size() + node->backward.size();
+    // send full cost evenly to all edges (so remaining cost in node is 0.0)
+    for (index l = 0; l < node->factor.size(); ++l) {
+      const cost msg = node->factor.get(l);
+      node->factor.repam(l, -msg);
+      for (const auto* pairwise_node : node->forward)
+        pairwise_node->factor.repam0(l, msg/number_of_neighbours);
+      for (const auto* pairwise_node : node->backward)
+        pairwise_node->factor.repam1(l, msg/number_of_neighbours);
+      assert(node->factor.get(l) == 0.0);
+    }
+  }
+
   template<typename PAIRWISE_NODE>
-  static void update(const PAIRWISE_NODE* pairwise_node)
+  static void receive_pairwise_message(const PAIRWISE_NODE* pairwise_node)
   {
     // move all costs to pairwise node
     helper_move_to_pairwise(pairwise_node);
+  }
+
+  // mplp++ edge update (from pairwise to both unaries)
+  template<typename PAIRWISE_NODE>
+  static void send_messages_to_unaries(const PAIRWISE_NODE* pairwise_node)
+  {
     // move half of what is possible to left node (unary0)
     helper_move_to_unary<false, true>(pairwise_node);
     // move as much as possible to right node (unary1)
@@ -20,15 +42,12 @@ struct pairwise_messages {
     helper_move_to_unary<false, false>(pairwise_node);
   }
 
-  template<bool forward, typename PAIRWISE_NODE>
-  static void send_from_pairwise_to_unary(const PAIRWISE_NODE* pairwise_node)
+  // full mplp++ edge update
+  template<typename PAIRWISE_NODE>
+  static void full_mplp_update(const PAIRWISE_NODE* pairwise_node)
   {
-    const auto no_labels_to = std::get<forward ? 1 : 0>(pairwise_node->factor.size());
-    for (index l = 0; l < no_labels_to; ++l) {
-      const auto msg = pairwise_node->factor.template min_marginal<forward>(l);
-      pairwise_node->factor.template repam<forward>(l, -msg);
-      pairwise_node->template unary<forward>()->factor.repam(l, msg);
-    }
+    receive_pairwise_message(pairwise_node);
+    send_messages_to_unaries(pairwise_node);
   }
 
   template<typename PAIRWISE_NODE>

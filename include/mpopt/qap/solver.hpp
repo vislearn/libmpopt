@@ -6,6 +6,9 @@ namespace qap {
 
 constexpr int default_greedy_generations = 10;
 
+enum class pairwise_update_kind { normal_mplp_plus_plus, diffused_mplp_plus_plus };
+constexpr auto PAIRWISE_UPDATE_KIND = pairwise_update_kind::diffused_mplp_plus_plus;
+
 template<typename ALLOCATOR>
 class solver : public ::mpopt::solver<solver<ALLOCATOR>> {
 public:
@@ -93,8 +96,18 @@ protected:
     auto lb_before = this->lower_bound();
 #endif
 
-    for (const auto* node : graph_.pairwise())
-      pairwise_messages::update(node);
+    if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::normal_mplp_plus_plus) {
+      for (const auto* node : graph_.pairwise())
+        pairwise_messages::full_mplp_update(node);
+    }
+
+    if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::diffused_mplp_plus_plus) {
+      for (const auto* node : graph_.unaries())
+        pairwise_messages::send_messages_to_pairwise(node);
+
+      for (const auto* node : graph_.pairwise())
+        pairwise_messages::send_messages_to_unaries(node);
+    }
 
     if constexpr (rounding) {
       for (int i = 0; i < greedy_generations; ++i) {

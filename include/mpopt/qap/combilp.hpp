@@ -70,7 +70,7 @@ protected:
   void preprocess()
   {
     for (const auto* node : graph_->pairwise())
-      pairwise_messages::update(node);
+      pairwise_messages::full_mplp_update(node);
 
     for (const auto* node : graph_->uniqueness())
       uniqueness_messages::send_messages_to_unaries(node);
