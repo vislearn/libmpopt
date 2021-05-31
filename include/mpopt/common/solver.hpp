@@ -35,6 +35,11 @@ public:
 
   void solve_ilp()
   {
+    if (std::abs(evaluate_primal() - lower_bound()) < epsilon) {
+      std::cout << "Not starting ILP solver: Problem is tight." << std::endl;
+      return;
+    }
+
 #ifdef ENABLE_GUROBI
     // We do not reset the primal as they will be used as a MIP start.
     typename DERIVED_TYPE::gurobi_model_builder_type builder(gurobi_env());
