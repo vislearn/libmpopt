@@ -78,6 +78,11 @@ public:
 
   void execute_combilp()
   {
+    if (std::abs(this->evaluate_primal() - this->lower_bound()) < epsilon) {
+      std::cout << "Not starting CombiLP: Problem is tight." << std::endl;
+      return;
+    }
+
 #ifdef ENABLE_GUROBI
     this->reset_primal();
     combilp subsolver(graph_, graph_.constant());
