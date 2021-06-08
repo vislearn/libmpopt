@@ -27,6 +27,7 @@ public:
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
+  , greedy_(graph_)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -71,8 +72,7 @@ public:
 
   void compute_greedy_assignment()
   {
-    greedy g(graph_);
-    g.run();
+    greedy_.run();
     assert(this->check_primal_consistency());
   }
 
@@ -176,6 +176,7 @@ protected:
   }
 
   graph_type graph_;
+  greedy<ALLOCATOR> greedy_;
   friend class ::mpopt::solver<solver<ALLOCATOR>>;
 };
 

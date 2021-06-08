@@ -14,30 +14,29 @@ public:
   using pairwise_node_type = typename graph_type::pairwise_node_type;
   using clock_type = std::chrono::high_resolution_clock;
 
-  greedy(graph_type& graph)
+  greedy(const graph_type& graph)
   : graph_(&graph)
   , gen_(std::random_device()())
   {
-    size_t max_label_size = 0;
-    unlabeled_ = graph_->unaries().size();
     frontier_.reserve(graph_->unaries().size());
 
-    for (const auto* node : graph_->unaries()) {
-      node->factor.reset_primal();
-      max_label_size = std::max(max_label_size, node->factor.size());
-    }
-
-    for (const auto* node : graph_->pairwise())
-      node->factor.reset_primal();
-
-    for (const auto* node : graph_->uniqueness())
-      node->factor.reset_primal();
+    const size_t max_label_size = std::accumulate(
+      graph_->unaries().begin(), graph_->unaries().end(), 0,
+      [](const size_t a, const auto* node) {
+        return std::max(a, node->factor.size());
+      });
 
     cost_storage_.reserve(max_label_size);
   }
 
   void run()
   {
+    frontier_.clear();
+    unlabeled_ = graph_->unaries().size();
+    graph_->for_each_node([](const auto* node) {
+      node->factor.reset_primal();
+    });
+
     while (unlabeled_ > 0) {
       if (frontier_.size() == 0)
         find_new_root();
@@ -244,7 +243,7 @@ protected:
     std::abort();
   }
 
-  graph_type* graph_;
+  const graph_type* graph_;
   std::default_random_engine gen_;
   index unlabeled_;
   std::vector<const unary_node_type*> frontier_;
