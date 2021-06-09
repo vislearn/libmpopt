@@ -41,6 +41,15 @@ public:
   {
   }
 
+  void reset()
+  {
+    qpbo_.Reset();
+    unaries_.clear();
+    uniqueness_.clear();
+    pairwise_.clear();
+    mapping_.clear();
+  }
+
   void set_constant(const cost constant)
   {
     // TODO: Implement this.
