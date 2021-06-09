@@ -58,12 +58,14 @@ public:
     const auto e1 = unary.has_two() ? node->factor.get(label1) : INFTY;
     qpbo_.AddUnaryTerm(unary.node, e0, e1);
 
+    [[maybe_unused]]
     const bool did_insert = unaries_.emplace(std::make_pair(node, unary)).second;
     assert(did_insert);
   }
 
   void add_factor(const uniqueness_node_type* node)
   {
+    [[maybe_unused]]
     bool did_insert = uniqueness_.insert(node).second;
     assert(did_insert);
 
@@ -100,6 +102,7 @@ public:
 
   void add_factor(const pairwise_node_type* node)
   {
+    [[maybe_unused]]
     auto did_insert = pairwise_.insert(node).second;
     assert(did_insert);
 
