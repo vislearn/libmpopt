@@ -11,26 +11,45 @@ struct timer {
   static_assert(clock_type::is_steady);
 
   timer(bool auto_start=true)
+  : running_(false)
+  , last_(0)
+  , total_(0)
   {
     if (auto_start)
       start();
   }
 
-  void start() { begin = clock_type::now(); }
-  void stop() { end = clock_type::now(); }
-
-  auto duration() const { return end - begin; }
-
-  template<typename DURATION>
-  auto duration_count() const
+  void start()
   {
-    return std::chrono::duration_cast<DURATION>(duration()).count();
+    assert(!running_);
+    running_ = true;
+    start_ = clock_type::now();
   }
 
-  auto milliseconds() const { return duration_count<std::chrono::milliseconds>(); }
-  auto seconds() const { return duration_count<std::chrono::seconds>(); }
+  void stop()
+  {
+    assert(running_);
+    running_ = false;
+    stop_ = clock_type::now();
+    last_ = stop_ - start_;
+    total_ += last_;
+  }
 
-  clock_type::time_point begin, end;
+  auto last() const { return last_; }
+  auto total() const { return total_; }
+
+  template<typename DURATION, bool TOTAL=false>
+  auto duration_count() const
+  {
+    return std::chrono::duration_cast<DURATION>(TOTAL ? total_ : last_).count();
+  }
+
+  template<bool TOTAL=false> auto milliseconds() const { return duration_count< std::chrono::milliseconds, TOTAL>(); }
+  template<bool TOTAL=false> auto seconds() const { return duration_count<std::chrono::seconds, TOTAL>(); }
+
+  bool running_;
+  clock_type::time_point start_, stop_;
+  clock_type::duration last_, total_;
 };
 
 
