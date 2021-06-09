@@ -28,6 +28,7 @@ public:
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
   , greedy_(graph_)
+  , qpbo_(graph_)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -115,35 +116,33 @@ protected:
     }
 
     if constexpr (rounding) {
+      primal_storage previous(graph_), current(graph_);
       for (int i = 0; i < greedy_generations; ++i) {
-        const auto previous_ub = this->evaluate_primal();
-        primal_storage previous(graph_);
         previous.save();
+        const auto previous_ub = this->evaluate_primal();
 
         compute_greedy_assignment();
-        auto current_ub = this->evaluate_primal();
-        primal_storage current(graph_);
         current.save();
+        auto current_ub = this->evaluate_primal();
 
 #ifdef ENABLE_QPBO
         if (previous_ub != infinity) {
-          qpbo_model_builder builder(graph_);
-
+          qpbo_.reset();
           index idx = 0;
           for (const auto* node : graph_.unaries()) {
-            builder.add_factor(node, previous.get(idx), current.get(idx));
+            qpbo_.add_factor(node, previous.get(idx), current.get(idx));
             ++idx;
           }
 
           for (const auto* node : graph_.uniqueness())
-            builder.add_factor(node);
+            qpbo_.add_factor(node);
 
           for (const auto* node : graph_.pairwise())
-            builder.add_factor(node);
+            qpbo_.add_factor(node);
 
-          builder.finalize();
-          builder.optimize();
-          builder.update_primals();
+          qpbo_.finalize();
+          qpbo_.optimize();
+          qpbo_.update_primals();
           assert(this->check_primal_consistency());
           const auto fused_ub = this->evaluate_primal();
 
@@ -177,6 +176,9 @@ protected:
 
   graph_type graph_;
   greedy<ALLOCATOR> greedy_;
+#ifdef ENABLE_QPBO
+  qpbo_model_builder<ALLOCATOR> qpbo_;
+#endif
   friend class ::mpopt::solver<solver<ALLOCATOR>>;
 };
 
