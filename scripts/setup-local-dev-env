@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eu -o pipefail
 
+LIBQPBO_VERSION=1.4.1
+
 buildtype=debugoptimized
 if [[ $# -ge 1 ]]; then
 	buildtype="$1"
@@ -10,19 +12,18 @@ temp_dir=$(mktemp -d)
 trap 'rm -rf "${temp_dir}"' EXIT
 
 source_dir=$(pwd)
-build_dir="${temp_dir}/build"
-install_dir="${temp_dir}/install"
+prefix="${temp_dir}/install"
 
-custom_sitelibs=$(scripts/print-python-libpath "${install_dir}")
+custom_sitelibs=$(scripts/print-python-libpath "${prefix}")
 export PYTHONPATH="${custom_sitelibs}${PYTHONPATH:+:${PYTHONPATH}}"
-export LD_LIBRARY_PATH="${install_dir}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
-export PATH="${install_dir}/bin${PATH:+:${PATH}}"
+export LD_LIBRARY_PATH="${prefix}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PATH="${prefix}/bin${PATH:+:${PATH}}"
 
 meson_args=(
-	--prefix="${install_dir}"
+	--prefix="${prefix}"
 	--bindir=bin
 	--libdir=lib
-	--pkg-config-path="${install_dir}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+	--pkg-config-path="${prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 	-Db_ndebug=if-release
 	-Dbuildtype="${buildtype}"
 	-Dc_args='-march=native -mtune=native'
@@ -30,19 +31,18 @@ meson_args=(
 )
 
 cd "${temp_dir}"
-curl -LJO https://github.com/fgrsnau/libqpbo/archive/v1.4.1.tar.gz
-tar -xf libqpbo-1.4.1.tar.gz
+curl -LJO "https://github.com/fgrsnau/libqpbo/archive/v${LIBQPBO_VERSION}.tar.gz"
+tar -xf "libqpbo-${LIBQPBO_VERSION}.tar.gz"
 
-mkdir "${build_dir}"
-cd "${build_dir}"
-meson setup "${meson_args[@]}" ../libqpbo-1.4.1
+mkdir libqpbo-build
+cd libqpbo-build
+meson setup "${meson_args[@]}" "../libqpbo-${LIBQPBO_VERSION}"
 ninja install
 
-find "${build_dir}" -mindepth 1 -delete
-
+cd "${temp_dir}"
+mkdir libmpopt-build
+cd libmpopt-build
 meson setup "${meson_args[@]}" -Dqpbo=enabled -Dgurobi=auto "${source_dir}"
-
-ninja
 ninja install
 
 ${SHELL}
