@@ -26,7 +26,7 @@ public:
         return std::max(a, node->factor.size());
       });
 
-    cost_storage_.reserve(max_label_size);
+    scratch_costs_.reserve(max_label_size);
   }
 
   void run()
@@ -77,9 +77,9 @@ protected:
     }
 
     // Copy costs.
-    cost_storage_.resize(root->factor.size());
+    scratch_costs_.resize(root->factor.size());
     for (index p = 0; p < root->factor.size(); ++p)
-      cost_storage_[p] = root->factor.get(p);
+      scratch_costs_[p] = root->factor.get(p);
 
 #ifndef NDEBUG
     for (const auto* pairwise : root->backward)
@@ -93,14 +93,14 @@ protected:
     root->traverse_uniqueness([this](const auto& edge, const auto slot) {
       if (edge.node->factor.is_primal_set()) {
         assert(edge.node->factor.primal() != edge.slot);
-        cost_storage_[slot] = infinity;
+        scratch_costs_[slot] = infinity;
       }
     });
 
     // Label the root.
-    const auto it = std::min_element(cost_storage_.cbegin(), cost_storage_.cend());
+    const auto it = std::min_element(scratch_costs_.cbegin(), scratch_costs_.cend());
     assert(*it < infinity);
-    label_node(root, it - cost_storage_.cbegin());
+    label_node(root, it - scratch_costs_.cbegin());
 
     frontier_.push_back(root);
     return root;
@@ -108,7 +108,9 @@ protected:
 
   void randomize_frontier()
   {
-    std::shuffle(frontier_.begin(), frontier_.end(), gen_);
+    std::uniform_int_distribution<size_t> dist(0, frontier_.size() - 1);
+    const auto idx = dist(gen_);
+    std::swap(frontier_[idx], frontier_.back());
   }
 
   void label_node(const unary_node_type* node)
@@ -169,16 +171,16 @@ protected:
       frontier_.push_back(neighbor);
 
       // First copy unary costs.
-      cost_storage_.resize(neighbor->factor.size());
+      scratch_costs_.resize(neighbor->factor.size());
       for (index p = 0; p < neighbor->factor.size(); ++p)
-        cost_storage_[p] = neighbor->factor.get(p);
+        scratch_costs_[p] = neighbor->factor.get(p);
 
       // Aggregate all edge costs.
       for (const auto* pairwise : neighbor->backward) {
         if (pairwise->unary0->factor.is_primal_set()) {
           const auto p0 = pairwise->unary0->factor.primal();
           for (index p1 = 0; p1 < neighbor->factor.size(); ++p1) {
-            cost_storage_[p1] += pairwise->factor.get(p0, p1);
+            scratch_costs_[p1] += pairwise->factor.get(p0, p1);
           }
         }
       }
@@ -187,7 +189,7 @@ protected:
         if (pairwise->unary1->factor.is_primal_set()) {
           const auto p1 = pairwise->unary1->factor.primal();
           for (index p0 = 0; p0 < neighbor->factor.size(); ++p0) {
-            cost_storage_[p0] += pairwise->factor.get(p0, p1);
+            scratch_costs_[p0] += pairwise->factor.get(p0, p1);
           }
         }
       }
@@ -196,58 +198,42 @@ protected:
       neighbor->traverse_uniqueness([this](const auto& edge, const auto slot) {
         if (edge.node->factor.is_primal_set()) {
           assert(edge.node->factor.primal() != edge.slot);
-          cost_storage_[slot] = infinity;
+          scratch_costs_[slot] = infinity;
         }
       });
 
-      const auto it = std::min_element(cost_storage_.cbegin(), cost_storage_.cend());
+      const auto it = std::min_element(scratch_costs_.cbegin(), scratch_costs_.cend());
       assert(*it < infinity);
-      const index p = it - cost_storage_.cbegin();
+      const index p = it - scratch_costs_.cbegin();
       label_node(neighbor, p);
     }
   }
 
   const pairwise_node_type* find_pairwise(const unary_node_type* node)
   {
-    index no_bw = 0, no_fw = 0;
-    for (const auto* pairwise : node->backward)
-      no_bw += pairwise->unary0->factor.is_primal_set() ? 0 : 1;
-    for (const auto* pairwise : node->forward)
-      no_fw += pairwise->unary1->factor.is_primal_set() ? 0 : 1;
+    scratch_pairwise_.clear();
 
-    if (no_bw == 0 && no_fw == 0)
+    for (const auto* pairwise : node->backward)
+      if (!pairwise->unary0->factor.is_primal_set())
+        scratch_pairwise_.push_back(pairwise);
+
+    for (const auto* pairwise : node->forward)
+      if (!pairwise->unary1->factor.is_primal_set())
+        scratch_pairwise_.push_back(pairwise);
+
+    if (scratch_pairwise_.empty())
       return nullptr;
 
-    std::uniform_int_distribution<index> dist(0, no_bw + no_fw - 1);
-    index idx = dist(gen_);
-    if (idx < no_bw) {
-      for (const auto* pairwise : node->backward) {
-        if (!pairwise->unary0->factor.is_primal_set()) {
-          if (idx == 0)
-            return pairwise;
-          --idx;
-        }
-      }
-    } else {
-      idx -= no_bw;
-      for (const auto* pairwise : node->forward) {
-        if (!pairwise->unary1->factor.is_primal_set()) {
-          if (idx == 0)
-            return pairwise;
-          --idx;
-        }
-      }
-    }
-
-    assert(false && "Should never be reached!");
-    std::abort();
+    std::uniform_int_distribution<index> dist(0, scratch_pairwise_.size() - 1);
+    return scratch_pairwise_[dist(gen_)];
   }
 
   const graph_type* graph_;
   std::default_random_engine gen_;
   index unlabeled_;
   std::vector<const unary_node_type*> frontier_;
-  std::vector<cost> cost_storage_;
+  std::vector<cost> scratch_costs_;
+  std::vector<const pairwise_node_type*> scratch_pairwise_;
 };
 
 }
