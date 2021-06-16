@@ -35,18 +35,22 @@ public:
 
   qpbo_model_builder(const graph_type& graph)
   : qpbo_(graph.unaries().size(), graph.uniqueness().size() + graph.pairwise().size())
+  , graph_(&graph)
   , enable_weak_persistency_(true)
   , enable_probe_(false)
   , enable_improve_(false)
+  , unaries_(graph.unaries().size())
+  , uniqueness_(graph.uniqueness().size())
+  , pairwise_(graph.pairwise().size())
   {
   }
 
   void reset()
   {
     qpbo_.Reset();
-    unaries_.clear();
-    uniqueness_.clear();
-    pairwise_.clear();
+    unaries_.assign(graph_->unaries().size(), {});
+    uniqueness_.assign(graph_->uniqueness().size(), {});
+    pairwise_.assign(graph_->pairwise().size(), {});
     mapping_.clear();
   }
 
@@ -60,23 +64,19 @@ public:
     assert(node != nullptr);
     assert(label0 >= 0 && label0 < node->factor.size());
     assert(label1 >= 0 && label1 < node->factor.size());
+    assert(!unaries_[node->idx]);
 
-    qpbo_unary_type unary(label0, label1);
+    auto& unary = unaries_[node->idx].emplace(label0, label1);
     unary.node = qpbo_.AddNode();
     const auto e0 = node->factor.get(label0);
     const auto e1 = unary.has_two() ? node->factor.get(label1) : INFTY;
     qpbo_.AddUnaryTerm(unary.node, e0, e1);
-
-    [[maybe_unused]]
-    const bool did_insert = unaries_.emplace(std::make_pair(node, unary)).second;
-    assert(did_insert);
   }
 
   void add_factor(const uniqueness_node_type* node)
   {
-    [[maybe_unused]]
-    bool did_insert = uniqueness_.insert(node).second;
-    assert(did_insert);
+    assert(!uniqueness_[node->idx]);
+    uniqueness_[node->idx] = true;
 
     qpbo_unary_type* first = nullptr;
     qpbo_unary_type* second = nullptr;
@@ -84,15 +84,15 @@ public:
 
     // FIXME: This clean up this mess.
     node->traverse_unaries([&](const auto edge, const index slot) {
-      auto it = unaries_.find(edge.node);
-      if (it != unaries_.end()) {
-        if (it->second.label0 == edge.slot || it->second.label1 == edge.slot) {
+      auto& tmp = unaries_[edge.node->idx];
+      if (tmp) {
+        if (tmp->label0 == edge.slot || tmp->label1 == edge.slot) {
           if (first == nullptr) {
-            first = &it->second;
+            first = &*tmp;
             first_label = edge.slot;
           } else {
             assert(second == nullptr);
-            second = &it->second;
+            second = &*tmp;
             second_label = edge.slot;
           }
         }
@@ -111,19 +111,19 @@ public:
 
   void add_factor(const pairwise_node_type* node)
   {
-    [[maybe_unused]]
-    auto did_insert = pairwise_.insert(node).second;
-    assert(did_insert);
+    assert(!pairwise_[node->idx]);
+    pairwise_[node->idx] = true;
 
-    const auto& left = unaries_.at(node->unary0);
-    const auto& right = unaries_.at(node->unary1);
+    const auto& left = unaries_[node->unary0->idx];
+    const auto& right = unaries_[node->unary1->idx];
+    assert(left && right);
 
-    const auto e00 = node->factor.get(left.label0, right.label0);
-    const auto e01 = node->factor.get(left.label0, right.label1);
-    const auto e10 = node->factor.get(left.label1, right.label0);
-    const auto e11 = node->factor.get(left.label1, right.label1);
+    const auto e00 = node->factor.get(left->label0, right->label0);
+    const auto e01 = node->factor.get(left->label0, right->label1);
+    const auto e10 = node->factor.get(left->label1, right->label0);
+    const auto e11 = node->factor.get(left->label1, right->label1);
 
-    qpbo_.AddPairwiseTerm(left.node, right.node, e00, e01, e10, e11);
+    qpbo_.AddPairwiseTerm(left->node, right->node, e00, e01, e10, e11);
   }
 
   auto enable_weak_persistency() { return enable_weak_persistency_; }
@@ -188,33 +188,40 @@ public:
 
   void update_primals()
   {
-    for (const auto& [node, info] : unaries_) {
-      node->factor.reset_primal();
-      int l;
-      if (mapping_.size() > 0) {
-        const int m = mapping_[info.node];
-        const int n = m / 2;
-        l = (qpbo_.GetLabel(n) + 1) % 2;
-        node->factor.primal() = l == 1 ? info.label1 : info.label0;
-      } else {
-        l = qpbo_.GetLabel(info.node);
+    for (const auto* node : graph_->unaries()) {
+      const auto& info = unaries_[node->idx];
+      if (info) {
+        node->factor.reset_primal();
+        int l;
+        if (mapping_.size() > 0) {
+          const int m = mapping_[info->node];
+          const int n = m / 2;
+          l = (qpbo_.GetLabel(n) + 1) % 2;
+          node->factor.primal() = l == 1 ? info->label1 : info->label0;
+        } else {
+          l = qpbo_.GetLabel(info->node);
+        }
+        node->factor.primal() = l == 1 ? info->label1 : info->label0;
       }
-      node->factor.primal() = l == 1 ? info.label1 : info.label0;
     }
 
-    for (const auto* node : uniqueness_) {
-      node->factor.primal() = node->unaries.size();
-      node->traverse_unaries([&](const auto& edge, const index slot) {
-        if (edge.node->factor.primal() == edge.slot)
-          node->factor.primal() = slot;
-      });
+    for (const auto* node : graph_->uniqueness()) {
+      if (uniqueness_[node->idx]) {
+        node->factor.primal() = node->unaries.size();
+        node->traverse_unaries([&](const auto& edge, const index slot) {
+          if (edge.node->factor.primal() == edge.slot)
+            node->factor.primal() = slot;
+        });
+      }
     }
 
-    for (const auto* node : pairwise_) {
-      node->factor.reset_primal();
-      const auto* left = node->unary0;
-      const auto* right = node->unary1;
-      node->factor.primal() = std::tuple(left->factor.primal(), right->factor.primal());
+    for (const auto* node : graph_->pairwise()) {
+      if (pairwise_[node->idx]) {
+        node->factor.reset_primal();
+        const auto* left = node->unary0;
+        const auto* right = node->unary1;
+        node->factor.primal() = std::tuple(left->factor.primal(), right->factor.primal());
+      }
     }
   }
 
@@ -222,9 +229,9 @@ public:
 protected:
   qpbo_type qpbo_;
   const graph_type* graph_;
-  std::unordered_map<const unary_node_type*, qpbo_unary_type> unaries_;
-  std::unordered_set<const uniqueness_node_type*> uniqueness_;
-  std::unordered_set<const pairwise_node_type*> pairwise_;
+  std::vector<std::optional<qpbo_unary_type>> unaries_;
+  std::vector<bool> uniqueness_;
+  std::vector<bool> pairwise_;
   std::vector<int> mapping_;
   bool enable_weak_persistency_;
   bool enable_probe_;
