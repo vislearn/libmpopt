@@ -32,6 +32,7 @@ struct unary_node {
   using pairwise_node_type = pairwise_node<allocator_type>;
   using uniqueness_node_type = uniqueness_node<allocator_type>;
 
+  index idx;
   mutable unary_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<uniqueness_node_type>, allocator_type> uniqueness;
   fixed_vector_alloc_gen<const pairwise_node_type*, allocator_type> forward;
@@ -95,6 +96,7 @@ struct uniqueness_node {
   using uniqueness_node_type = uniqueness_node<allocator_type>;
   using unary_node_type = unary_node<allocator_type>;
 
+  index idx;
   mutable uniqueness_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<unary_node_type>, allocator_type> unaries;
 
@@ -137,6 +139,7 @@ struct pairwise_node {
   using unary_node_type = unary_node<allocator_type>;
   using pairwise_node_type = pairwise_node<allocator_type>;
 
+  index idx;
   mutable pairwise_factor<allocator_type> factor;
   unary_node_type* unary0;
   unary_node_type* unary1;
@@ -191,6 +194,7 @@ public:
     typename std::allocator_traits<allocator_type>::template rebind_alloc<unary_node_type> a(allocator_);
     node = a.allocate();
     new (node) unary_node_type(number_of_labels, number_of_forward, number_of_backward, allocator_);
+    node->idx = idx;
 #ifndef NDEBUG
     node->factor.set_debug_info(idx);
 #endif
@@ -211,6 +215,7 @@ public:
     typename std::allocator_traits<allocator_type>::template rebind_alloc<uniqueness_node_type> a(allocator_);
     node = a.allocate();
     new (node) uniqueness_node_type(number_of_unaries, allocator_);
+    node->idx = idx;
 #ifndef NDEBUG
     node->factor.set_debug_info(idx);
 #endif
@@ -230,6 +235,7 @@ public:
     typename std::allocator_traits<allocator_type>::template rebind_alloc<pairwise_node_type> a(allocator_);
     node = a.allocate();
     new (node) pairwise_node_type(number_of_labels0, number_of_labels1, allocator_);
+    node->idx = idx;
 
     return node;
   }
@@ -312,6 +318,27 @@ public:
   bool check_primal_consistency(const pairwise_node_type* node) const
   {
     return pairwise_messages::check_primal_consistency(node);
+  }
+
+  void check_structure() const
+  {
+#ifndef NDEBUG
+    index idx;
+
+    idx = 0;
+    for (const auto* node : unaries_)
+      assert(node->idx == idx++);
+
+    idx = 0;
+    for (const auto* node : uniqueness_)
+      assert(node->idx == idx++);
+
+    idx = 0;
+    for (const auto* node : pairwise_)
+      assert(node->idx == idx++);
+#endif
+
+    base_type::check_structure();
   }
 
 protected:
