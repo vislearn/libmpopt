@@ -10,7 +10,7 @@ struct timer {
   using clock_type = std::chrono::steady_clock;
   static_assert(clock_type::is_steady);
 
-  timer(bool auto_start=true)
+  timer(bool auto_start=false)
   : running_(false)
   , last_(0)
   , total_(0)
