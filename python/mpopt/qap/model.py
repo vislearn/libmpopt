@@ -32,4 +32,7 @@ class Model:
 
     def add_edge(self, id_assignment1, id_assignment2, cost):
         assert len(self.edges) < self.no_edges
+        assert id_assignment1 < id_assignment2
+        assert self.assignments[id_assignment1].left != self.assignments[id_assignment2].left
+        assert self.assignments[id_assignment1].right != self.assignments[id_assignment2].right
         self.edges.append(Edge(assignment1=id_assignment1, assignment2=id_assignment2, cost=cost))
