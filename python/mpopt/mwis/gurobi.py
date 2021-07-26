@@ -43,6 +43,7 @@ class Gurobi:
             self.gurobi.addConstr(lhs == 1)
 
         self.gurobi.ObjCon = self.model.constant
+        self.gurobi.ModelSense = gurobi.GRB.MAXIMIZE
         self._constructed = True
 
     def use_mapping(self, mapping):

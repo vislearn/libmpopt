@@ -14,7 +14,7 @@ class CBC:
         self.solver = pulp.COIN_CMD()
         self.solver.msg = 0 if silent else 1
         self.solver.presolve = 1 if presolve else 0
-        self.lp = pulp.LpProblem('WSP', pulp.LpMinimize)
+        self.lp = pulp.LpProblem('WSP', pulp.LpMaximize)
 
     def construct(self):
         if self._constructed:
