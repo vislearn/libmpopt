@@ -1,0 +1,19 @@
+#mesondefine ENABLE_GUROBI
+#mesondefine ENABLE_QPBO
+
+#ifndef ENABLE_GUROBI
+void abort_on_disabled_gurobi()
+{
+	std::cerr << "Aborting! ENABLE_GUROBI was disabled during configuration of libqapopt." << std::endl;
+	std::abort();
+}
+#endif
+
+
+#ifndef ENABLE_QPBO
+void abort_on_disabled_qpbo()
+{
+	std::cerr << "Aborting! ENABLE_QPBO was disabled during configuration of libqapopt." << std::endl;
+	std::abort();
+}
+#endif

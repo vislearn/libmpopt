@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu -o pipefail
+
+curl -OL 'https://pub.ist.ac.at/~vnk/software/QPBO-v1.4.src.zip'
+unzip QPBO-v1.4.src.zip
+rm QPBO-v1.4.src.zip
+mv QPBO-v1.4.src/* .
+rmdir QPBO-v1.4.src
