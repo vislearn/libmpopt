@@ -27,7 +27,7 @@ public:
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  , greedy_(graph_)
+  , greedy_(graph_, 0.5, 32)
   , qpbo_(graph_)
   {
 #ifndef ENABLE_QPBO
@@ -176,7 +176,7 @@ protected:
   }
 
   graph_type graph_;
-  greedy<ALLOCATOR> greedy_;
+  grasp<ALLOCATOR> greedy_;
 #ifdef ENABLE_QPBO
   qpbo_model_builder<ALLOCATOR> qpbo_;
 #endif
