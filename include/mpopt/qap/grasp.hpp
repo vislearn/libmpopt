@@ -342,24 +342,6 @@ protected:
     return nullptr;
   }
 
-  double cost_of_relabel(const unary_node_type* node, const index primal, const unary_node_type* swap_node, const index swap_primal)
-  {
-    cost costs = 0;
-
-    costs += cost_of_unlabel(node);
-    if (swap_node != nullptr) {
-      costs += cost_of_unlabel(swap_node, node);
-    }
-
-    costs += cost_of_label(node, primal, swap_node, swap_primal);
-    if (swap_node != nullptr) {
-      //Pass primal_unset to avoid counting pairwise cost twice if node and swap_node are adjacent.
-      costs += cost_of_label(swap_node, swap_primal, node, node->factor.primal_unset);
-    }
-
-    return costs;
-  }
-
   cost cost_of_label(const unary_node_type *node, const index primal, const unary_node_type *swap_node = nullptr, const index swap_primal = 0) const
   {
     cost costs = 0;
