@@ -60,20 +60,24 @@ public:
     max_label_size_ = max_label_size;
   }
 
-
   void run()
   {
     //FIXME: This should be done in the constructor, but apparently graph_->unaries_ etc. is not initialized there
-    const size_t max_label_size = std::accumulate(
-        graph_->unaries().begin(), graph_->unaries().end(), 0,
-        [](const size_t a, const auto* node) {
-          return std::max(a, node->factor.size());
-        });
-    scratch_costs_.reserve(max_label_size);
-    cost_matrix_.resize(graph_->unaries().size() * max_label_size);
-    candidate_heap_.reserve(graph_->unaries().size() * max_label_size);
-    frontier_set_.resize(graph_->unaries().size());
-    max_label_size_ = max_label_size;
+    if (!initialized_) {
+      const size_t max_label_size = std::accumulate(
+          graph_->unaries().begin(), graph_->unaries().end(), 0,
+          [](const size_t a, const auto* node) {
+            return std::max(a, node->factor.size());
+          });
+      scratch_costs_.reserve(max_label_size);
+      cost_matrix_.resize(graph_->unaries().size() * max_label_size);
+      candidate_heap_.reserve(graph_->unaries().size() * max_label_size);
+      frontier_set_.resize(graph_->unaries().size());
+      max_label_size_ = max_label_size;
+      eq_primal_lookup_.resize(graph_->unaries().size() * max_label_size_ * graph_->unaries().size());
+      prepare_eq_primal_lookup();
+      initialized_ = true;
+    }
 
     cost best_cost = infinity;
     primal_storage best_primals(*graph_);
@@ -90,6 +94,7 @@ public:
     }
 
     best_primals.restore();
+    fix_pairwise_primals();
 
     for (const auto* node : graph_->uniqueness())
       if (!node->factor.is_primal_set())
@@ -109,6 +114,39 @@ protected:
   size_t max_label_size_;
   std::vector<bool> frontier_set_;
   cost current_cost_;
+  std::vector<index> eq_primal_lookup_;
+  bool initialized_;
+
+  void prepare_eq_primal_lookup()
+  {
+    two_dimension_array_accessor a(graph_->unaries().size(), max_label_size_);
+    two_dimension_array_accessor b(graph_->unaries().size() * max_label_size_, graph_->unaries().size());
+    for (const unary_node_type* node : graph_->unaries()) {
+      for (const unary_node_type* other : graph_->unaries()) {
+        if (node == other) {
+          continue;
+        }
+
+        for (int p = 0; p < node->factor.size(); ++p) {
+          eq_primal_lookup_[b.to_linear(a.to_linear(node->idx, p), other->idx)] = get_equivalent_primal(node, p, other);
+        }
+      }
+    }
+  }
+
+  index get_equivalent_primal(const unary_node_type *node, const index primal, const unary_node_type *swap_node) const
+  {
+    const uniqueness_node_type* uniqueness_node = node->uniqueness[primal].node;
+    for (index q = 0; q < swap_node->factor.size(); q++) {
+      if (swap_node->uniqueness[q].node == uniqueness_node) {
+        //If uniqueness_node == nullptr, then swap_primal will be a dummy label.
+        return q;
+      }
+    }
+
+    //default to dummy (?) in case the (non-null) uniqueness_node is not linked with swap_node
+    return swap_node->factor.size() - 1;
+  }
 
   void reset()
   {
@@ -219,12 +257,14 @@ protected:
     {
       update_candidate_heap(previous_node);
 
-      std::uniform_int_distribution<index> dist(0, std::ceil(alpha_ * candidate_heap_.size()));
+      std::uniform_int_distribution<index> dist(0, std::ceil(alpha_ * candidate_heap_.size()) - 1);
       const auto candidate_index = dist(gen_);
       for (size_t i = 0; i < candidate_index; i++)
       {
         std::pop_heap(candidate_heap_.begin(), candidate_heap_.end(), candidate_comparer_);
+        candidate_heap_.pop_back();
       }
+
       const auto candidate = candidate_heap_.front();
       label_node(candidate.node, candidate.primal);
       current_cost_ += candidate.costs;
@@ -235,14 +275,15 @@ protected:
   void local_search()
   {
     bool has_improved = true;
+    int iter = 0;
 
     while (has_improved) {
       has_improved = false;
+      iter++;
 
       for (const unary_node_type* node : graph_->unaries()) {
         const auto current_primal = node->factor.primal();
         const auto node_unlabel_cost = cost_of_unlabel(node);
-        assert(cost_of_label(node, current_primal) == -node_unlabel_cost);
         
         for (index p = 0; p < node->factor.size(); ++p) {
           if (p == current_primal) {
@@ -255,10 +296,6 @@ protected:
           cost costs = node_unlabel_cost;
           costs += cost_of_label(node, p, swap_node, swap_primal);
 
-          //FIXME The local search is running in infinite loops... again. Probably errors in cost calculation.
-          cost tmp = cost_of_label(node, current_primal, swap_node, p);
-          tmp = cost_of_label(node, current_primal, swap_node, p);
-          assert(tmp == -node_unlabel_cost);
           if (swap_node != nullptr) {
             costs += cost_of_unlabel(swap_node, node);
             //Pass primal_unset to avoid counting pairwise cost twice if node and swap_node are adjacent.
@@ -272,7 +309,12 @@ protected:
               label_node(swap_node, swap_primal);
             }
             current_cost_ += costs;
+            break;
           }
+        }
+
+        if (has_improved) {
+          break;
         }
       }
     }
@@ -280,23 +322,12 @@ protected:
   
   index get_swap_primal(const unary_node_type *node, const unary_node_type *swap_node) const
   {
-    index swap_primal = 0;
-    if (swap_node != nullptr) {
-      //default to dummy (?) in case the (non-null) uniqueness_node is not linked with swap_node
-      swap_primal = swap_node->factor.size() - 1;
-      const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
-      //FIXME If there's a way to obtain the primal in swap_node associated with uniqueness_node without iterating
-      // over all primals, it should be used here.
-      // Something like uniqueness_node->unaries[swap_node->idx].slot (which currently would be wrong, afaik)
-      for (index q = 0; q < swap_node->factor.size(); q++) {
-        if (swap_node->uniqueness[q].node == uniqueness_node) {
-          //If uniqueness_node == nullptr, then swap_primal will be a dummy label.
-          swap_primal = q;
-          break;
-        }
-      }
+    if (swap_node == nullptr) {
+      return 0;
     }
-    return swap_primal;
+    two_dimension_array_accessor a(graph_->unaries().size(), max_label_size_);
+    two_dimension_array_accessor b(graph_->unaries().size() * max_label_size_, graph_->unaries().size());
+    return eq_primal_lookup_[b.to_linear(a.to_linear(node->idx, node->factor.primal()), swap_node->idx)];
   }
 
   const unary_node_type *get_unary_with_primal(const unary_node_type *node, index p) const
@@ -341,8 +372,7 @@ protected:
         }
         continue;
       }
-      //FIXME: There are cases where primal == primal1 and costs go to infinity.
-      const auto [primal0, primal1] = edge->factor.primal();
+      const auto primal1 = edge->unary1->factor.primal();
       costs += edge->factor.get(primal, primal1);
     }
 
@@ -354,7 +384,7 @@ protected:
         }
         continue;
       }
-      const auto [primal0, primal1] = edge->factor.primal();
+      const auto primal0 = edge->unary0->factor.primal();
       costs += edge->factor.get(primal0, primal);
     }
 
@@ -369,7 +399,8 @@ protected:
       if (edge->unary1 == exclude_node) {
         continue;
       }
-      const auto [primal0, primal1] = edge->factor.primal();
+      const auto primal0 = edge->unary0->factor.primal();
+      const auto primal1 = edge->unary1->factor.primal();
       costs -= edge->factor.get(primal0, primal1);
     }
 
@@ -377,7 +408,8 @@ protected:
       if (edge->unary0 == exclude_node) {
         continue;
       }
-      const auto [primal0, primal1] = edge->factor.primal();
+      const auto primal0 = edge->unary0->factor.primal();
+      const auto primal1 = edge->unary1->factor.primal();
       costs -= edge->factor.get(primal0, primal1);
     }
     return costs;
@@ -435,41 +467,22 @@ protected:
 
   void label_node(const unary_node_type* node, index primal)
   {
-    //assert(!node->factor.is_primal_set());
     node->factor.primal() = primal;
-    label_node_neighbors(node);
+    const auto& edge = node->uniqueness[primal];
+    if (edge.node != nullptr) {
+      edge.node->factor.primal() = edge.slot;
+    }
+    //Note: pairwise factors are ignored (for speed) and fixed before the run() method exits.
     frontier_set_[node->idx] = false;
     --unlabeled_;
   }
 
-  void label_node_neighbors(const unary_node_type* node)
+  void fix_pairwise_primals()
   {
-    assert(node->factor.is_primal_set());
-    const auto primal = node->factor.primal();
-
-    for (const pairwise_node_type* pairwise : node->backward) {
-      if (!pairwise->unary0->factor.is_primal_set()) {
-        frontier_set_[pairwise->unary0->idx] = true;
-      }
-      const auto left = std::get<0>(pairwise->factor.primal());
-      pairwise->factor.primal() = std::tuple(left, primal);
+    for (const pairwise_node_type* edge : graph_->pairwise()) {
+      edge->factor.primal() = std::tuple(edge->unary0->factor.primal(), edge->unary1->factor.primal());
     }
-
-    for (const auto* pairwise : node->forward) {
-      if (!pairwise->unary1->factor.is_primal_set()) {
-        frontier_set_[pairwise->unary1->idx] = true;
-      }
-      const auto right = std::get<1>(pairwise->factor.primal());
-      pairwise->factor.primal() = std::tuple(primal, right);
-    }
-
-    assert(primal < node->uniqueness.size());
-    const auto& edge = node->uniqueness[primal];
-    if (edge.node != nullptr) {
-      //assert(!edge.node->factor.is_primal_set());
-      edge.node->factor.primal() = edge.slot;
-    }
-  }
+  };
 
 };
 
