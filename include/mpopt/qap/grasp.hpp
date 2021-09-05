@@ -10,9 +10,9 @@ struct candidate
   using graph_type = graph<allocator_type>;
   using unary_node_type = typename graph_type::unary_node_type;
 
-  const unary_node_type* node;
-  index primal;
-  cost costs;
+  const unary_node_type* node{};
+  index primal{};
+  cost costs{};
 
   candidate(const unary_node_type *node, index primal, cost costs)
       : node(node), primal(primal), costs(costs)
@@ -103,19 +103,19 @@ public:
 
 protected:
 
-  const graph_type* graph_;
+  const graph_type* graph_{};
 
-  std::default_random_engine gen_;
-  index unlabeled_;
-  std::vector<cost> scratch_costs_;
-  std::vector<cost> cost_matrix_;
-  std::vector<candidate_type> candidate_heap_;
+  std::default_random_engine gen_{};
+  index unlabeled_{};
+  std::vector<cost> scratch_costs_{};
+  std::vector<cost> cost_matrix_{};
+  std::vector<candidate_type> candidate_heap_{};
   candidate_comparer<ALLOCATOR> candidate_comparer_;
-  size_t max_label_size_;
-  std::vector<bool> frontier_set_;
-  cost current_cost_;
-  std::vector<index> eq_primal_lookup_;
-  bool initialized_;
+  size_t max_label_size_{};
+  std::vector<bool> frontier_set_{};
+  cost current_cost_{};
+  std::vector<index> eq_primal_lookup_{};
+  bool initialized_{};
 
   void prepare_eq_primal_lookup()
   {
@@ -302,7 +302,7 @@ protected:
             costs += cost_of_label(swap_node, swap_primal, node, node->factor.primal_unset);
           }
 
-          if (costs < 0) {
+          if (costs < -epsilon) {
             has_improved = true;
             label_node(node, p);
             if (swap_node != nullptr) {
