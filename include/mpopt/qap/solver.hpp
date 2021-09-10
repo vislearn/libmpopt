@@ -28,7 +28,9 @@ public:
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
   , greedy_(graph_)
+#ifdef ENABLE_QPBO
   , qpbo_(graph_)
+#endif
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
