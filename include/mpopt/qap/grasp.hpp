@@ -291,6 +291,7 @@ protected:
           }
 
           const unary_node_type* swap_node = get_unary_with_primal(node, p);
+          assert(node != swap_node);
           index swap_primal = get_swap_primal(node, swap_node);
 
           cost costs = node_unlabel_cost;
@@ -304,10 +305,7 @@ protected:
 
           if (costs < -epsilon) {
             has_improved = true;
-            label_node(node, p);
-            if (swap_node != nullptr) {
-              label_node(swap_node, swap_primal);
-            }
+            swap_labels(node, p, swap_node, swap_primal);
             current_cost_ += costs;
             break;
           }
@@ -449,14 +447,39 @@ protected:
 
   void label_node(const unary_node_type* node, index primal)
   {
+    assert(!node->factor.is_primal_set());
     node->factor.primal() = primal;
-    const auto& edge = node->uniqueness[primal];
-    if (edge.node != nullptr) {
-      edge.node->factor.primal() = edge.slot;
-    }
+    label_uniqueness(node);
+
     //Note: pairwise factors are ignored (for speed) and fixed before the run() method exits.
     frontier_set_[node->idx] = false;
     --unlabeled_;
+  }
+
+  void swap_labels(const unary_node_type* node, index primal, const unary_node_type* swap_node, index swap_primal) {
+    assert(node->factor.is_primal_set());
+    const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
+    if (swap_node == nullptr) {
+      if (uniqueness_node != nullptr) {
+        uniqueness_node->factor.reset_primal();
+      }
+      node->factor.primal() = primal;
+      label_uniqueness(node);
+    } else {
+      assert(uniqueness_node != nullptr);
+      node->factor.primal() = primal;
+      swap_node->factor.primal() = swap_primal;
+      label_uniqueness(node);
+      label_uniqueness(swap_node);
+    }
+  }
+
+  void label_uniqueness(const unary_node_type *node) const
+  {
+    const link_info<uniqueness_node_type>& link = node->uniqueness[node->factor.primal()];
+    if (link.node != nullptr) {
+      link.node->factor.primal() = link.slot;
+    }
   }
 
   void fix_pairwise_primals()
@@ -465,6 +488,30 @@ protected:
       edge->factor.primal() = std::tuple(edge->unary0->factor.primal(), edge->unary1->factor.primal());
     }
   };
+
+  void assert_uniqueness()
+  {
+    for (const unary_node_type* node : graph_->unaries()) {
+      if (node->factor.is_primal_set()) {
+        const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
+        if (uniqueness_node == nullptr) {
+          continue;
+        }
+        assert(uniqueness_node->factor.is_primal_set());
+        assert((uniqueness_node->unaries[uniqueness_node->factor.primal()].node == node));
+      }
+    }
+
+    for (const uniqueness_node_type* node : graph_->uniqueness()) {
+      int assigned = 0;
+      node->template traverse_unaries([&](link_info<unary_node_type> link, index slot) {
+        if (link.node->factor.primal() == link.slot) {
+          assigned++;
+        }
+      });
+      assert(assigned <= 1);
+    }
+  }
 
 };
 
