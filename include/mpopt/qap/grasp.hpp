@@ -266,7 +266,6 @@ protected:
 
     while (has_improved) {
       has_improved = false;
-
       for (const unary_node_type* node : graph_->unaries()) {
         const auto current_primal = node->factor.primal();
         const auto node_unlabel_cost = cost_of_unlabel(node);
@@ -444,19 +443,26 @@ protected:
 
   void swap_labels(const unary_node_type* node, index primal, const unary_node_type* swap_node, index swap_primal) {
     assert(node->factor.is_primal_set());
-    const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
     if (swap_node == nullptr) {
-      if (uniqueness_node != nullptr) {
-        uniqueness_node->factor.reset_primal();
-      }
+      reset_uniqueness(node);
       node->factor.primal() = primal;
       label_uniqueness(node);
     } else {
-      assert(uniqueness_node != nullptr);
+      reset_uniqueness(node);
+      reset_uniqueness(swap_node);
       node->factor.primal() = primal;
       swap_node->factor.primal() = swap_primal;
       label_uniqueness(node);
       label_uniqueness(swap_node);
+    }
+  }
+
+  void reset_uniqueness(const unary_node_type* node) const
+  {
+    assert(node->factor.is_primal_set());
+    const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
+    if (uniqueness_node != nullptr) {
+      uniqueness_node->factor.reset_primal();
     }
   }
 
