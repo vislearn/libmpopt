@@ -409,6 +409,9 @@ protected:
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
     value_relaxed_ = value_latest_;
 
+    scratch_greedy_indices_.resize(no_cliques());
+    std::iota(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), 0);
+
     finalized_graph_ = true;
   }
 
@@ -549,11 +552,11 @@ protected:
 
   void greedy()
   {
-    std::shuffle(clique_indices_.begin(), clique_indices_.end(), gen_);
+    std::shuffle(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), gen_);
 
     std::fill(assignment_latest_.begin(), assignment_latest_.end(), -1);
-    for (const auto& cl : clique_indices_)
-      round(cl);
+    for (const auto clique_idx : scratch_greedy_indices_)
+      round(clique_indices_[clique_idx]);
 
     value_latest_ = primal(assignment_latest_);
   }
@@ -688,6 +691,7 @@ protected:
   int iterations_;
   double temperature_;
   mutable std::vector<cost> scratch_;
+  mutable std::vector<index> scratch_greedy_indices_;
 
   cost value_latest_;
   std::vector<int> assignment_latest_;
