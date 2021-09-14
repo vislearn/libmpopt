@@ -38,11 +38,9 @@ public:
   using candidate_type = typename mpopt::qap::candidate<ALLOCATOR>;
 
   double alpha_;
-  unsigned iterations_;
 
-  grasp(const graph_type& graph, double alpha, unsigned iterations)
+  grasp(const graph_type& graph, double alpha)
   : alpha_(alpha)
-    , iterations_(iterations)
     , graph_(&graph)
     , gen_(std::random_device()())
   {
@@ -79,21 +77,11 @@ public:
       initialized_ = true;
     }
 
-    cost best_cost = infinity;
-    primal_storage best_primals(*graph_);
+    reset();
+    const auto* root = initialize_assignment();
+    complete_assignment(root);
+    local_search();
 
-    for (unsigned i = 0; i < iterations_; ++i) {
-      reset();
-      const auto* root = initialize_assignment();
-      complete_assignment(root);
-      local_search();
-      if (current_cost_ < best_cost) {
-        best_cost = current_cost_;
-        best_primals.save();
-      }
-    }
-
-    best_primals.restore();
     fix_pairwise_primals();
 
     for (const auto* node : graph_->uniqueness())
@@ -275,11 +263,9 @@ protected:
   void local_search()
   {
     bool has_improved = true;
-    int iter = 0;
 
     while (has_improved) {
       has_improved = false;
-      iter++;
 
       for (const unary_node_type* node : graph_->unaries()) {
         const auto current_primal = node->factor.primal();
