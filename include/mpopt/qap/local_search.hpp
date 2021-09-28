@@ -31,6 +31,7 @@ protected:
   std::vector<index> eq_primal_lookup_{};
   size_t max_label_size_{};
   bool initialized_{};
+  std::vector<bool> skip_node_set_{};
 
   double two_exchange()
   {
@@ -40,6 +41,10 @@ protected:
     while (has_improved) {
       has_improved = false;
       for (const unary_node_type *node: graph_->unaries()) {
+        if (skip_node_set_[node->idx]) {
+          continue;
+        }
+
         const auto current_primal = node->factor.primal();
         const auto node_unlabel_cost = cost_of_unlabel(node);
 
@@ -65,17 +70,32 @@ protected:
             has_improved = true;
             swap_labels(node, p, swap_node, swap_primal);
             cost_change += costs;
+            update_skip_set(node, swap_node);
             break;
           }
         }
 
         if (has_improved) {
           break;
+        } else {
+          skip_node_set_[node->idx] = true;
         }
       }
     }
 
     return cost_change;
+  }
+
+  void update_skip_set(const unary_node_type *node, const unary_node_type *swap_node)
+  {
+    for (const pairwise_node_type* edge : node->forward) {
+      skip_node_set_[edge->unary1->idx] = false;
+    }
+    if (swap_node != nullptr) {
+      for (const pairwise_node_type* edge : swap_node->forward) {
+        skip_node_set_[edge->unary1->idx] = false;
+      }
+    }
   }
 
   void initialize()
@@ -87,6 +107,7 @@ protected:
         });
     eq_primal_lookup_.resize(graph_->unaries().size() * max_label_size_ * graph_->unaries().size());
     prepare_eq_primal_lookup();
+    skip_node_set_.resize(graph_->unaries().size(), false);
     initialized_ = true;
   }
 
