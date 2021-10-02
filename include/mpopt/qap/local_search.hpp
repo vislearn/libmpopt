@@ -23,6 +23,7 @@ public:
       initialize();
     }
 
+    reset();
     return two_exchange();
   }
 
@@ -109,6 +110,11 @@ protected:
     prepare_eq_primal_lookup();
     skip_node_set_.resize(graph_->unaries().size(), false);
     initialized_ = true;
+  }
+
+  void reset()
+  {
+    std::fill(skip_node_set_.begin(), skip_node_set_.end(), false);
   }
 
   void prepare_eq_primal_lookup()
