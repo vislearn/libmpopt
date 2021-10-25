@@ -48,3 +48,13 @@ class GurobiModel():
         self.gurobi.Params.Threads = 1
         self.gurobi.Params.Method = 1
         self.gurobi.optimize()
+
+    def assignment(self):
+        result = [None] * self.model.no_left
+        for assignment, var in zip(self.model.assignments, self.gurobi.getVars()):
+            if var.X >= 1 - 1e-4:
+                assert result[assignment.left] is None
+                result[assignment.left] = assignment.right
+            else:
+                assert var.X <= 1e-4
+        return result
