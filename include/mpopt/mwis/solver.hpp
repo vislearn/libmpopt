@@ -529,7 +529,7 @@ protected:
   {
     bool has_improved = false;
     for (int i = 0; i < greedy_generations; ++i)
-      has_improved &= update_integer_assignment();
+      has_improved |= update_integer_assignment();
     return has_improved;
   }
 
