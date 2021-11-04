@@ -27,10 +27,10 @@ public:
 
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
-  , greedy_(graph_, 0.25)
-//  , greedy_(graph_)
+  , local_search_(graph_)
   , qpbo_(graph_)
   {
+    greedy_ = std::make_unique<greedy<ALLOCATOR>>(graph_);
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
               << "ENABLE_QPBO was not activated during configuration of libmpopt.\n"
@@ -42,6 +42,37 @@ public:
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
 
+  void set_fusion_moves_enabled(bool enabled) {
+    fusion_moves_enabled_ = enabled;
+  }
+
+  void set_dual_updates_enabled(bool enabled) {
+    dual_updates_enabled_ = enabled;
+  }
+
+  void set_local_search_enabled(bool enabled) {
+    local_search_enabled_ = enabled;
+  }
+
+  void set_grasp_alpha(double alpha) {
+    assert(0 < alpha && alpha <= 1);
+    grasp_alpha_ = alpha;
+  }
+
+  void use_grasp() {
+    if (grasp_ == nullptr) {
+      greedy_.reset();
+      grasp_ = std::make_unique<grasp<ALLOCATOR>>(graph_, grasp_alpha_);
+    }
+  }
+
+  void use_greedy() {
+    if (greedy_ == nullptr) {
+      grasp_.reset();
+      greedy_ = std::make_unique<greedy<ALLOCATOR>>(graph_);
+    }
+  }
+
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
     graph_.check_structure();
@@ -49,6 +80,13 @@ public:
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
+
+    if (!dual_updates_enabled_) {
+      for (const auto* node : graph_.pairwise()) {
+        pairwise_messages::send_messages_to_unaries(node);
+      }
+    }
+
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
       const auto clock_start = clock_type::now();
 
@@ -74,7 +112,15 @@ public:
 
   void compute_greedy_assignment()
   {
-    greedy_.run();
+    if (greedy_ != nullptr) {
+      greedy_->run();
+    } else {
+      grasp_->run();
+    }
+
+    if (local_search_enabled_) {
+      local_search_.run();
+    }
     assert(this->check_primal_consistency());
   }
 
@@ -103,17 +149,19 @@ protected:
     auto lb_before = this->lower_bound();
 #endif
 
-    if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::normal_mplp_plus_plus) {
-      for (const auto* node : graph_.pairwise())
-        pairwise_messages::full_mplp_update(node);
-    }
+    if (dual_updates_enabled_) {
+      if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::normal_mplp_plus_plus) {
+        for (const auto* node : graph_.pairwise())
+          pairwise_messages::full_mplp_update(node);
+      }
 
-    if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::diffused_mplp_plus_plus) {
-      for (const auto* node : graph_.unaries())
-        pairwise_messages::send_messages_to_pairwise(node);
+      if constexpr (PAIRWISE_UPDATE_KIND == pairwise_update_kind::diffused_mplp_plus_plus) {
+        for (const auto* node : graph_.unaries())
+          pairwise_messages::send_messages_to_pairwise(node);
 
-      for (const auto* node : graph_.pairwise())
-        pairwise_messages::send_messages_to_unaries(node);
+        for (const auto* node : graph_.pairwise())
+          pairwise_messages::send_messages_to_unaries(node);
+      }
     }
 
     if constexpr (rounding) {
@@ -127,7 +175,7 @@ protected:
         auto current_ub = this->evaluate_primal();
 
 #ifdef ENABLE_QPBO
-        if (previous_ub != infinity) {
+        if (fusion_moves_enabled_ && previous_ub != infinity) {
           qpbo_.reset();
           index idx = 0;
           for (const auto* node : graph_.unaries()) {
@@ -160,14 +208,16 @@ protected:
       }
     }
 
-    for (const auto* node : graph_.unaries()) {
-      graph_.add_to_constant(node->factor.normalize());
-      uniqueness_messages::send_messages_to_uniqueness(node);
-    }
+    if (dual_updates_enabled_) {
+      for (const auto* node : graph_.unaries()) {
+        graph_.add_to_constant(node->factor.normalize());
+        uniqueness_messages::send_messages_to_uniqueness(node);
+      }
 
-    for (const auto* node : graph_.uniqueness()) {
-      graph_.add_to_constant(node->factor.normalize());
-      uniqueness_messages::send_messages_to_unaries(node);
+      for (const auto* node : graph_.uniqueness()) {
+        graph_.add_to_constant(node->factor.normalize());
+        uniqueness_messages::send_messages_to_unaries(node);
+      }
     }
 
 #ifndef NDEBUG
@@ -176,9 +226,14 @@ protected:
 #endif
   }
 
+  bool fusion_moves_enabled_ = true;
+  bool dual_updates_enabled_ = true;
+  bool local_search_enabled_ = true;
+  double grasp_alpha_ = 0.25;
   graph_type graph_;
-  grasp<ALLOCATOR> greedy_;
-//  greedy<ALLOCATOR> greedy_;
+  std::unique_ptr<grasp<ALLOCATOR>> grasp_{};
+  std::unique_ptr<greedy<ALLOCATOR>> greedy_;
+  local_search<ALLOCATOR> local_search_;
 #ifdef ENABLE_QPBO
   qpbo_model_builder<ALLOCATOR> qpbo_;
 #endif

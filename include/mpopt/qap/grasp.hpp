@@ -43,7 +43,6 @@ public:
   : alpha_(alpha)
     , graph_(&graph)
     , gen_(std::random_device()())
-    , local_search_(&graph)
   {
     //assert(graph_->unaries().size() > 0);
     const size_t max_label_size = std::accumulate(
@@ -78,8 +77,6 @@ public:
     reset();
     const auto* root = initialize_assignment();
     complete_assignment(root);
-    local_search_.run();
-
     fix_pairwise_primals();
 
     for (const auto* node : graph_->uniqueness())
@@ -101,7 +98,6 @@ protected:
   std::vector<bool> frontier_set_{};
   cost current_cost_{};
   bool initialized_{};
-  local_search<ALLOCATOR> local_search_;
 
   void reset()
   {

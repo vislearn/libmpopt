@@ -13,8 +13,8 @@ public:
   using uniqueness_node_type = typename graph_type::uniqueness_node_type;
   using pairwise_node_type = typename graph_type::pairwise_node_type;
 
-  explicit local_search(const graph_type *graph)
-      : graph_(graph)
+  explicit local_search(const graph_type& graph)
+      : graph_(&graph)
   {}
 
   double run()
@@ -24,7 +24,9 @@ public:
     }
 
     reset();
-    return two_exchange();
+    const auto cost_change = two_exchange();
+    fix_pairwise_primals();
+    return cost_change;
   }
 
 protected:
@@ -127,7 +129,7 @@ protected:
           continue;
         }
 
-        for (int p = 0; p < node->factor.size(); ++p) {
+        for (index p = 0; p < node->factor.size(); ++p) {
           eq_primal_lookup_[b.to_linear(a.to_linear(node->idx, p), other->idx)] = get_equivalent_primal(node, p, other);
         }
       }
@@ -164,7 +166,7 @@ protected:
     if (uniqueness_node == nullptr) {
       return nullptr;
     }
-    if (uniqueness_node->factor.is_primal_set()) {
+    if (uniqueness_node->factor.primal() < uniqueness_node->factor.size()) {
       return uniqueness_node->unaries[uniqueness_node->factor.primal()].node;
     }
     return nullptr;
@@ -246,7 +248,7 @@ protected:
     assert(node->factor.is_primal_set());
     const uniqueness_node_type* uniqueness_node = node->uniqueness[node->factor.primal()].node;
     if (uniqueness_node != nullptr) {
-      uniqueness_node->factor.reset_primal();
+      uniqueness_node->factor.primal() = uniqueness_node->factor.size();
     }
   }
 
@@ -255,8 +257,16 @@ protected:
     const link_info<uniqueness_node_type>& link = node->uniqueness[node->factor.primal()];
     if (link.node != nullptr) {
       link.node->factor.primal() = link.slot;
+      assert(link.slot < link.node->unaries.size());
     }
   }
+
+  void fix_pairwise_primals()
+  {
+    for (const pairwise_node_type* edge : graph_->pairwise()) {
+      edge->factor.primal() = std::tuple(edge->unary0->factor.primal(), edge->unary1->factor.primal());
+    }
+  };
 
 };
 
