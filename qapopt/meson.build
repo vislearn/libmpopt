@@ -84,7 +84,7 @@ lib = both_libraries(
   include_directories: include_dirs,
   version: meson.project_version(),
   soversion: '0',
-  pie: true,
+  pic: true,
   dependencies: [lsatr, gurobi, qpbo],
   install: true)
 
