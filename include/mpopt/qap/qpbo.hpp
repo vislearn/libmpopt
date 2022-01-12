@@ -38,7 +38,7 @@ public:
   , graph_(&graph)
   , enable_weak_persistency_(true)
   , enable_probe_(false)
-  , enable_improve_(false)
+  , enable_improve_(true)
   , unaries_(graph.unaries().size())
   , uniqueness_(graph.uniqueness().size())
   , pairwise_(graph.pairwise().size())
