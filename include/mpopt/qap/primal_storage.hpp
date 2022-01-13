@@ -16,6 +16,11 @@ public:
   {
   }
 
+  void resize()
+  {
+    data_.resize(graph_->unaries().size());
+  }
+
   void save()
   {
     auto it = data_.begin();

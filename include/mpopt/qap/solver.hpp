@@ -31,6 +31,8 @@ public:
 #ifdef ENABLE_QPBO
   , qpbo_(graph_)
 #endif
+  , primals_best_(graph_)
+  , primals_candidate_(graph_)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -46,6 +48,8 @@ public:
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
     graph_.check_structure();
+    primals_best_.resize();
+    primals_candidate_.resize();
     cost best_ub = infinity;
 
     signal_handler h;
@@ -118,21 +122,20 @@ protected:
     }
 
     if constexpr (rounding) {
-      primal_storage previous(graph_), current(graph_);
       for (int i = 0; i < greedy_generations; ++i) {
-        previous.save();
-        const auto previous_ub = this->evaluate_primal();
+        primals_best_.save();
+        const auto ub_best = this->evaluate_primal();
 
         compute_greedy_assignment();
-        current.save();
-        auto current_ub = this->evaluate_primal();
+        primals_candidate_.save();
+        auto ub_candidate = this->evaluate_primal();
 
 #ifdef ENABLE_QPBO
-        if (previous_ub != infinity) {
+        if (ub_best != infinity) {
           qpbo_.reset();
           index idx = 0;
           for (const auto* node : graph_.unaries()) {
-            qpbo_.add_factor(node, previous.get(idx), current.get(idx));
+            qpbo_.add_factor(node, primals_best_.get(idx), primals_candidate_.get(idx));
             ++idx;
           }
 
@@ -149,15 +152,15 @@ protected:
           assert(this->check_primal_consistency());
           const auto fused_ub = this->evaluate_primal();
 
-          if (fused_ub < current_ub)
-            current_ub = fused_ub;
+          if (fused_ub < ub_candidate)
+            ub_candidate = fused_ub;
           else
-            current.restore();
+            primals_candidate_.restore();
         }
 #endif
 
-        if (previous_ub < current_ub)
-          previous.restore();
+        if (ub_best < ub_candidate)
+          primals_best_.restore();
       }
     }
 
@@ -182,6 +185,7 @@ protected:
 #ifdef ENABLE_QPBO
   qpbo_model_builder<ALLOCATOR> qpbo_;
 #endif
+  primal_storage<ALLOCATOR> primals_best_, primals_candidate_;
   friend class ::mpopt::solver<solver<ALLOCATOR>>;
 };
 
