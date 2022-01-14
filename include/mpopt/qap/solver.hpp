@@ -75,6 +75,21 @@ public:
                 << "t=" << this->runtime() << std::endl;
     }
 
+    // If max_batches is zero the caller does not want to run any dual
+    // iterations at all. In those cases we run the greedy heurisitic the
+    // specified number of times and fuse the solutions together.
+    if (max_batches == 0) {
+      const auto lb = this->lower_bound();
+      for (int i = 0; i < greedy_generations; ++i) {
+        primal_step();
+        std::cout << "greedy=" << (i+1) << " "
+                  << "lb=" << lb << " "
+                  << "ub=" << ub_best_ << " "
+                  << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
+                  << "t=" << this->runtime() << std::endl;
+      }
+    }
+
     primals_best_.restore();
   }
 
