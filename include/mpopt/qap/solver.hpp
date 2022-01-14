@@ -50,7 +50,7 @@ public:
     graph_.check_structure();
     primals_best_.resize();
     primals_candidate_.resize();
-    cost best_ub = infinity;
+    ub_best_ = ub_candidate_ = infinity;
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
@@ -62,7 +62,6 @@ public:
 
       single_pass<true>(greedy_generations);
 
-      best_ub = std::min(best_ub, this->evaluate_primal());
       const auto lb = this->lower_bound();
       this->iterations_ += batch_size;
 
@@ -71,10 +70,12 @@ public:
 
       std::cout << "it=" << this->iterations_ << " "
                 << "lb=" << lb << " "
-                << "ub=" << best_ub << " "
-                << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
+                << "ub=" << ub_best_ << " "
+                << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
                 << "t=" << this->runtime() << std::endl;
     }
+
+    primals_best_.restore();
   }
 
   void compute_greedy_assignment()
@@ -123,15 +124,12 @@ protected:
 
     if constexpr (rounding) {
       for (int i = 0; i < greedy_generations; ++i) {
-        primals_best_.save();
-        const auto ub_best = this->evaluate_primal();
-
         compute_greedy_assignment();
-        primals_candidate_.save();
-        auto ub_candidate = this->evaluate_primal();
+        ub_candidate_ = this->evaluate_primal();
 
 #ifdef ENABLE_QPBO
-        if (ub_best != infinity) {
+        primals_candidate_.save();
+        if (ub_best_ != infinity) {
           qpbo_.reset();
           index idx = 0;
           for (const auto* node : graph_.unaries()) {
@@ -150,17 +148,27 @@ protected:
           qpbo_.optimize();
           qpbo_.update_primals();
           assert(this->check_primal_consistency());
-          const auto fused_ub = this->evaluate_primal();
+          const auto ub_fused = this->evaluate_primal();
 
-          if (fused_ub < ub_candidate)
-            ub_candidate = fused_ub;
-          else
-            primals_candidate_.restore();
+          if (ub_fused < std::min(ub_best_, ub_candidate_)) {
+            primals_best_.save();
+            ub_best_ = ub_fused;
+          } else if (ub_candidate_ < std::min(ub_best_, ub_fused)) {
+            primals_best_ = primals_candidate_;
+            ub_best_ = ub_candidate_;
+          } else {
+            assert(ub_best_ <= std::min(ub_candidate_, ub_fused));
+          }
+        } else if (ub_candidate_ < ub_best_) {
+          primals_best_ = primals_candidate_;
+          ub_best_ = ub_candidate_;
+        }
+#else
+        if (ub_candidate_ < ub_best_) {
+          primals_best_.save();
+          ub_best_ = ub_candidate_;
         }
 #endif
-
-        if (ub_best < ub_candidate)
-          primals_best_.restore();
       }
     }
 
@@ -186,6 +194,7 @@ protected:
   qpbo_model_builder<ALLOCATOR> qpbo_;
 #endif
   primal_storage<ALLOCATOR> primals_best_, primals_candidate_;
+  cost ub_best_, ub_candidate_;
   friend class ::mpopt::solver<solver<ALLOCATOR>>;
 };
 
