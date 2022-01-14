@@ -81,7 +81,11 @@ public:
     if (max_batches == 0) {
       const auto lb = this->lower_bound();
       for (int i = 0; i < greedy_generations; ++i) {
+        const auto clock_start = clock_type::now();
         primal_step();
+        const auto clock_end = clock_type::now();
+        this->duration_ += clock_end - clock_start;
+
         std::cout << "greedy=" << (i+1) << " "
                   << "lb=" << lb << " "
                   << "ub=" << ub_best_ << " "
