@@ -122,55 +122,9 @@ protected:
         pairwise_messages::send_messages_to_unaries(node);
     }
 
-    if constexpr (rounding) {
-      for (int i = 0; i < greedy_generations; ++i) {
-        compute_greedy_assignment();
-        ub_candidate_ = this->evaluate_primal();
-
-#ifdef ENABLE_QPBO
-        primals_candidate_.save();
-        if (ub_best_ != infinity) {
-          qpbo_.reset();
-          index idx = 0;
-          for (const auto* node : graph_.unaries()) {
-            qpbo_.add_factor(node, primals_best_.get(idx), primals_candidate_.get(idx));
-            ++idx;
-          }
-
-          for (const auto* node : graph_.uniqueness())
-            qpbo_.add_factor(node);
-
-          for (const auto* node : graph_.pairwise())
-            qpbo_.add_factor(node);
-
-          qpbo_.enable_improve(true);
-          qpbo_.finalize();
-          qpbo_.optimize();
-          qpbo_.update_primals();
-          assert(this->check_primal_consistency());
-          const auto ub_fused = this->evaluate_primal();
-
-          if (ub_fused < std::min(ub_best_, ub_candidate_)) {
-            primals_best_.save();
-            ub_best_ = ub_fused;
-          } else if (ub_candidate_ < std::min(ub_best_, ub_fused)) {
-            primals_best_ = primals_candidate_;
-            ub_best_ = ub_candidate_;
-          } else {
-            assert(ub_best_ <= std::min(ub_candidate_, ub_fused));
-          }
-        } else if (ub_candidate_ < ub_best_) {
-          primals_best_ = primals_candidate_;
-          ub_best_ = ub_candidate_;
-        }
-#else
-        if (ub_candidate_ < ub_best_) {
-          primals_best_.save();
-          ub_best_ = ub_candidate_;
-        }
-#endif
-      }
-    }
+    if constexpr (rounding)
+      for (int i = 0; i < greedy_generations; ++i)
+        primal_step();
 
     for (const auto* node : graph_.unaries()) {
       graph_.add_to_constant(node->factor.normalize());
@@ -185,6 +139,54 @@ protected:
 #ifndef NDEBUG
     auto lb_after = this->lower_bound();
     assert(lb_before <= lb_after + epsilon);
+#endif
+  }
+
+  void primal_step() {
+    compute_greedy_assignment();
+    ub_candidate_ = this->evaluate_primal();
+
+#ifdef ENABLE_QPBO
+    primals_candidate_.save();
+    if (ub_best_ != infinity) {
+      qpbo_.reset();
+      index idx = 0;
+      for (const auto* node : graph_.unaries()) {
+        qpbo_.add_factor(node, primals_best_.get(idx), primals_candidate_.get(idx));
+        ++idx;
+      }
+
+      for (const auto* node : graph_.uniqueness())
+        qpbo_.add_factor(node);
+
+      for (const auto* node : graph_.pairwise())
+        qpbo_.add_factor(node);
+
+      qpbo_.enable_improve(true);
+      qpbo_.finalize();
+      qpbo_.optimize();
+      qpbo_.update_primals();
+      assert(this->check_primal_consistency());
+      const auto ub_fused = this->evaluate_primal();
+
+      if (ub_fused < std::min(ub_best_, ub_candidate_)) {
+        primals_best_.save();
+        ub_best_ = ub_fused;
+      } else if (ub_candidate_ < std::min(ub_best_, ub_fused)) {
+        primals_best_ = primals_candidate_;
+        ub_best_ = ub_candidate_;
+      } else {
+        assert(ub_best_ <= std::min(ub_candidate_, ub_fused));
+      }
+    } else if (ub_candidate_ < ub_best_) {
+      primals_best_ = primals_candidate_;
+      ub_best_ = ub_candidate_;
+    }
+#else
+    if (ub_candidate_ < ub_best_) {
+      primals_best_.save();
+      ub_best_ = ub_candidate_;
+    }
 #endif
   }
 
