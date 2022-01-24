@@ -50,9 +50,9 @@ mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx,
   return to_unary(node);
 }
 
-mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries)
+mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries, int label_idx)
 {
-  auto* node = from_graph(graph)->add_uniqueness(idx, number_of_unaries);
+  auto* node = from_graph(graph)->add_uniqueness(idx, number_of_unaries, label_idx);
   return to_uniqueness(node);
 }
 

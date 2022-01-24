@@ -52,6 +52,18 @@ public:
     primals_candidate_.resize();
     ub_best_ = ub_candidate_ = infinity;
 
+    auto dump_assignment = [this]() {
+      bool first=true;
+      std::cout << "[";
+      for (const auto a : primals_best_.assignment()) {
+        if (!first)
+          std::cout << " ";
+        std::cout << a;
+        first = false;
+      }
+      std::cout << "]";
+    };
+
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
@@ -72,7 +84,10 @@ public:
                 << "lb=" << lb << " "
                 << "ub=" << ub_best_ << " "
                 << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                << "t=" << this->runtime() << std::endl;
+                << "t=" << this->runtime() << " "
+                << "a=";
+      dump_assignment();
+      std::cout << "\n";
     }
 
     // If max_batches is zero the caller does not want to run any dual
@@ -90,7 +105,10 @@ public:
                   << "lb=" << lb << " "
                   << "ub=" << ub_best_ << " "
                   << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                  << "t=" << this->runtime() << std::endl;
+                  << "t=" << this->runtime() << " "
+                  << "a=";
+        dump_assignment();
+        std::cout << "\n";
       }
     }
 

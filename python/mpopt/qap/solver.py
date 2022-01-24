@@ -183,7 +183,7 @@ def construct_solver(deco):
     # insert uniqueness factors
     if deco.with_uniqueness:
         for idx_uniqueness, (label_idx, assigned_in) in enumerate(deco.label_set.items()):
-            f = lib.graph_add_uniqueness(g, idx_uniqueness, len(assigned_in))
+            f = lib.graph_add_uniqueness(g, idx_uniqueness, len(assigned_in), label_idx)
             for slot, assignment_idx in enumerate(assigned_in):
                 assignment = deco.model.assignments[assignment_idx]
                 assert getattr(assignment, deco.label_side) == label_idx
