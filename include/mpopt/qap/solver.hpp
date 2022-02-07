@@ -28,7 +28,11 @@ public:
   solver(const ALLOCATOR& allocator = ALLOCATOR())
   : graph_(allocator)
   , local_search_(graph_)
+#ifdef ENABLE_QPBO
   , qpbo_(graph_)
+#endif
+  , primals_best_(graph_)
+  , primals_candidate_(graph_)
   {
     greedy_ = std::make_unique<greedy<ALLOCATOR>>(graph_);
 #ifndef ENABLE_QPBO
@@ -76,7 +80,9 @@ public:
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
     graph_.check_structure();
-    cost best_ub = infinity;
+    primals_best_.resize();
+    primals_candidate_.resize();
+    ub_best_ = ub_candidate_ = infinity;
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
@@ -95,7 +101,6 @@ public:
 
       single_pass<true>(greedy_generations);
 
-      best_ub = std::min(best_ub, this->evaluate_primal());
       const auto lb = this->lower_bound();
       this->iterations_ += batch_size;
 
@@ -104,10 +109,31 @@ public:
 
       std::cout << "it=" << this->iterations_ << " "
                 << "lb=" << lb << " "
-                << "ub=" << best_ub << " "
-                << "gap=" << static_cast<float>(100.0 * (best_ub - lb) / std::abs(lb)) << "% "
+                << "ub=" << ub_best_ << " "
+                << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
                 << "t=" << this->runtime() << std::endl;
     }
+
+    // If max_batches is zero the caller does not want to run any dual
+    // iterations at all. In those cases we run the greedy heurisitic the
+    // specified number of times and fuse the solutions together.
+    if (max_batches == 0) {
+      const auto lb = this->lower_bound();
+      for (int i = 0; i < greedy_generations; ++i) {
+        const auto clock_start = clock_type::now();
+        primal_step();
+        const auto clock_end = clock_type::now();
+        this->duration_ += clock_end - clock_start;
+
+        std::cout << "greedy=" << (i+1) << " "
+                  << "lb=" << lb << " "
+                  << "ub=" << ub_best_ << " "
+                  << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
+                  << "t=" << this->runtime() << std::endl;
+      }
+    }
+
+    primals_best_.restore();
   }
 
   void compute_greedy_assignment()
@@ -164,49 +190,9 @@ protected:
       }
     }
 
-    if constexpr (rounding) {
-      primal_storage previous(graph_), current(graph_);
-      for (int i = 0; i < greedy_generations; ++i) {
-        previous.save();
-        const auto previous_ub = this->evaluate_primal();
-
-        compute_greedy_assignment();
-        current.save();
-        auto current_ub = this->evaluate_primal();
-
-#ifdef ENABLE_QPBO
-        if (fusion_moves_enabled_ && previous_ub != infinity) {
-          qpbo_.reset();
-          index idx = 0;
-          for (const auto* node : graph_.unaries()) {
-            qpbo_.add_factor(node, previous.get(idx), current.get(idx));
-            ++idx;
-          }
-
-          for (const auto* node : graph_.uniqueness())
-            qpbo_.add_factor(node);
-
-          for (const auto* node : graph_.pairwise())
-            qpbo_.add_factor(node);
-
-          qpbo_.enable_improve(true);
-          qpbo_.finalize();
-          qpbo_.optimize();
-          qpbo_.update_primals();
-          assert(this->check_primal_consistency());
-          const auto fused_ub = this->evaluate_primal();
-
-          if (fused_ub < current_ub)
-            current_ub = fused_ub;
-          else
-            current.restore();
-        }
-#endif
-
-        if (previous_ub < current_ub)
-          previous.restore();
-      }
-    }
+    if constexpr (rounding)
+      for (int i = 0; i < greedy_generations; ++i)
+        primal_step();
 
     if (dual_updates_enabled_) {
       for (const auto* node : graph_.unaries()) {
@@ -226,10 +212,54 @@ protected:
 #endif
   }
 
-  bool fusion_moves_enabled_ = true;
-  bool dual_updates_enabled_ = true;
-  bool local_search_enabled_ = true;
-  double grasp_alpha_ = 0.25;
+  void primal_step() {
+    compute_greedy_assignment();
+    ub_candidate_ = this->evaluate_primal();
+
+#ifdef ENABLE_QPBO
+    primals_candidate_.save();
+    if (fusion_moves_enabled_ && ub_best_ != infinity) {
+      qpbo_.reset();
+      index idx = 0;
+      for (const auto* node : graph_.unaries()) {
+        qpbo_.add_factor(node, primals_best_.get(idx), primals_candidate_.get(idx));
+        ++idx;
+      }
+
+      for (const auto* node : graph_.uniqueness())
+        qpbo_.add_factor(node);
+
+      for (const auto* node : graph_.pairwise())
+        qpbo_.add_factor(node);
+
+      qpbo_.enable_improve(true);
+      qpbo_.finalize();
+      qpbo_.optimize();
+      qpbo_.update_primals();
+      assert(this->check_primal_consistency());
+      const auto ub_fused = this->evaluate_primal();
+
+      if (ub_fused < std::min(ub_best_, ub_candidate_)) {
+        primals_best_.save();
+        ub_best_ = ub_fused;
+      } else if (ub_candidate_ < std::min(ub_best_, ub_fused)) {
+        primals_best_ = primals_candidate_;
+        ub_best_ = ub_candidate_;
+      } else {
+        assert(ub_best_ <= std::min(ub_candidate_, ub_fused));
+      }
+    } else if (ub_candidate_ < ub_best_) {
+      primals_best_ = primals_candidate_;
+      ub_best_ = ub_candidate_;
+    }
+#else
+    if (ub_candidate_ < ub_best_) {
+      primals_best_.save();
+      ub_best_ = ub_candidate_;
+    }
+#endif
+  }
+
   graph_type graph_;
   std::unique_ptr<grasp<ALLOCATOR>> grasp_{};
   std::unique_ptr<greedy<ALLOCATOR>> greedy_;
@@ -237,7 +267,14 @@ protected:
 #ifdef ENABLE_QPBO
   qpbo_model_builder<ALLOCATOR> qpbo_;
 #endif
+  primal_storage<ALLOCATOR> primals_best_, primals_candidate_;
+  cost ub_best_, ub_candidate_;
   friend class ::mpopt::solver<solver<ALLOCATOR>>;
+
+  bool fusion_moves_enabled_ = true;
+  bool dual_updates_enabled_ = true;
+  bool local_search_enabled_ = true;
+  double grasp_alpha_ = 0.25;
 };
 
 }

@@ -105,7 +105,7 @@ foreach sublibrary : sublibraries
     include_directories: include_dirs,
     version: meson.project_version(),
     soversion: '0',
-    pie: true,
+    pic: true,
     dependencies: [gurobi, qpbo],
     install: true)
 

@@ -14,20 +14,23 @@ trap 'rm -rf "${temp_dir}"' EXIT
 source_dir=$(pwd)
 prefix="${temp_dir}/install"
 
-custom_sitelibs=$(scripts/print-python-libpath "${prefix}")
-export PYTHONPATH="${custom_sitelibs}${PYTHONPATH:+:${PYTHONPATH}}"
+pythonlibdir="${prefix}/lib/python/site-packages"
+
+export PKG_CONFIG_PATH="${prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 export LD_LIBRARY_PATH="${prefix}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+export PYTHONPATH="${pythonlibdir}${PYTHONPATH:+:${PYTHONPATH}}"
 export PATH="${prefix}/bin${PATH:+:${PATH}}"
 
 meson_args=(
 	--prefix="${prefix}"
 	--bindir=bin
 	--libdir=lib
-	--pkg-config-path="${prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 	-Db_ndebug=if-release
 	-Dbuildtype="${buildtype}"
 	-Dc_args='-march=native -mtune=native'
 	-Dcpp_args='-march=native -mtune=native'
+	-Dpython.platlibdir="${pythonlibdir}"
+	-Dpython.purelibdir="${pythonlibdir}"
 )
 
 cd "${temp_dir}"
