@@ -239,14 +239,19 @@ protected:
       assert(this->check_primal_consistency());
       const auto ub_fused = this->evaluate_primal();
 
-      if (ub_fused < std::min(ub_best_, ub_candidate_)) {
-        primals_best_.save();
-        ub_best_ = ub_fused;
-      } else if (ub_candidate_ < std::min(ub_best_, ub_fused)) {
-        primals_best_ = primals_candidate_;
-        ub_best_ = ub_candidate_;
-      } else {
-        assert(ub_best_ <= std::min(ub_candidate_, ub_fused));
+      // Check if one of candidate or fused solution is in fact better.
+      if (ub_best_ > std::min(ub_candidate_, ub_fused)) {
+        // Now check which one is better, for the candidate-case we have less
+        // work to do, check it first.
+        if (ub_candidate_ <= ub_fused) {
+          primals_best_ = primals_candidate_;
+          ub_best_ = ub_candidate_;
+        } else {
+          // QPBO solver wrote solution into the individual factors, we read
+          // them off here.
+          primals_best_.save();
+          ub_best_ = ub_fused;
+        }
       }
     } else if (ub_candidate_ < ub_best_) {
       primals_best_ = primals_candidate_;
