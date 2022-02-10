@@ -23,6 +23,7 @@ void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, 
 mpopt_qap_unary_node* mpopt_qap_graph_get_unary(mpopt_qap_graph* graph, int idx);
 mpopt_qap_uniqueness_node* mpopt_qap_graph_get_uniqueness(mpopt_qap_graph* graph, int idx);
 mpopt_qap_pairwise_node* mpopt_qap_graph_get_pairwise(mpopt_qap_graph* graph, int idx);
+void mpopt_qap_solver_set_random_seed(mpopt_qap_solver* s, const unsigned long seed);
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int batch_size, int max_batches, int greedy_generations);
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s);
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s);

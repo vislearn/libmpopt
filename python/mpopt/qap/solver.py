@@ -145,6 +145,9 @@ class Solver(BaseSolver):
     def __init__(self):
         super().__init__(lib)
 
+    def set_random_seed(self, seed):
+        return self.lib.solver_set_random_seed(self.solver, seed)
+
     def run(self, batch_size=DEFAULT_BATCH_SIZE, max_batches=DEFAULT_MAX_BATCHES, greedy_generations=DEFAULT_GREEDY_GENERATIONS):
         return self.lib.solver_run(self.solver, batch_size, max_batches, greedy_generations)
 
