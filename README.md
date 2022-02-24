@@ -56,9 +56,9 @@ the following command in the root of the repository:
 
 ```sh
 # for a debug build:
-./scripts/setup-local-dev-env debug
+./scripts/setup-dev-env debug
 # or alternatively for a release build:
-./scripts/setup-local-dev-env release
+./scripts/setup-dev-env release
 ```
 
 After building the container image and spawning a new container instance you
