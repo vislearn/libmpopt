@@ -2,6 +2,7 @@
 set -eu -o pipefail
 
 LIBQPBO_VERSION=1.4.1
+MESON_VERSION=0.61.2
 
 buildtype=debugoptimized
 if [[ $# -ge 1 ]]; then
@@ -33,15 +34,29 @@ meson_args=(
 	-Dpython.purelibdir="${pythonlibdir}"
 )
 
+# Some older Linux distributions (e.g. Ubuntu 20.04) ship an older version of
+# meson. Meson 0.60 got some improvements for Python path handling and this
+# script requires those features. Therefore we fetch the latest version and
+# link it into our temporary prefix.
+cd "${temp_dir}"
+curl -LO "https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz"
+tar -xf "meson-${MESON_VERSION}.tar.gz"
+mkdir -p "${prefix}/bin"
+ln -sT "${temp_dir}/meson-${MESON_VERSION}/meson.py" "${prefix}/bin/meson"
+
+# libqpbo is an optional requirement, but used for various important things.
+# Therefore we fetch the latest version and install it into our temporary
+# prefix.
 cd "${temp_dir}"
 curl -LJO "https://github.com/fgrsnau/libqpbo/archive/v${LIBQPBO_VERSION}.tar.gz"
 tar -xf "libqpbo-${LIBQPBO_VERSION}.tar.gz"
-
 mkdir libqpbo-build
 cd libqpbo-build
 meson setup "${meson_args[@]}" "../libqpbo-${LIBQPBO_VERSION}"
 ninja install
 
+# Now we can build and install libmpopt into our temporary prefix and
+# afterwards run a shell.
 cd "${temp_dir}"
 mkdir libmpopt-build
 cd libmpopt-build
