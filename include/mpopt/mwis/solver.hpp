@@ -12,6 +12,9 @@ struct range {
 
 constexpr int default_greedy_generations = 10;
 
+enum class temperature_update_kind { continously, after_convergence };
+constexpr auto TEMPERATURE_UPDATE_KIND = temperature_update_kind::continously;
+
 class solver {
 public:
 
@@ -65,7 +68,7 @@ public:
   }
 
   void finalize() {
-    temperature_ = 1;
+    temperature_ = 10000;
     finalize_graph();
     finalize_costs();
   }
@@ -216,7 +219,7 @@ public:
            std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
 
-  void update_temperature()
+  void update_temperature_continously()
   {
     const auto d = dual_smoothed();
     const auto p = std::max(value_relaxed_, value_best_);
@@ -225,6 +228,39 @@ public:
     assert(std::isnormal(new_temp) && new_temp >= 0.0);
 
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
+  }
+
+  void update_temperature_after_convergence()
+  {
+    bool is_optimal = true;
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
+      cost total = 0.0;
+      const auto& cl = clique_indices_[clique_idx];
+      for (index idx = cl.begin; idx < cl.end; ++idx) {
+        const auto node_idx = clique_index_data_[idx];
+        const auto x = std::exp(costs_[node_idx] / temperature_);
+        total += x;
+      }
+
+      if (std::abs(total - 1) > 1e-2)
+        is_optimal = false;
+    }
+
+    if (is_optimal) {
+      temperature_ /= gamma_;
+      std::cout << "Temperature dropped to " << temperature_ << std::endl;
+    }
+  }
+
+  void update_temperature()
+  {
+    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::continously) {
+      update_temperature_continously();
+    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence) {
+      update_temperature_after_convergence();
+    } else {
+      std::abort();
+    }
   }
 
   void limit_runtime(double seconds) { limit_runtime_ = seconds; }
