@@ -456,6 +456,12 @@ protected:
     if (finalized_costs_)
       return;
 
+    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence) {
+      auto it = std::max_element(costs_.cbegin(), costs_.cend());
+      if (it != costs_.cend())
+        temperature_ = *it;
+    }
+
     // Update all lambdas (without smoothing, invariants do not hold) to ensure
     // that invariants (negative node costs) hold.
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
