@@ -48,7 +48,7 @@ public:
     return costs_.size() - 1;
   }
 
-  index add_clique(std::vector<index> indices)
+  index add_clique(const std::vector<index>& indices)
   {
     assert(!finalized_graph_);
 
