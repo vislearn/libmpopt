@@ -5,5 +5,6 @@ from .gurobi import *
 from .jug import *
 from .model import *
 from .preprocess import *
+from .snap import *
 from .solver import *
 from .uai import *

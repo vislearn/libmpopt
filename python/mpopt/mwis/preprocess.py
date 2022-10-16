@@ -1,4 +1,6 @@
-from mpopt.mwis.model import reduce_model
+import random
+
+from mpopt.mwis.model import Model, reduce_model
 
 
 def _cliques_for_nodes(model):
@@ -77,3 +79,49 @@ def persistency(model):
                     mapping[nidx0] = 0
 
     return reduce_model(model, mapping), mapping
+
+
+def sample_cliques(model):
+    edges = [set(edges) for edges in model.edges]
+    uncovered = [set(edges) for edges in model.edges]
+    queue = set(range(len(model.nodes)))
+
+    m = Model()
+    for cost in model.nodes:
+        m.add_node(cost)
+
+    while queue:
+        u = random.choice(tuple(queue))
+        vs = uncovered[u]
+        if not vs:
+            queue.remove(u)
+            continue
+
+        v = random.choice(tuple(vs))
+        clique = {u, v}
+        all_neighs = edges[u] & edges[v]
+        uncovered_neighs = uncovered[u] & uncovered[v]
+
+        while uncovered_neighs:
+            v = random.choice(tuple(uncovered_neighs))
+            clique.add(v)
+            all_neighs.intersection_update(edges[v])
+            uncovered_neighs.intersection_update(uncovered[v])
+
+        while all_neighs:
+            v = random.choice(tuple(all_neighs))
+            clique.add(v)
+            all_neighs.intersection_update(edges[v])
+
+        m.add_clique(tuple(clique))
+        for u in clique:
+            for v in clique:
+                uncovered[u].discard(v)
+
+        print(len(clique), sum(len(edges) for edges in uncovered))
+
+    print()
+    print('orig:', len(model.cliques))
+    print('redu:', len(m.cliques))
+
+    return m
