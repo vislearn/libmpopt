@@ -27,8 +27,8 @@ def _node_optimal_percentage(model):
     return [o / t * 100.0 if t > 0 else nan for o, t in zip(optimal, total)]
 
 
-def prune_positive_nodes(model):
-    mapping = [0 if cost >= 0 else None for cost in model.nodes]
+def prune_negative_nodes(model):
+    mapping = [0 if cost < 0 else None for cost in model.nodes]
     return reduce_model(model, mapping), mapping
 
 
