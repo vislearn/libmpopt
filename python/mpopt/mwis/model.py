@@ -129,6 +129,7 @@ def deserialize(f):
     if 'edges' in obj:
         model.edges = [set(nb) for nb in obj['edges']]
     else:
+        print('WARN: Edges not present in model, recomputing edges. This is going to be slow.')
         model.edges = _recompute_edges(model)
 
     model.check_integrity()
