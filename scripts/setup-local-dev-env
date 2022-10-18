@@ -38,7 +38,14 @@ meson_args=(
 # meson. We need some newer features (e.g. prefer-static in 0.63). Therefore we
 # fetch the latest version and link it into our temporary prefix.
 cd "${temp_dir}"
-curl -LO "https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz"
+if [[ -f "${source_dir}/.cache/meson-${MESON_VERSION}.tar.gz" ]]; then
+	echo "Using cached meson-${MESON_VERSION}.tar.gz asset."
+	cp "${source_dir}/.cache/meson-${MESON_VERSION}.tar.gz" .
+else
+	curl -LO "https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz"
+	mkdir -p "${source_dir}/.cache"
+	cp "meson-${MESON_VERSION}.tar.gz" "${source_dir}/.cache/"
+fi
 tar -xf "meson-${MESON_VERSION}.tar.gz"
 mkdir -p "${prefix}/bin"
 ln -sT "${temp_dir}/meson-${MESON_VERSION}/meson.py" "${prefix}/bin/meson"
@@ -50,7 +57,14 @@ python3 -m pip install --target="${pythonlibdir}" pulp
 # Therefore we fetch the latest version and install it into our temporary
 # prefix.
 cd "${temp_dir}"
-curl -LJO "https://github.com/fgrsnau/libqpbo/archive/v${LIBQPBO_VERSION}.tar.gz"
+if [[ -f "${source_dir}/.cache/libqpbo-${LIBQPBO_VERSION}.tar.gz" ]]; then
+	echo "Using cached libqpbo-${LIBQPBO_VERSION}.tar.gz asset."
+	cp "${source_dir}/.cache/libqpbo-${LIBQPBO_VERSION}.tar.gz" .
+else
+	curl -LJO "https://github.com/fgrsnau/libqpbo/archive/v${LIBQPBO_VERSION}.tar.gz"
+	mkdir -p "${source_dir}/.cache"
+	cp "libqpbo-${LIBQPBO_VERSION}.tar.gz" "${source_dir}/.cache/"
+fi
 tar -xf "libqpbo-${LIBQPBO_VERSION}.tar.gz"
 mkdir libqpbo-build
 cd libqpbo-build
