@@ -461,6 +461,8 @@ protected:
     scratch_greedy_indices_.resize(no_cliques());
     std::iota(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), 0);
 
+    scratch_qpbo_indices_.resize(no_orig());
+
     finalized_graph_ = true;
   }
 
@@ -647,63 +649,113 @@ protected:
     assert(a0.size() == no_nodes());
     assert(a1.size() == no_nodes());
 
+    auto reset_qpbo_indices = [&]() {
+      std::fill(scratch_qpbo_indices_.begin(), scratch_qpbo_indices_.end(), -1);
+    };
+
+    auto is_node_present = [&](auto nidx) {
+      return nidx < no_orig() && scratch_qpbo_indices_[nidx] != -1;
+    };
+
+    auto for_each_present_node_tuple = [&](auto func) {
+      for (index nidx1 = 0; nidx1 < no_orig(); ++nidx1) {
+        if (is_node_present(nidx1)) {
+          for (index idx = node_neighs_[nidx1].begin; idx < node_neighs_[nidx1].end; ++idx) {
+            const auto nidx2 = node_neigh_data_[idx];
+            if (nidx1 < nidx2 && is_node_present(nidx2)) {
+              func(nidx1, nidx2);
+            }
+          }
+        }
+      }
+    };
+
+    auto enable_all_dumies = [&]() {
+      std::fill(a0.begin() + no_orig(), a0.end(), 1);
+    };
+
+    auto disable_dummy_of_clique = [&](const auto clique_idx) {
+      assert(clique_idx >= 0 && clique_idx < clique_indices_.size());
+      assert(clique_idx >= 0 && clique_idx < clique_indices_.size());
+      const auto& cl = clique_indices_[clique_idx];
+      assert(cl.size >= 2);
+      assert(cl.end - 1 >= 0 && cl.end - 1 < clique_index_data_.size());
+      const auto nidx = clique_index_data_[cl.end - 1];
+      assert(nidx >= no_orig());
+      assert(nidx < no_nodes());
+      assert(a0[nidx] == 1);
+      a0[nidx] = 0;
+    };
+
+    auto disable_dummy_for_node = [&](const auto nidx) {
+      assert(nidx >= 0 && nidx < no_orig());
+      assert(a0[nidx] == 1);
+      const auto& nc = node_cliques_[nidx];
+      for (auto idx = nc.begin; idx < nc.end; ++idx) {
+        assert(idx >= 0 && idx < node_cliques_data_.size());
+        const auto clique_idx = node_cliques_data_[idx];
+        disable_dummy_of_clique(clique_idx);
+      }
+    };
+
     qpbo_.Reset();
-    qpbo_.AddNode(no_orig());
+    reset_qpbo_indices();
 
     for (index nidx = 0; nidx < no_orig(); ++nidx) {
       assert(a0[nidx] == 0 || a0[nidx] == 1);
       assert(a1[nidx] == 0 || a1[nidx] == 1);
 
-      const bool l0 = a0[nidx] == 1, l1 = a1[nidx] == 1;
-      cost c0 = l0 ? -orig_[nidx] : 0.0;
-      cost c1 = l1 ? -orig_[nidx] : 0.0;
-
-      if (l0 == l1)
-        c1 = QPBO_INF;
-
-      qpbo_.AddUnaryTerm(nidx, c0, c1);
-    }
-
-    for (index nidx = 0; nidx < no_orig(); ++nidx) {
-      for (index idx = node_neighs_[nidx].begin; idx < node_neighs_[nidx].end; ++idx) {
-        const auto nidx2 = node_neigh_data_[idx];
-        if (nidx < nidx2 && nidx2 < no_orig()) {
-          cost c00 = a0[nidx] == 1 && a0[nidx2] == 1 ? QPBO_INF : 0.0;
-          cost c01 = a0[nidx] == 1 && a1[nidx2] == 1 ? QPBO_INF : 0.0;
-          cost c10 = a1[nidx] == 1 && a0[nidx2] == 1 ? QPBO_INF : 0.0;
-          cost c11 = a1[nidx] == 1 && a1[nidx2] == 1 ? QPBO_INF : 0.0;
-          if (c00 || c01 || c10 || c11)
-            qpbo_.AddPairwiseTerm(nidx, nidx2, c00, c01, c10, c11);
-        }
+      if (a0[nidx] != a1[nidx]) {
+        const bool l0 = a0[nidx] == 1, l1 = a1[nidx] == 1;
+        cost c0 = l0 ? -orig_[nidx] : 0.0;
+        cost c1 = l1 ? -orig_[nidx] : 0.0;
+        const auto qpbo_index = qpbo_.AddNode();
+        qpbo_.AddUnaryTerm(qpbo_index, c0, c1);
+        scratch_qpbo_indices_[nidx] = qpbo_index;
       }
     }
+
+#ifndef NDEBUG
+    const auto qpbo_size = qpbo_.GetNodeNum();
+    std::cout << "[DBG] qpbo_size = " << qpbo_size << " / " << no_orig() << " ("
+              << (100.0f * qpbo_size / no_orig()) << "%)" << std::endl;
+#endif
+
+    for_each_present_node_tuple([&](const auto nidx1, const auto nidx2) {
+      const cost c01 = a0[nidx1] == 1 && a1[nidx2] == 1 ? QPBO_INF : 0.0;
+      const cost c10 = a1[nidx1] == 1 && a0[nidx2] == 1 ? QPBO_INF : 0.0;
+
+#ifndef NDEBUG
+      const cost c00 = a0[nidx1] == 1 && a0[nidx2] == 1 ? QPBO_INF : 0.0;
+      const cost c11 = a1[nidx1] == 1 && a1[nidx2] == 1 ? QPBO_INF : 0.0;
+      assert(std::abs(c00) < 1e-8);
+      assert(std::abs(c11) < 1e-8);
+#else
+      const cost c00 = 0.0, c11 = 0.0;
+#endif
+
+      if (c00 || c01 || c10 || c11) {
+        const auto qpbo_idx1 = scratch_qpbo_indices_[nidx1];
+        const auto qpbo_idx2 = scratch_qpbo_indices_[nidx2];
+        qpbo_.AddPairwiseTerm(qpbo_idx1, qpbo_idx2, c00, c01, c10, c11);
+      }
+    });
 
     qpbo_.Solve();
 
     bool changed = false;
+    enable_all_dumies();
     for (index nidx = 0; nidx < no_orig(); ++nidx) {
-      const auto l = qpbo_.GetLabel(nidx);
-      changed = changed || l != 0;
-      a0[nidx] = qpbo_.GetLabel(nidx) == 0 ? a0[nidx] : a1[nidx];
+      const auto qpbo_idx = scratch_qpbo_indices_[nidx];
+      const auto l = qpbo_idx != -1 ? qpbo_.GetLabel(qpbo_idx) : 0;
+      changed = changed || (l != 0);
+      a0[nidx] = l == 0 ? a0[nidx] : a1[nidx];
+
+      if (a0[nidx] == 1)
+        disable_dummy_for_node(nidx);
     }
 
-    // We have built the QPBO problem only with `no_orig()` nodes, so the
-    // remaining "dummy" nodes of `costs_` are still unset. We set them to the
-    // correct value now.
-
-    for (const auto& cl : clique_indices_) {
-      assert(cl.size >= 2);
-
-      int count = 0;
-      for (index idx = cl.begin; idx < cl.end - 1; ++idx) {
-        const auto nidx = clique_index_data_[idx];
-        count += a0[nidx] == 1 ? 1 : 0;
-      }
-
-      assert(count == 0 || count == 1);
-      const auto nidx = clique_index_data_[cl.end - 1];
-      a0[nidx] = count == 1 ? 0 : 1;
-    }
+    assert(feasibility(a0));
 
     return changed;
   }
@@ -747,6 +799,7 @@ protected:
   double temperature_;
   mutable std::vector<cost> scratch_;
   mutable std::vector<index> scratch_greedy_indices_;
+  mutable std::vector<index> scratch_qpbo_indices_;
 
   cost value_latest_;
   std::vector<int> assignment_latest_;
