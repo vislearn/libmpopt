@@ -15,6 +15,9 @@ constexpr int default_greedy_generations = 10;
 enum class temperature_update_kind { continously, after_convergence };
 constexpr auto TEMPERATURE_UPDATE_KIND = temperature_update_kind::continously;
 
+template<typename T> bool feasibility_check(const T   sum) { return std::abs(sum - 1.0) < 1e-8; }
+template<>           bool feasibility_check(const int sum) { return sum == 1; }
+
 class solver {
 public:
 
@@ -129,6 +132,19 @@ public:
     return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
   }
 
+  template<typename T>
+  bool feasibility(const std::vector<T>& assignment) const
+  {
+    for (const auto& cl : clique_indices_) {
+      T sum = 0;
+      for (index idx = cl.begin; idx < cl.end; ++idx)
+        sum += assignment[clique_index_data_[idx]];
+      if (!feasibility_check(sum))
+        return false;
+    }
+    return true;
+  }
+
   cost primal() const { return value_best_; }
 
   cost primal(const std::vector<int>& assignment) const
@@ -157,13 +173,10 @@ public:
       result += costs_[node_idx] * x;
     }
 
-    for (const auto& cl : clique_indices_) {
-      double sum = 0;
-      for (index idx = cl.begin; idx < cl.end; ++idx)
-        sum += assignment[clique_index_data_[idx]];
-      if (std::abs(sum - 1) >= 1e-6)
-        result = -infinity;
-    }
+#ifndef NDEBUG
+    if (!feasibility(assignment))
+      result = infinity;
+#endif
 
     return result;
   }
