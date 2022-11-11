@@ -11,6 +11,14 @@ struct pairwise_messages {
   {
     // get number of forward and backward edges
     int number_of_neighbours = node->forward.size() + node->backward.size();
+
+    // The code below unconditionally substracts the message value from the
+    // unary node and distributes it among all connected pairwise nodes. If no
+    // pairwise nodes exists, the substractions is still performed which would
+    // result in a corrupt reparametrization. Guard this case here.
+    if (number_of_neighbours == 0)
+      return;
+
     // send full cost evenly to all edges (so remaining cost in node is 0.0)
     for (index l = 0; l < node->factor.size(); ++l) {
       const cost msg = node->factor.get(l);
