@@ -104,6 +104,46 @@ configure -Dbuildtype=debug` or `meson configure -Dbuildtype=release` followed
 by `ninja install`.
 
 
+## Installing into an existing Python virtual environment (venv)
+
+When developing Python projects that use libmpopt as a dependency it is
+convenient to directly install the project into an virtual environment.
+Here we will use `/tmp/venv` as the base path of the virtual environment, but
+every occurrence can obviously be replaced by the real path.
+
+The assumption is that a virtual environment was created with the following
+command:
+
+```sh
+python3 -m venv /tmp/venv
+```
+
+To activate the virtual environment in the bash shell we can use:
+
+```sh
+source /tmp/venv/bin/activate
+```
+
+After this command the virtual environment is active and the shell prompt
+should have updated to indicate this fact. Inside the environment we can use
+`pip` to install necessary dependencies, e.g. `pip install numpy`. Everything
+will be installed locally into the `/tmp/venv` directory.
+
+To install libmpopt, enter the source directory, ensure that the virtual
+environment is active and then run:
+
+```sh
+./scripts/install-into-venv
+```
+
+The script will automatically determine the location of the active virtual
+environment and install all files at the correct location. With the virtual
+environment being active commands like `qap_dd` etc. should work. Additional
+Python should be able to execute `import mpopt` correctly. Therefore, any
+Python script is able to use the mpopt libary as long as the virtual
+environment is active.
+
+
 ## Building and Installing the Software Manually
 
 You will need build tools like meson, ninja, a C++17 compatible compiler, Python
