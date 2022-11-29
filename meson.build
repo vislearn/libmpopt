@@ -54,6 +54,8 @@ python_sources = [
 # Features and Options.
 #
 
+prefer_static = get_option('prefer_static')
+
 feature_gurobi = get_option('gurobi')
 feature_qpbo = get_option('qpbo')
 
@@ -109,6 +111,10 @@ foreach sublibrary : sublibraries
     dependencies: [gurobi, qpbo],
     install: true)
 
+  if prefer_static
+    lib = lib.get_static_lib()
+  endif
+
   lib_py = custom_target('lib' + sublibrary + '_py',
     input: ['swig/' + sublibrary + '.i', 'include/mpopt/' + sublibrary + '.h'],
     output: ['lib' + sublibrary + '_py.c'],
@@ -117,7 +123,7 @@ foreach sublibrary : sublibraries
   python3.extension_module('libmpopt_' + sublibrary,
     sources: [lib_py],
     include_directories: include_dirs,
-    link_with: [lib.get_static_lib()],
+    link_with: [lib],
     dependencies: [python3.dependency()],
     install: true,
     install_dir: python3.get_install_dir(pure: false, subdir: 'mpopt' / sublibrary))
