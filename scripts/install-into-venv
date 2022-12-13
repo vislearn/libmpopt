@@ -4,9 +4,22 @@ set -eu -o pipefail
 LIBQPBO_VERSION=1.4.1
 MESON_VERSION=0.64.1
 
-if [[ ! -v VIRTUAL_ENV ]]; then
-	echo "Must be run within activated virtual env!" >&2
+if [[ ! -v VIRTUAL_ENV && ! -v CONDA_PREFIX ]]; then
+	echo "Must be run within activated venv or conda environment!" >&2
 	exit 64
+fi
+
+if [[ -v VIRTUAL_ENV ]]; then
+	prefix="${VIRTUAL_ENV}"
+else
+	if [[ $(conda list | grep python) ]]
+	then 
+		prefix="${CONDA_PREFIX}"
+	else
+		echo "libmpopt is installed as a site package."
+		echo "Explicitly install python into the environment with 'conda install python' first."
+		exit 64
+	fi
 fi
 
 buildtype=debugoptimized
@@ -18,7 +31,6 @@ temp_dir=$(mktemp -d)
 trap 'rm -rf "${temp_dir}"' EXIT
 
 source_dir=$(pwd)
-prefix="${VIRTUAL_ENV}"
 
 export PKG_CONFIG_PATH="${prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
 
@@ -40,6 +52,10 @@ cd "${temp_dir}"
 curl -LO "https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz"
 tar -xf "meson-${MESON_VERSION}.tar.gz"
 mkdir -p "${prefix}/bin"
+
+if [ -L "${prefix}/bin/meson" ] ; then
+    rm "${prefix}/bin/meson"
+fi
 ln -sT "${temp_dir}/meson-${MESON_VERSION}/meson.py" "${prefix}/bin/meson"
 
 # libqpbo is an optional requirement, but used for various important things.
