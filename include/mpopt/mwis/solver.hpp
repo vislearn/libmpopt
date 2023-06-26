@@ -12,7 +12,7 @@ struct range {
 
 constexpr int default_greedy_generations = 10;
 
-enum class temperature_update_kind { continously, after_convergence };
+enum class temperature_update_kind { continously, after_convergence_old, after_convergence_new };
 constexpr auto TEMPERATURE_UPDATE_KIND = temperature_update_kind::continously;
 
 template<typename T> bool feasibility_check(const T   sum) { return std::abs(sum - 1.0) < 1e-8; }
@@ -243,7 +243,7 @@ public:
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
-  void update_temperature_after_convergence()
+  void update_temperature_after_convergence_old()
   {
     bool is_optimal = true;
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
@@ -265,12 +265,36 @@ public:
     }
   }
 
+  void update_temperature_after_convergence_new()
+  {
+    const auto d = dual_smoothed();
+    const auto p = std::max(value_relaxed_, value_best_);
+
+    // FIXME: The gamma_ parameter actually has many different roles for
+    // different temperature update rules.
+    const auto t_gap = gamma_;
+
+    const auto numerator = d - p;
+    const auto denominator = t_gap * entropy();
+    const auto fraction = numerator / denominator;
+
+    if (temperature_ > fraction) {
+      // FIXME: Temperature drop factor of 2.0 is currenctly hard-coded!
+      const auto new_temperature = fraction / 2.0;
+      assert(new_temperature < temperature_ + 1e-4);
+      temperature_ = new_temperature;
+      std::cout << "Temperature dropped to " << temperature_ << std::endl;
+    }
+  }
+
   void update_temperature()
   {
     if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::continously) {
       update_temperature_continously();
-    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence) {
-      update_temperature_after_convergence();
+    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_old) {
+      update_temperature_after_convergence_old();
+    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_new) {
+      update_temperature_after_convergence_new();
     } else {
       std::abort();
     }
@@ -471,7 +495,7 @@ protected:
     if (finalized_costs_)
       return;
 
-    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence) {
+    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_old) {
       auto it = std::max_element(costs_.cbegin(), costs_.cend());
       if (it != costs_.cend())
         temperature_ = *it;
