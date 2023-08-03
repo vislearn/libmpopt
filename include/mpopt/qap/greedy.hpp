@@ -29,6 +29,8 @@ public:
     scratch_costs_.reserve(max_label_size);
   }
 
+  void set_random_seed(const unsigned long seed) { gen_.seed(seed); }
+
   void run()
   {
     frontier_.clear();
