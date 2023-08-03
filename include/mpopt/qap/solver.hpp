@@ -45,12 +45,26 @@ public:
   auto& get_graph() { return graph_; }
   const auto& get_graph() const { return graph_; }
 
+  void set_random_seed(const unsigned long seed) { greedy_.set_random_seed(seed); }
+
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
     graph_.check_structure();
     primals_best_.resize();
     primals_candidate_.resize();
     ub_best_ = ub_candidate_ = infinity;
+
+    auto dump_assignment = [this]() {
+      bool first=true;
+      std::cout << "[";
+      for (const auto a : primals_best_.assignment()) {
+        if (!first)
+          std::cout << " ";
+        std::cout << a;
+        first = false;
+      }
+      std::cout << "]";
+    };
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
@@ -72,7 +86,10 @@ public:
                 << "lb=" << lb << " "
                 << "ub=" << ub_best_ << " "
                 << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                << "t=" << this->runtime() << std::endl;
+                << "t=" << this->runtime() << " "
+                << "a=";
+      dump_assignment();
+      std::cout << "\n";
     }
 
     // If max_batches is zero the caller does not want to run any dual
@@ -90,7 +107,10 @@ public:
                   << "lb=" << lb << " "
                   << "ub=" << ub_best_ << " "
                   << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                  << "t=" << this->runtime() << std::endl;
+                  << "t=" << this->runtime() << " "
+                  << "a=";
+        dump_assignment();
+        std::cout << "\n";
       }
     }
 

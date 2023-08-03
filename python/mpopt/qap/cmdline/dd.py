@@ -16,6 +16,7 @@ def parse_arguments():
     parser.add_argument('-g', '--greedy-generations', type=int, default=qap.DEFAULT_GREEDY_GENERATIONS, help='Specify number of greedy generation passes per batch.')
     parser.add_argument('-u', '--unary-side', choices=('left', 'right'), default='left', help='Choose side where quadratic terms will be instantiated.')
     parser.add_argument('-o', '--output', help='Output file for resulting labeling.')
+    parser.add_argument('-s', '--seed', type=int, help='Fix random seed to a specific value')
     parser.add_argument('--ilp', action='store_true', help='Solves the ILP after reparametrizing.')
     parser.add_argument('--combilp', action='store_true', help='Solves the problem using combilp after reparametrizing.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.dd input file.')
@@ -60,6 +61,11 @@ def main():
                                   unary_side=args.unary_side)
 
     solver = construct_solver(deco, args)
+
+    if args.seed:
+        print(f'initializing random seed to {args.seed}')
+        solver.set_random_seed(args.seed)
+
     print('initial lower bound: {}'.format(solver.lower_bound()), flush=True)
     solver.run(args.batch_size, args.max_batches, args.greedy_generations)
 
