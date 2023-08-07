@@ -1,6 +1,0 @@
-#!/bin/bash
-set -xeu -o pipefail
-
-for optflag in '' '-O' '-OO'; do
-	@PYTHON_EXECUTABLE@ ${optflag} -m compileall "${DESTDIR:-}@PYTHON_INSTALL_DIR@mpopt"
-done
