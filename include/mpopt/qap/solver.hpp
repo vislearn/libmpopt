@@ -77,7 +77,13 @@ public:
     }
   }
 
-  void set_random_seed(const unsigned long seed) { greedy_->set_random_seed(seed); }
+  void set_random_seed(const unsigned long seed) {
+    if (greedy_ == nullptr) {
+      greedy_->set_random_seed(seed); 
+    } else {
+      grasp_->set_random_seed(seed);
+    }
+  }
 
   void run(const int batch_size=default_batch_size, const int max_batches=default_max_batches, int greedy_generations=default_greedy_generations)
   {
