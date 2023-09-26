@@ -79,9 +79,9 @@ public:
 
   void set_random_seed(const unsigned long seed) {
     if (greedy_ == nullptr) {
-      greedy_->set_random_seed(seed); 
+      grasp_->set_random_seed(seed); 
     } else {
-      grasp_->set_random_seed(seed);
+      greedy_->set_random_seed(seed);
     }
   }
 
