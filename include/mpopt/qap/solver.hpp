@@ -86,7 +86,7 @@ public:
 
     signal_handler h;
     std::cout.precision(std::numeric_limits<cost>::max_digits10);
-
+    
     if (!dual_updates_enabled_) {
       for (const auto* node : graph_.pairwise()) {
         pairwise_messages::send_messages_to_unaries(node);
@@ -107,11 +107,11 @@ public:
       const auto clock_end = clock_type::now();
       this->duration_ += clock_end - clock_start;
 
-      std::cout << "it=" << this->iterations_ << " "
-                << "lb=" << lb << " "
-                << "ub=" << ub_best_ << " "
-                << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                << "t=" << this->runtime() << std::endl;
+      // std::cout << "it=" << this->iterations_ << " "
+      //           << "lb=" << lb << " "
+      //           << "ub=" << ub_best_ << " "
+      //           << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
+      //           << "t=" << this->runtime() << std::endl;
     }
 
     // If max_batches is zero the caller does not want to run any dual
@@ -125,11 +125,11 @@ public:
         const auto clock_end = clock_type::now();
         this->duration_ += clock_end - clock_start;
 
-        std::cout << "greedy=" << (i+1) << " "
-                  << "lb=" << lb << " "
-                  << "ub=" << ub_best_ << " "
-                  << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
-                  << "t=" << this->runtime() << std::endl;
+        // std::cout << "greedy=" << (i+1) << " "
+        //           << "lb=" << lb << " "
+        //           << "ub=" << ub_best_ << " "
+        //           << "gap=" << static_cast<float>(100.0 * (ub_best_ - lb) / std::abs(lb)) << "% "
+        //           << "t=" << this->runtime() << std::endl;
       }
     }
 

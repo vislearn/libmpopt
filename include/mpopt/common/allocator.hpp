@@ -25,7 +25,7 @@ public:
     }
 
 #ifndef NDEBUG
-      std::cout << "[mem] ctor: size=" << size_ << "B (" << (1.0f * size_ / size_gib) << "GiB) -> memory_=" << reinterpret_cast<void*>(memory_) << std::endl;
+      //std::cout << "[mem] ctor: size=" << size_ << "B (" << (1.0f * size_ / size_gib) << "GiB) -> memory_=" << reinterpret_cast<void*>(memory_) << std::endl;
 #endif
 
     if (memory_ == 0)
@@ -70,7 +70,7 @@ public:
       throw std::bad_alloc();
     size_ = current_size;
 #ifndef NDEBUG
-      std::cout << "[mem] finalize: size=" << size_ << " (" << (1.0f * size_ / size_mib) << " MiB)" << std::endl;
+      //std::cout << "[mem] finalize: size=" << size_ << " (" << (1.0f * size_ / size_mib) << " MiB)" << std::endl;
 #endif
     finalized_ = true;
   }
