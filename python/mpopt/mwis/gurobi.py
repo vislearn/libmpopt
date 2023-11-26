@@ -47,7 +47,7 @@ class Gurobi:
         if silent:
             self.gurobi.Params.OutputFlag = 0
 
-        self.gurobi.Params.Method = 1
+        self.gurobi.Params.Method = 2
         self.gurobi.Params.DisplayInterval = 1
         self.gurobi.Params.MIPGap = 0
         self.gurobi.Params.MIPGapAbs = 0
