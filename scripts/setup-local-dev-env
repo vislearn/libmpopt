@@ -34,6 +34,10 @@ meson_args=(
 	-Dpython.purelibdir="${pythonlibdir}"
 )
 
+# Uncomment the next line if you want to enable your IDE to pick up the correct
+# compile options.
+# ln -nsf "${temp_dir}/libmpopt-build/compile_commands.json" compile_commands.json
+
 # Some older Linux distributions (e.g. Ubuntu 22.04) ship an older version of
 # meson. We need some newer features (e.g. prefer-static in 0.63). Therefore we
 # fetch the latest version and link it into our temporary prefix.
