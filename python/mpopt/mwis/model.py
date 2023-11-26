@@ -129,8 +129,11 @@ def deserialize(f):
     if 'edges' in obj:
         model.edges = [set(nb) for nb in obj['edges']]
     else:
-        print('WARN: Edges not present in model, recomputing edges. This is going to be slow.')
-        model.edges = _recompute_edges(model)
+        # FIXME: The following is too slow for large model, we skip recomputation
+        # of edges.
+        # print('WARN: Edges not present in model, recomputing edges. This is going to be slow.')
+        # model.edges = _recompute_edges(model)
+        print('WARN: Edge graph not present in model, edge graph is left empty.')
 
     model.check_integrity()
     return model
