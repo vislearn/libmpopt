@@ -10,7 +10,6 @@ foreach wrapper, module : python_wrappers
     install: true,
     install_dir: get_option('bindir'),
     install_mode: 'rwxr-xr-x')
-
 endforeach
 
 # vim: set ts=8 sts=2 sw=2 et:

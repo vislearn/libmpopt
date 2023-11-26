@@ -1,4 +1,4 @@
-FROM debian:bullseye
+FROM debian:bookworm
 #FROM gurobi
 
 RUN export DEBIAN_FRONTEND="noninteractive" \
@@ -27,7 +27,9 @@ RUN export DEBIAN_FRONTEND="noninteractive" \
 # of site-packages, Debian uses dist-packages. We fix this by creating a
 # symlink here.
 RUN cd /usr/local/lib/python3.* \
-&& ln -nsf dist-packages site-packages
+&& ln -nsf dist-packages site-packages \
+&& cd .. \
+&& ln -s python3.* python3
 
 RUN useradd -ms /bin/bash user \
 && echo 'user ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/user
