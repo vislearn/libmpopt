@@ -2,6 +2,38 @@ from mpopt.utils import if_debug
 from mpopt.common import gurobi
 from mpopt.mwis.model import Model
 
+import json
+import math
+import sys
+
+
+def callback(model, where):
+    time, dual, primal = None, math.inf, -math.inf
+    if where == gurobi.GRB.Callback.SIMPLEX:
+        time = model.cbGet(gurobi.GRB.Callback.RUNTIME)
+        dual = model.cbGet(gurobi.GRB.Callback.SPX_OBJVAL)
+    elif where == gurobi.GRB.Callback.BARRIER:
+        time = model.cbGet(gurobi.GRB.Callback.RUNTIME)
+        primal = model.cbGet(gurobi.GRB.Callback.BARRIER_PRIMOBJ)
+        dual = model.cbGet(gurobi.GRB.Callback.BARRIER_DUALOBJ)
+    elif where == gurobi.GRB.Callback.MIP:
+        time = model.cbGet(gurobi.GRB.Callback.RUNTIME)
+        primal = model.cbGet(gurobi.GRB.Callback.MIP_OBJBST)
+        dual = model.cbGet(gurobi.GRB.Callback.MIP_OBJBND)
+    elif where == gurobi.GRB.Callback.MIPSOL:
+        time = model.cbGet(gurobi.GRB.Callback.RUNTIME)
+        primal = model.cbGet(gurobi.GRB.Callback.MIPSOL_OBJBST)
+        dual = model.cbGet(gurobi.GRB.Callback.MIPSOL_OBJBND)
+    elif where == gurobi.GRB.Callback.MIPNODE:
+        time = model.cbGet(gurobi.GRB.Callback.RUNTIME)
+        primal = model.cbGet(gurobi.GRB.Callback.MIPNODE_OBJBST)
+        dual = model.cbGet(gurobi.GRB.Callback.MIPNODE_OBJBND)
+
+    if time is not None:
+        obj = {'t': time, 'ub': dual, 'lb': primal, 'opt': False}
+        json.dump(obj, sys.stdout)
+        print(flush=True)
+
 
 class Gurobi:
 
@@ -53,7 +85,16 @@ class Gurobi:
 
     def solve(self):
         self.construct()
-        self.gurobi.optimize()
+        self.gurobi.optimize(callback)
+        time = self.gurobi.Runtime
+        dual = self.gurobi.ObjVal
+        if self.ilp_mode:
+            primal = dual
+        else:
+            primal = -math.inf
+        obj = {'t': time, 'ub': dual, 'lb': primal, 'opt': True}
+        json.dump(obj, sys.stdout)
+        print(flush=True)
         self.assignment = [var.X for var in self.node_vars.values()]
         if self.ilp_mode:
             self.assignment = [int(x > .5) for x in self.assignment]
