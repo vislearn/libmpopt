@@ -186,7 +186,7 @@ public:
 
   cost lower_bound() const
   {
-    return std::min(min_detection(), 0.0);
+    return std::min(min_detection(), cost{0});
   }
 
   void repam_detection(const cost msg) { detection_ += msg; }

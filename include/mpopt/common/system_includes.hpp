@@ -8,6 +8,7 @@
 #include <cmath>
 #include <csignal>
 #include <cstdlib>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -16,18 +17,25 @@
 #include <random>
 #include <set>
 #include <sstream>
-#include <unordered_set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <mpopt/common/config.h>
 
+#if __GNUC__ >= 11
+#   include <source_location>
+#else
+#   include <experimental/source_location>
+    namespace std { using source_location = experimental::source_location; };
+#endif
+
 #ifdef ENABLE_GUROBI
-#  include <gurobi_c++.h>
+#   include <gurobi_c++.h>
 #endif
 
 #ifdef ENABLE_QPBO
-#  include <qpbo/qpbo.h>
+#   include <qpbo/qpbo.h>
 #endif
 
 #endif
