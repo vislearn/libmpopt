@@ -25,7 +25,7 @@ public:
   : finalized_graph_(false)
   , finalized_costs_(false)
   , constant_(0.0)
-  , gamma_(2.0)
+  , temperature_drop_factor_(0.5)
   , gen_(std::random_device()())
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
@@ -237,7 +237,7 @@ public:
     const auto d = dual_smoothed();
     const auto p = std::max(value_relaxed_, value_best_);
 
-    auto new_temp = (d - p) / (gamma_ * entropy());
+    auto new_temp = (d - p) / (entropy() / temperature_drop_factor_);
     assert(std::isnormal(new_temp) && new_temp >= 0.0);
 
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
@@ -260,7 +260,7 @@ public:
     }
 
     if (is_optimal) {
-      temperature_ /= gamma_;
+      temperature_ *= temperature_drop_factor_;
       std::cout << "Temperature dropped to " << temperature_ << std::endl;
     }
   }
@@ -270,9 +270,9 @@ public:
     const auto d = dual_smoothed();
     const auto p = std::max(value_relaxed_, value_best_);
 
-    // FIXME: The gamma_ parameter actually has many different roles for
+    // FIXME: The temperature_drop_factor_ parameter actually has many different roles for
     // different temperature update rules.
-    const auto t_gap = gamma_;
+    const auto t_gap = temperature_drop_factor_;
 
     const auto numerator = d - p;
     const auto denominator = t_gap * entropy();
@@ -379,8 +379,8 @@ public:
   index no_orig() const { return orig_.size(); }
   index no_cliques() const { return clique_indices_.size(); }
 
-  double gamma() const { return gamma_; }
-  void gamma(double g) { gamma_ = g; }
+  double temperature_drop_factor() const { return temperature_drop_factor_; }
+  void temperature_drop_factor(double v) { temperature_drop_factor_ = v; }
 
   double temperature() const { return temperature_; }
   void temperature(double t) { temperature_ = t; }
@@ -808,7 +808,7 @@ protected:
   std::vector<cost> costs_;
   std::vector<cost> orig_;
   cost constant_;
-  double gamma_;
+  double temperature_drop_factor_;
 
   std::vector<range> clique_indices_;
   std::vector<index> clique_index_data_;

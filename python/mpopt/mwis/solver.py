@@ -56,11 +56,11 @@ class Solver(BaseSolver):
         else:
             lib.solver_set_clique_cost(self.solver, clique_cost, cost)
 
-    def gamma(self, g=None):
-        if gamma is None:
-            return lib.solver_get_gamma(self.solver)
+    def temperature_drop_factor(self, v=None):
+        if v is None:
+            return lib.solver_get_temperature_drop_factor(self.solver)
         else:
-            lib.solver_set_gamma(self.solver, g)
+            lib.solver_set_temperature_drop_factor(self.solver, v)
 
     def temperature(self, t=None):
         if t is None:

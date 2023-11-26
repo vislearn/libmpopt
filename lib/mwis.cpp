@@ -46,8 +46,8 @@ void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c) { s-
 double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i) { return s->solver.clique_cost<false>(i); }
 double mpopt_mwis_solver_get_reduced_clique_cost(mpopt_mwis_solver* s, int i) { return s->solver.clique_cost<true>(i); }
 
-double mpopt_mwis_solver_get_gamma(mpopt_mwis_solver* s) { return s->solver.gamma(); }
-void mpopt_mwis_solver_set_gamma(mpopt_mwis_solver* s, double g) { s->solver.gamma(g); }
+double mpopt_mwis_solver_get_temperature_drop_factor(mpopt_mwis_solver* s) { return s->solver.temperature_drop_factor(); }
+void mpopt_mwis_solver_set_temperature_drop_factor(mpopt_mwis_solver* s, double v) { s->solver.temperature_drop_factor(v); }
 
 double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s) { return s->solver.temperature(); }
 void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double t) { s->solver.temperature(t); }
