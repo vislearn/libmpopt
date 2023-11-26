@@ -44,8 +44,16 @@ struct timer {
     return std::chrono::duration_cast<DURATION>(TOTAL ? total_ : last_).count();
   }
 
-  template<bool TOTAL=false> auto milliseconds() const { return duration_count< std::chrono::milliseconds, TOTAL>(); }
-  template<bool TOTAL=false> auto seconds() const { return duration_count<std::chrono::seconds, TOTAL>(); }
+  template<bool TOTAL=false> auto milliseconds() const
+  {
+    using milliseconds = std::chrono::duration<float, std::milli>;
+    return duration_count<milliseconds, TOTAL>();
+  }
+
+  template<bool TOTAL=false> auto seconds() const {
+    using seconds = std::chrono::duration<float>;
+    return duration_count<seconds, TOTAL>();
+  }
 
   bool running_;
   clock_type::time_point start_, stop_;

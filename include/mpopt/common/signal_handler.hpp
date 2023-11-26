@@ -1,11 +1,19 @@
 #ifndef LIBMPOPT_COMMON_SIGNAL_HANDLER_HPP
 #define LIBMPOPT_COMMON_SIGNAL_HANDLER_HPP
 
+#include <unistd.h>
+
 extern "C" {
   static volatile sig_atomic_t mpopt_signaled;
 
   void mpopt_signal_handler(int sig)
   {
+    if (sig == SIGALRM) {
+      write(1, "\nTimeout.\n", 10);
+      std::signal(sig, SIG_DFL);
+      std::raise(sig);
+    }
+
     mpopt_signaled = 1;
   }
 }
@@ -18,6 +26,7 @@ public:
   {
     mpopt_signaled = 0;
     old_handler_ = std::signal(SIGINT, mpopt_signal_handler);
+    std::signal(SIGALRM, mpopt_signal_handler);
   }
 
   ~signal_handler()
