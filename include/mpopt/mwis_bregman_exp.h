@@ -1,5 +1,5 @@
-#ifndef LIBMPOPT_MWIS_H
-#define LIBMPOPT_MWIS_H
+#ifndef LIBMPOPT_MWIS_SINKHORN_EXP_H
+#define LIBMPOPT_MWIS_SINKHORN_EXP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,11 +39,17 @@ void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c);
 
 double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i);
 
+double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double v);
+
+double mpopt_mwis_solver_get_threshold_optimality(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_threshold_optimality(mpopt_mwis_solver* s, double v);
+
+double mpopt_mwis_solver_get_threshold_stability(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_threshold_stability(mpopt_mwis_solver* s, double v);
+
 double mpopt_mwis_solver_get_temperature_drop_factor(mpopt_mwis_solver* s);
 void mpopt_mwis_solver_set_temperature_drop_factor(mpopt_mwis_solver* s, double v);
-
-double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s);
-void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double t);
 
 #ifdef __cplusplus
 }

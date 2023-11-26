@@ -7,7 +7,9 @@
 #include <mpopt/common/debug.hpp>
 #include <mpopt/common/solver.hpp>
 
-#include <mpopt/mwis/solver.hpp>
+#include <mpopt/mwis/solver_original.hpp>
+#include <mpopt/mwis/solver_bregman_exp.hpp>
+#include <mpopt/mwis/solver_bregman_log.hpp>
 
 #endif
 

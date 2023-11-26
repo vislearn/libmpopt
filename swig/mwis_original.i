@@ -1,6 +1,6 @@
-%module libmpopt_mwis
+%module libmpopt_mwis_original
 %{
-  #include <mpopt/mwis.h>
+  #include <mpopt/mwis_original.h>
 %}
 
 %typemap(in) int* {
@@ -8,4 +8,4 @@
 }
 
 %rename ("%(strip:[mpopt_mwis_])s") "";
-%include <mpopt/mwis.h>
+%include <mpopt/mwis_original.h>

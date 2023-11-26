@@ -1,7 +1,7 @@
 #include <mpopt/mwis.hpp>
-#include <mpopt/mwis.h>
+#include <mpopt/mwis_original.h>
 
-using solver_type = mpopt::mwis::solver;
+using solver_type = mpopt::mwis::original::solver;
 
 struct mpopt_mwis_solver_t { solver_type solver; };
 
@@ -46,11 +46,17 @@ void mpopt_mwis_solver_set_node_cost(mpopt_mwis_solver* s, int i, double c) { s-
 double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i) { return s->solver.clique_cost<false>(i); }
 double mpopt_mwis_solver_get_reduced_clique_cost(mpopt_mwis_solver* s, int i) { return s->solver.clique_cost<true>(i); }
 
+double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s) { return s->solver.temperature(); }
+void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double v) { s->solver.temperature(v); }
+
+//double mpopt_mwis_solver_get_threshold_optimality(mpopt_mwis_solver* s) { return s->solver.threshold_optimality(); }
+//void mpopt_mwis_solver_set_threshold_optimality(mpopt_mwis_solver* s, double v) { s->solver.threshold_optimality(v); }
+
+//double mpopt_mwis_solver_get_threshold_stability(mpopt_mwis_solver* s) { return s->solver.threshold_stability(); }
+//void mpopt_mwis_solver_set_threshold_stability(mpopt_mwis_solver* s, double v) { s->solver.threshold_stability(v); }
+
 double mpopt_mwis_solver_get_temperature_drop_factor(mpopt_mwis_solver* s) { return s->solver.temperature_drop_factor(); }
 void mpopt_mwis_solver_set_temperature_drop_factor(mpopt_mwis_solver* s, double v) { s->solver.temperature_drop_factor(v); }
-
-double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s) { return s->solver.temperature(); }
-void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double t) { s->solver.temperature(t); }
 
 }
 

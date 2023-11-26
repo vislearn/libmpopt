@@ -1,8 +1,9 @@
-#ifndef LIBMPOPT_MWIS_SOLVER_HPP
-#define LIBMPOPT_MWIS_SOLVER_HPP
+#ifndef LIBMPOPT_MWIS_SOLVER_SINKHORN_EXP_HPP
+#define LIBMPOPT_MWIS_SOLVER_SINKHORN_EXP_HPP
 
 namespace mpopt {
 namespace mwis {
+namespace bregman_exp {
 
 struct range {
   index begin;
@@ -11,9 +12,7 @@ struct range {
 };
 
 constexpr int default_greedy_generations = 10;
-
-enum class temperature_update_kind { continously, after_convergence_old, after_convergence_new };
-constexpr auto TEMPERATURE_UPDATE_KIND = temperature_update_kind::continously;
+constexpr bool initial_reparametrization = true;
 
 template<typename T> bool feasibility_check(const T   sum) { return std::abs(sum - 1.0) < 1e-8; }
 template<>           bool feasibility_check(const int sum) { return sum == 1; }
@@ -25,7 +24,7 @@ public:
   : finalized_graph_(false)
   , finalized_costs_(false)
   , constant_(0.0)
-  , temperature_drop_factor_(0.5)
+  , scaling_(1.0)
   , gen_(std::random_device()())
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
@@ -33,6 +32,9 @@ public:
   , limit_p01b_gap_(0.0)
   , limit_best_stagnation_(0.0)
   , limit_runtime_(0.0)
+  , threshold_optimality_(1e-2)
+  , threshold_stability_(1e300)
+  , temperature_drop_factor_(0.5)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -110,13 +112,21 @@ public:
 
   cost dual_relaxed() const
   {
-    // Compute $D(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} <c^\lambda, x>$.
-    // Note that the last term is zero if c^\lambda <= 0 (i.e. after updates
-    // have been performed).
-    assert_negative_node_costs();
+    if constexpr (initial_reparametrization)
+      return constant_;
 
-    // sum of all lambdas = constant_
-    return constant_;
+    // If alphas are non-zero this computation fails. Reparametrization would be required before calling this
+    // function then.
+    assert_unset_alphas();
+
+    // Accumulator for ∑ max(c_i, 0).
+    const auto f = [](const auto a, const auto b) {
+      return a + std::max(b, cost{0});
+    };
+
+    // Compute $D(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} <c^\lambda, x>$.
+    // Sum of all lambdas = constant_
+    return constant_ + std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
   }
 
   cost dual_smoothed() const
@@ -126,6 +136,7 @@ public:
     // If $c^\lambda <= 0$ it is within the range [0, 1] and the obtained value is
     // $T / e * exp(c / T)$.
     assert_negative_node_costs();
+    assert_unset_alphas();
 
     // sum of all lambdas = constant_
     auto f = [this](const auto a, const auto c) { return a + std::exp(c / temperature_); };
@@ -170,7 +181,7 @@ public:
     for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
       const auto x = assignment[node_idx];
       assert(x >= 0 && x <= 1);
-      result += costs_[node_idx] * x;
+      result += costs_[node_idx] * x * scaling_;
     }
 
 #ifndef NDEBUG
@@ -232,74 +243,6 @@ public:
            std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
 
-  void update_temperature_continously()
-  {
-    const auto d = dual_smoothed();
-    const auto p = std::max(value_relaxed_, value_best_);
-
-    auto new_temp = (d - p) / (entropy() / temperature_drop_factor_);
-    assert(std::isnormal(new_temp) && new_temp >= 0.0);
-
-    temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
-  }
-
-  void update_temperature_after_convergence_old()
-  {
-    bool is_optimal = true;
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
-      cost total = 0.0;
-      const auto& cl = clique_indices_[clique_idx];
-      for (index idx = cl.begin; idx < cl.end; ++idx) {
-        const auto node_idx = clique_index_data_[idx];
-        const auto x = std::exp(costs_[node_idx] / temperature_);
-        total += x;
-      }
-
-      if (std::abs(total - 1) > 1e-2)
-        is_optimal = false;
-    }
-
-    if (is_optimal) {
-      temperature_ *= temperature_drop_factor_;
-      std::cout << "Temperature dropped to " << temperature_ << std::endl;
-    }
-  }
-
-  void update_temperature_after_convergence_new()
-  {
-    const auto d = dual_smoothed();
-    const auto p = std::max(value_relaxed_, value_best_);
-
-    // FIXME: The temperature_drop_factor_ parameter actually has many different roles for
-    // different temperature update rules.
-    const auto t_gap = temperature_drop_factor_;
-
-    const auto numerator = d - p;
-    const auto denominator = t_gap * entropy();
-    const auto fraction = numerator / denominator;
-
-    if (temperature_ > fraction) {
-      // FIXME: Temperature drop factor of 2.0 is currenctly hard-coded!
-      const auto new_temperature = fraction / 2.0;
-      assert(new_temperature < temperature_ + 1e-4);
-      temperature_ = new_temperature;
-      std::cout << "Temperature dropped to " << temperature_ << std::endl;
-    }
-  }
-
-  void update_temperature()
-  {
-    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::continously) {
-      update_temperature_continously();
-    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_old) {
-      update_temperature_after_convergence_old();
-    } else if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_new) {
-      update_temperature_after_convergence_new();
-    } else {
-      std::abort();
-    }
-  }
-
   void limit_runtime(double seconds) { limit_runtime_ = seconds; }
   void limit_integer_primal_gap(double percentage) { limit_p01b_gap_ = percentage; }
   void limit_integer_primal_stagnation(int seconds) { limit_best_stagnation_ = seconds; }
@@ -310,82 +253,149 @@ public:
            const int max_batches=default_max_batches,
            const int greedy_generations=default_greedy_generations)
   {
+    std::cout.precision(std::numeric_limits<cost>::max_digits10);
     assert(finalized());
-    auto start = std::chrono::steady_clock::now();
-    auto best_since = start;
-    std::cout << "initial dual = " << dual_relaxed() << std::endl;
     signal_handler h;
-    for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      auto batch_start = std::chrono::steady_clock::now();
-      for (int j = 0; j < batch_size; ++j)
-        single_pass();
-      bool best_improved = update_integer_assignment(greedy_generations);
-      auto batch_end = std::chrono::steady_clock::now();
-      iterations_ += batch_size;
+    dbg::timer t_total;
 
-      if (best_improved)
-        best_since = batch_end;
-
-      using fsec = std::chrono::duration<float>;
-      using msec = std::chrono::milliseconds;
-      auto total_s      = std::chrono::duration_cast<fsec>(batch_end - start).count();
-      auto best_since_s = std::chrono::duration_cast<fsec>(batch_end - best_since).count();
-      auto batch_ms     = std::chrono::duration_cast<msec>(batch_end - batch_start).count();
-
+    while (!h.signaled() && temperature_ > 1e-16) {
+      init_exponential_domain();
       const auto d = dual_relaxed();
-      const auto gap    = (d - value_relaxed_) / d * 100.0;
-      const auto gap01  = (d - value_latest_)  / d * 100.0;
-      const auto gap01b = (d - value_best_)    / d * 100.0;
-
+      const auto p = primal();
+      const auto gap = (d - p) / d * 100.0;
       std::cout << "it=" << iterations_ << " "
                 << "d=" << d << " "
-                << "p=" << value_relaxed_ << " "
+                << "p=" << p << " "
                 << "gap=" << gap << "% "
-                << "p01=" << value_latest_ << " "
-                << "gap01=" << gap01 << "% "
-                << "p01*=" << value_best_ << " "
-                << "gap01*=" << gap01b << "% "
-                << "p01*_since=" << best_since_s << "s "
-#ifndef NDEBUG
-                << "H=" << entropy() << " "
-                << "d_T=" << dual_smoothed() << " "
-                << "p_T=" << primal_smoothed(assignment_relaxed_) << " "
-#endif
+                << "t=" << t_total.seconds<true>() << " "
                 << "T=" << temperature_ << " "
-                << "t=" << total_s << "s "
-                << "t/it=" << batch_ms / batch_size << "ms"
-                << "\n";
+                << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it " << std::endl;
 
-      if (limit_runtime_ > 0.0 && total_s >= limit_runtime_) {
-        std::cout << "run time limit reached: " << total_s << "s" << std::endl;
-        return;
+      if (gap < 1e-2) {
+        std::cout << "Gap limit reached." << std::endl;
+        break;
       }
 
-      if (gap01b <= limit_p01b_gap_) {
-        std::cout << "integer-primal / dual gap limit reached: " << gap01b << "%" << std::endl;
-        return;
-      }
+      t_total.start();
+      bool is_optimal = false;
+      while (!is_optimal) {
+        size_t count_stabilization = 0;
+        foreach_clique([&](const auto clique_idx) {
+          update_lambda(clique_idx);
 
-      if (limit_best_stagnation_ > 0.0 && best_since_s >= limit_best_stagnation_) {
-        std::cout << "p01* improvement limit reached: " << best_since_s << "s" << std::endl;
-        return;
+          const auto& alpha = alphas_[clique_idx];
+          if (alpha + 1/alpha > threshold_stability_) {
+            reparametrize();
+            temperature_ /= 0.5 * temperature_drop_factor_;
+            init_exponential_domain();
+            count_stabilization += 1;
+          }
+        });
+
+        std::cout << count_stabilization << " " << std::flush;
+
+        is_optimal = true;
+        foreach_clique([&](const auto clique_idx) {
+          cost sum = 0.0;
+          foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+            sum += assignment_relaxed_[node_idx];
+          });
+          if (sum - 1.0 > threshold_optimality_)
+            is_optimal = false;
+        });
+
+        ++iterations_;
       }
+      reparametrize();
+      temperature_ *= temperature_drop_factor_;
+
+      update_integer_assignment(greedy_generations);
+      t_total.stop();
+
+      std::cout << std::endl;
     }
 
-    std::cout << std::flush;
+    std::cout << "Optimization stopped: "
+              << "d=" << dual_relaxed() << " "
+              << "p=" << primal() << std::endl;
   }
 
   index no_nodes() const { return costs_.size(); }
   index no_orig() const { return orig_.size(); }
   index no_cliques() const { return clique_indices_.size(); }
 
+  double threshold_optimality() const { return threshold_optimality_; }
+  void threshold_optimality(const double v) { threshold_optimality_ = v; }
+
+  double threshold_stability() const { return threshold_stability_; }
+  void threshold_stability(const double v) { threshold_stability_ = v; }
+
   double temperature_drop_factor() const { return temperature_drop_factor_; }
-  void temperature_drop_factor(double v) { temperature_drop_factor_ = v; }
+  void temperature_drop_factor(const double v) { temperature_drop_factor_ = v; }
 
   double temperature() const { return temperature_; }
-  void temperature(double t) { temperature_ = t; }
+  void temperature(const double v) { temperature_ = v; }
 
 protected:
+
+  template<typename F>
+  void foreach_clique(F f) const
+  {
+#if 0
+    auto executor = [&](const auto idx) {
+      bool cont = true;
+      if constexpr (std::is_void_v<std::invoke_result_t<F, index>>)
+        f(idx);
+      else
+        cont = f(idx);
+      return cont;
+    };
+
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+      if (!executor(clique_idx))
+        break;
+#endif
+
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+      f(clique_idx);
+  }
+
+  template<bool only_orig=false, typename F>
+  void foreach_node(F f) const
+  {
+    for (index node_idx = 0; node_idx < (only_orig ? no_orig() : no_nodes()); ++node_idx)
+      f(node_idx);
+  }
+
+  template<typename F>
+  void foreach_node_in_clique(const index clique_idx, F f) const
+  {
+    const auto& r = clique_indices_[clique_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index node_idx = clique_index_data_[idx];
+      f(node_idx);
+    }
+  }
+
+  template<typename F>
+  void foreach_clique_of_node(const index node_idx, F f) const
+  {
+    const auto& r = node_cliques_[node_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index clique_idx = node_cliques_data_[idx];
+      f(clique_idx);
+    }
+  }
+
+  template<typename F>
+  void foreach_node_neigh(const index node_idx, F f) const
+  {
+    const auto& r = node_neighs_[node_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index other_node_idx = node_neigh_data_[idx];
+      f(other_node_idx);
+    }
+  }
 
   void finalize_graph()
   {
@@ -482,6 +492,12 @@ protected:
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
     value_relaxed_ = value_latest_;
 
+    //
+    // Initialize remaining things.
+    //
+
+    alphas_.resize(no_cliques());
+
     scratch_greedy_indices_.resize(no_cliques());
     std::iota(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), 0);
 
@@ -495,16 +511,32 @@ protected:
     if (finalized_costs_)
       return;
 
-    if constexpr (TEMPERATURE_UPDATE_KIND == temperature_update_kind::after_convergence_old) {
+    if constexpr (initial_reparametrization) {
+      // Update all lambdas (without smoothing, invariants do not hold) to ensure
+      // that invariants (negative node costs) hold.
+      for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+        update_lambda<false>(clique_idx);
+
+      std::cout << "initial reparametrization: lb=" << dual_relaxed() << " ub=" << primal() << std::endl;
+
+      auto it = std::min_element(costs_.cbegin(), costs_.cend());
+      scaling_ = std::abs(*it);
+
+      //if (it != costs_.cend()) {
+      //  temperature_ = -*it;
+      //  std::cout << "initial temperature estimate: T=" << temperature_ << " min_element=" << *it << std::endl;
+      //}
+    } else {
       auto it = std::max_element(costs_.cbegin(), costs_.cend());
-      if (it != costs_.cend())
-        temperature_ = *it;
+      scaling_ = std::abs(*it);
+      //if (it != costs_.cend()) {
+      //  temperature_ = *it;
+      //  std::cout << "intial temperature estimate: T=" << temperature_ << " max_element=" << *it << std::endl;
+      //}
     }
 
-    // Update all lambdas (without smoothing, invariants do not hold) to ensure
-    // that invariants (negative node costs) hold.
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      update_lambda<false>(clique_idx);
+    for (auto& c : costs_)
+      c /= scaling_;
 
     // We update the cached values for the corresponding assignments (costs
     // have most likely changed the assignment between calls to
@@ -515,95 +547,125 @@ protected:
 
     // Try to improve naive assignment by greedily sampling an assignment.
     // This will be used for inital temperature selection.
-    greedy();
+    //greedy();
     if (value_latest_ > value_best_) {
       value_best_ = value_latest_;
       assignment_best_ = assignment_latest_;
     }
-    update_temperature();
 
     finalized_costs_ = true;
   }
 
-  void single_pass()
-  {
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      update_lambda(clique_idx);
+  void init_exponential_domain() {
+    // Reset alphas to 1.
+    std::fill(alphas_.begin(), alphas_.end(), 1.0);
 
-    compute_relaxed_truncated_projection();
-    update_temperature();
+    // Recompute exponentiated costs.
+    std::transform(costs_.cbegin(), costs_.cend(), assignment_relaxed_.begin(),
+      [this](const auto c) { return std::exp(c / temperature_); });
+
+#ifndef NDEBUG
+    for (const auto v : assignment_relaxed_)
+      assert(std::isfinite(v));
+#endif
   }
 
+  template<bool smoothing=true>
   void copy_clique_in(const range& cl)
   {
     scratch_.resize(cl.size, 0.0);
     for (index idx = 0; idx < cl.size; ++idx)
-      scratch_[idx] = costs_[clique_index_data_[cl.begin + idx]];
+      if constexpr (smoothing)
+        scratch_[idx] = assignment_relaxed_[clique_index_data_[cl.begin + idx]];
+      else
+        scratch_[idx] = costs_[clique_index_data_[cl.begin + idx]];
   }
 
+  template<bool smoothing=true>
   void copy_clique_out(const range& cl)
   {
     for (index idx = 0; idx < cl.size; ++idx)
-      costs_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
+      if constexpr (smoothing)
+        assignment_relaxed_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
+      else
+        costs_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
   }
 
   template<bool smoothing=true>
   void update_lambda(const index clique_idx)
   {
     const auto& cl = clique_indices_[clique_idx];
-    copy_clique_in(cl);
+    copy_clique_in<smoothing>(cl);
 
-    auto f = [](const cost a, const cost b) { return std::max(a, b); };
-    const cost maximum = std::accumulate(scratch_.begin(), scratch_.end(), -infinity, f);
-
-    cost msg = 0.0;
     if constexpr (smoothing) {
-      for (auto c : scratch_)
-        msg += std::exp((c - maximum) / temperature_);
-      msg = maximum + temperature_ * std::log(msg);
+      auto& alpha = alphas_[clique_idx];
+      const auto s = std::reduce(scratch_.cbegin(), scratch_.cend());
+      alpha /= s;
+      for (auto& x : scratch_)
+        x /= s;
     } else {
-      msg = maximum;
+      const auto msg = std::reduce(scratch_.cbegin(), scratch_.cend(), -infinity, [](auto a, auto b) { return std::max(a, b); });
+      assert(std::isfinite(msg));
+
+      constant_ += scaling_ * msg;
+      for (auto& c : scratch_)
+        c -= msg;
     }
-    assert(std::isfinite(msg));
 
-    constant_ += msg;
-    for (auto& c : scratch_)
-      c -= msg;
-
-    copy_clique_out(cl);
+    copy_clique_out<smoothing>(cl);
   }
 
-  void compute_relaxed_truncated_projection()
+  void reparametrize(const index clique_idx, const cost v)
   {
-    auto slack = [this](const index clique_idx) {
-      assert(no_orig() + clique_idx < assignment_relaxed_.size());
-      return &assignment_relaxed_[no_orig() + clique_idx];
-    };
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+    assert(std::isfinite(v));
+    assert(std::isfinite(constant_));
 
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      *slack(clique_idx) = 1.0;
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      auto& cost = costs_[node_idx]; assert(std::isfinite(cost));
+      cost -= v; assert(std::isfinite(cost));
+    });
 
-    for (index node_idx = 0; node_idx < no_orig(); ++node_idx) {
-      const auto& nc = node_cliques_[node_idx];
-      const auto x = std::exp(costs_[node_idx] / temperature_);
+    constant_ += scaling_ * v;
+    assert(std::isfinite(constant_));
+  }
 
-      cost max_allowed_x = 1.0;
-      for (index idx = nc.begin; idx < nc.end; ++idx) {
-        const auto clique_idx = node_cliques_data_[idx];
-        max_allowed_x = std::min(max_allowed_x, *slack(clique_idx));
-      }
-      assert(!std::isinf(max_allowed_x));
+  void reparametrize(const index clique_idx)
+  {
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+    const auto alpha = alphas_[clique_idx];
+    assert(std::isfinite(alpha));
+    reparametrize(clique_idx, -temperature_ * std::log(alpha));
+  }
 
-      const auto y = std::min(x, max_allowed_x);
-      assignment_relaxed_[node_idx] = y;
+  void reparametrize()
+  {
+    foreach_clique([this](const auto clique_idx) {
+      reparametrize(clique_idx);
+    });
+  }
 
-      for (index idx = nc.begin; idx < nc.end; ++idx) {
-        const auto clique_idx = node_cliques_data_[idx];
-        *slack(clique_idx) -= y;
-      }
-    }
 
-    value_relaxed_ = primal_relaxed(assignment_relaxed_);
+  bool is_stable(const cost c) const
+  {
+    bool result = c <= threshold_stability_ && c >= 1/threshold_stability_;
+    // result \implies std::isfinite(result)
+    assert(!result || std::isfinite(c));
+    return result;
+  }
+
+  bool is_unstable(const cost c) const
+  {
+    return !is_stable(c);
+  }
+
+  void stabilize()
+  {
+    // If we stabilize all terms, we just reparametrize (moves things from
+    // alphas back to original costs) and reinitialize the values in the
+    // exponential domain in one batch (i.e. set everything to 1).
+    reparametrize();
+    init_exponential_domain();
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -633,37 +695,44 @@ protected:
 
   void greedy()
   {
+    std::cout << "g " << std::flush;
     std::shuffle(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), gen_);
 
     std::fill(assignment_latest_.begin(), assignment_latest_.end(), -1);
     for (const auto clique_idx : scratch_greedy_indices_)
-      round(clique_indices_[clique_idx]);
+      greedy_clique(clique_idx);
 
     value_latest_ = primal(assignment_latest_);
   }
 
-  void round(const range& cl)
+  void greedy_clique(const index clique_idx)
   {
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+
     int count = 0;
-    for (index idx = cl.begin; idx < cl.end; ++idx)
-      count += assignment_latest_[clique_index_data_[idx]] == 1 ? 1 : 0;
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      count += assignment_latest_[node_idx] == 1 ? 1 : 0;
+    });
     assert(count == 0 || count == 1);
 
     if (count > 0)
       return;
 
-    copy_clique_in(cl);
-    for (index idx = 0; idx < cl.size; ++idx) {
-      const auto nidx = clique_index_data_[cl.begin + idx];
-      if (assignment_latest_[nidx] == 0)
-        scratch_[idx] = -infinity;
-    }
+    cost max = -infinity;
+    index argmax = -1;
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      if (assignment_latest_[node_idx] != 0 && costs_[node_idx] > max) {
+        max = costs_[node_idx];
+        argmax = node_idx;
+      }
+    });
 
-    const auto argmax = std::max_element(scratch_.begin(), scratch_.end()) - scratch_.begin();
-    const auto nidx = clique_index_data_[cl.begin + argmax];
-    assignment_latest_[nidx] = 1;
-    for (index idx = node_neighs_[nidx].begin; idx < node_neighs_[nidx].end; ++idx)
-      assignment_latest_[node_neigh_data_[idx]] = 0;
+    assignment_latest_[argmax] = 1;
+    foreach_node_neigh(argmax, [&](const auto node_idx) {
+      assert(node_idx != argmax);
+      assert(assignment_latest_[node_idx] != 1);
+      assignment_latest_[node_idx] = 0;
+    });
   }
 
 #ifdef ENABLE_QPBO
@@ -786,15 +855,24 @@ protected:
 
   void fusion_move()
   {
+    std::cout << "f " << std::flush;
 #ifndef NDEBUG
     const auto value_best_old = value_best_;
 #endif
     if (fuse_two_assignments(assignment_best_, assignment_latest_))
       value_best_ = primal(assignment_best_);
-    assert(std::abs(value_best_ - primal(assignment_best_)) <= 1e-8);
+    assert(dbg::are_identical(value_best_, primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
   }
 #endif
+
+  void assert_unset_alphas() const
+  {
+#ifndef NDEBUG
+    for (const auto v : alphas_)
+      assert(std::abs(v - 1) < epsilon);
+#endif
+  }
 
   void assert_negative_node_costs() const
   {
@@ -808,7 +886,10 @@ protected:
   std::vector<cost> costs_;
   std::vector<cost> orig_;
   cost constant_;
-  double temperature_drop_factor_;
+  double scaling_;
+
+  int iterations_;
+  double temperature_;
 
   std::vector<range> clique_indices_;
   std::vector<index> clique_index_data_;
@@ -819,8 +900,6 @@ protected:
   std::vector<range> node_neighs_;
   std::vector<index> node_neigh_data_;
 
-  int iterations_;
-  double temperature_;
   mutable std::vector<cost> scratch_;
   mutable std::vector<index> scratch_greedy_indices_;
   mutable std::vector<index> scratch_qpbo_indices_;
@@ -831,7 +910,7 @@ protected:
   std::vector<int> assignment_best_;
 
   cost value_relaxed_;
-  std::vector<double> assignment_relaxed_;
+  std::vector<cost> assignment_relaxed_, alphas_;
 
   std::default_random_engine gen_;
 #ifdef ENABLE_QPBO
@@ -841,10 +920,15 @@ protected:
   double limit_p01b_gap_;
   double limit_best_stagnation_;
   double limit_runtime_;
+
+  double threshold_optimality_;
+  double threshold_stability_;
+  double temperature_drop_factor_;
 };
 
-}
-}
+} // namespace mpopt::mwis::bregman_exp
+} // namespace mpopt::mwis
+} // namespace mpopt
 
 #endif
 

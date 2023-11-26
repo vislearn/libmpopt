@@ -4,7 +4,7 @@ project('libmpopt', ['c', 'cpp'], version: '0.1.0', default_options: ['cpp_std=c
 # Project specific infos.
 #
 
-sublibraries = ['ct', 'gm', 'mwis', 'qap']
+sublibraries = ['ct', 'gm', 'mwis_original', 'mwis_bregman_exp', 'mwis_bregman_log', 'qap']
 
 python_wrappers = {
   'ct_jug_2ts':             'mpopt.ct.cmdline.jug2_ts',
@@ -158,7 +158,7 @@ foreach sublibrary : sublibraries
     link_with: [lib],
     dependencies: [python3.dependency()],
     install: true,
-    install_dir: python3.get_install_dir(pure: false, subdir: 'mpopt' / sublibrary))
+    install_dir: python3.get_install_dir(pure: false, subdir: 'mpopt' / sublibrary.split('_')[0]))
 
   install_headers('include/mpopt/' + sublibrary + '.h', subdir: 'mpopt')
 endforeach
