@@ -341,21 +341,6 @@ protected:
   template<typename F>
   void foreach_clique(F f) const
   {
-#if 0
-    auto executor = [&](const auto idx) {
-      bool cont = true;
-      if constexpr (std::is_void_v<std::invoke_result_t<F, index>>)
-        f(idx);
-      else
-        cont = f(idx);
-      return cont;
-    };
-
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      if (!executor(clique_idx))
-        break;
-#endif
-
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
       f(clique_idx);
   }
