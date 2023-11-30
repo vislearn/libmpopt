@@ -39,13 +39,10 @@ class Solver(BaseSolver):
         self.lib.solver_limit_integer_primal_stagnation(self.solver, seconds)
 
     def iterations(self):
-        return self.lib.solver_get_iterations(self.solver)
+        return self._getter_setter('iteration')
 
-    def constant(self, c=None):
-        if c is None:
-            return self.lib.solver_get_constant(self.solver)
-        else:
-            self.lib.solver_set_constant(self.solver, c)
+    def constant(self, v=None):
+        return self._getter_setter('constant', v)
 
     def node_cost(self, node_idx, cost=None):
         if cost is None:
@@ -57,7 +54,7 @@ class Solver(BaseSolver):
         if cost is None:
             return self.lib.solver_get_clique_cost(self.solver, clique_idx)
         else:
-            self.lib.solver_set_clique_cost(self.solver, clique_cost, cost)
+            self.lib.solver_set_clique_cost(self.solver, clique_idx, cost)
 
     def _getter_setter(self, k, v=None):
         if v is None:
