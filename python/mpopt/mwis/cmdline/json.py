@@ -59,10 +59,13 @@ if __name__ == '__main__':
         # user aborted the run with Ctrl-C.
         pass
 
+    assignment = solver.assignment()
+    print('Got assignment with lb:', model.evaluate(assignment))
+
     if args.output_assignment:
         print(f'Writing assignment to {args.output_assignment}...')
         with open(args.output_assignment, 'wt') as f:
-            json.dump(solver.assignment(), f)
+            json.dump(assignment, f)
             f.write('\n')
 
     print('\nOk.')
