@@ -10,8 +10,8 @@ extern "C" {
   {
     if (sig == SIGALRM) {
       write(1, "\nTimeout.\n", 10);
-      std::signal(sig, SIG_DFL);
-      std::raise(sig);
+    } else {
+      write(1, "\nInterrupt.\n", 12);
     }
 
     mpopt_signaled = 1;
