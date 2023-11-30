@@ -2,9 +2,7 @@
 
 import argparse
 import math
-import os.path
 import signal
-import sys
 
 from mpopt import utils, mwis
 
