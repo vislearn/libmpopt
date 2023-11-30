@@ -271,7 +271,7 @@ public:
 
       t_total.start();
       bool is_optimal = false;
-      while (!is_optimal) {
+      while (!is_optimal && !h.signaled()) {
         is_optimal = true;
 
         for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)

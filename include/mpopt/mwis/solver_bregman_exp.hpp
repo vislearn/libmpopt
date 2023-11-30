@@ -278,7 +278,7 @@ public:
 
       t_total.start();
       bool is_optimal = false;
-      while (!is_optimal) {
+      while (!is_optimal && !h.signaled()) {
         size_t count_stabilization = 0;
         foreach_clique([&](const auto clique_idx) {
           update_lambda(clique_idx);
