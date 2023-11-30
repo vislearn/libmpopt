@@ -14,9 +14,11 @@ class Solver(BaseSolver):
 
     def __init__(self, lib):
         super().__init__(lib)
+        self.number_of_nodes = 0
 
     def add_node(self, cost):
         self.lib.solver_add_node(self.solver, cost)
+        self.number_of_nodes += 1
 
     def add_clique(self, indices):
         indices = np.asarray(sorted(indices), dtype=np.int32)
@@ -28,6 +30,12 @@ class Solver(BaseSolver):
 
     def run(self, batch_size=DEFAULT_BATCH_SIZE, max_batches=DEFAULT_MAX_BATCHES, greedy_generations=DEFAULT_GREEDY_GENERATIONS):
         return self.lib.solver_run(self.solver, batch_size, max_batches, greedy_generations)
+
+    def assignment(self):
+        array = np.empty((self.number_of_nodes,), dtype=np.int32)
+        ptr = ctypes.cast(np.ctypeslib.as_ctypes(array), ctypes.c_void_p)
+        self.lib.solver_get_assignment(self.solver, ptr.value, self.number_of_nodes)
+        return array.tolist()
 
     def limit_runtime(self, seconds):
         self.lib.solver_limit_runtime(self.solver, seconds)

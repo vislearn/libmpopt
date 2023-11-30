@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import math
 import signal
 
@@ -19,6 +20,7 @@ if __name__ == '__main__':
     parser.add_argument('--threshold-optimality', type=float)
     parser.add_argument('--threshold-stability', type=float)
     parser.add_argument('--temperature-drop-factor', type=float)
+    parser.add_argument('--output-assignment', help='Writes the primal assignment to a file.')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.jug input file.')
     args = parser.parse_args()
 
@@ -50,5 +52,17 @@ if __name__ == '__main__':
             timeout = float(args.timeout)
         signal.alarm(math.ceil(timeout))
 
-    solver.run(args.batch_size, args.max_batches, args.greedy_generations)
+    try:
+        solver.run(args.batch_size, args.max_batches, args.greedy_generations)
+    except KeyboardInterrupt:
+        # We ignore Ctrl-C here so that we store the primal assignment into a file even though the
+        # user aborted the run with Ctrl-C.
+        pass
+
+    if args.output_assignment:
+        print(f'Writing assignment to {args.output_assignment}...')
+        with open(args.output_assignment, 'wt') as f:
+            json.dump(solver.assignment(), f)
+            f.write('\n')
+
     print('\nOk.')
