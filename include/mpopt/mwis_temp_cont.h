@@ -1,5 +1,5 @@
-#ifndef LIBMPOPT_MWIS_ORIGINAL_H
-#define LIBMPOPT_MWIS_ORIGINAL_H
+#ifndef LIBMPOPT_MWIS_TEMP_CONT_H
+#define LIBMPOPT_MWIS_TEMP_CONT_H
 
 #ifdef __cplusplus
 extern "C" {

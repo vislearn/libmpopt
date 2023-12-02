@@ -1,5 +1,5 @@
-#ifndef LIBMPOPT_MWIS_SINKHORN_LOG_H
-#define LIBMPOPT_MWIS_SINKHORN_LOG_H
+#ifndef LIBMPOPT_MWIS_BREGMAN_LOG_H
+#define LIBMPOPT_MWIS_BREGMAN_LOG_H
 
 #ifdef __cplusplus
 extern "C" {

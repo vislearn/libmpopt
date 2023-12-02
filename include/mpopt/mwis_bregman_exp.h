@@ -1,5 +1,5 @@
-#ifndef LIBMPOPT_MWIS_SINKHORN_EXP_H
-#define LIBMPOPT_MWIS_SINKHORN_EXP_H
+#ifndef LIBMPOPT_MWIS_BREGMAN_EXP_H
+#define LIBMPOPT_MWIS_BREGMAN_EXP_H
 
 #ifdef __cplusplus
 extern "C" {
