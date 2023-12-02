@@ -487,18 +487,9 @@ protected:
 
       auto it = std::min_element(costs_.cbegin(), costs_.cend());
       scaling_ = std::abs(*it);
-
-      //if (it != costs_.cend()) {
-      //  temperature_ = -*it;
-      //  std::cout << "initial temperature estimate: T=" << temperature_ << " min_element=" << *it << std::endl;
-      //}
     } else {
       auto it = std::max_element(costs_.cbegin(), costs_.cend());
       scaling_ = std::abs(*it);
-      //if (it != costs_.cend()) {
-      //  temperature_ = *it;
-      //  std::cout << "intial temperature estimate: T=" << temperature_ << " max_element=" << *it << std::endl;
-      //}
     }
 
     for (auto& c : costs_)
@@ -510,14 +501,6 @@ protected:
     value_relaxed_ = primal_relaxed(assignment_relaxed_);
     value_best_ = primal(assignment_best_);
     iterations_ = 0;
-
-    // Try to improve naive assignment by greedily sampling an assignment.
-    // This will be used for inital temperature selection.
-    //greedy();
-    if (value_latest_ > value_best_) {
-      value_best_ = value_latest_;
-      assignment_best_ = assignment_latest_;
-    }
 
     finalized_costs_ = true;
   }
