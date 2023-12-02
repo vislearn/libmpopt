@@ -1,5 +1,5 @@
 #include <mpopt/mwis.hpp>
-#include <mpopt/mwis_original.h>
+#include <mpopt/mwis_temp_cont.h>
 
 using solver_type = mpopt::mwis::original::solver;
 

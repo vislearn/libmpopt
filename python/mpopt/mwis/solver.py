@@ -3,9 +3,9 @@ import numpy as np
 
 from ..common.solver import (DEFAULT_BATCH_SIZE, DEFAULT_MAX_BATCHES, BaseSolver)
 
-from . import libmpopt_mwis_original as lib_original
 from . import libmpopt_mwis_bregman_exp as lib_bregman_exp
 from . import libmpopt_mwis_bregman_log as lib_bregman_log
+from . import libmpopt_mwis_temp_cont as lib_temp_cont
 
 DEFAULT_GREEDY_GENERATIONS = 10
 

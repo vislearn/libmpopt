@@ -4,7 +4,7 @@ project('libmpopt', ['c', 'cpp'], version: '0.1.0', default_options: ['cpp_std=c
 # Project specific infos.
 #
 
-sublibraries = ['ct', 'gm', 'mwis_original', 'mwis_bregman_exp', 'mwis_bregman_log', 'qap']
+sublibraries = ['ct', 'gm', 'mwis_bregman_exp', 'mwis_bregman_log', 'mwis_temp_cont', 'qap']
 
 python_wrappers = {
   'ct_jug_2ts':             'mpopt.ct.cmdline.jug2_ts',

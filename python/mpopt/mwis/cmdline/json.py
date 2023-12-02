@@ -10,7 +10,7 @@ from mpopt import utils, mwis
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='mwis_json', description='Optimizer for *.json maximum weighted independent set files.')
-    parser.add_argument('-l', '--library', choices=('bregman_exp', 'bregman_log', 'original'), default='bregman_exp')
+    parser.add_argument('-l', '--library', choices=('bregman_exp', 'bregman_log', 'temp_cont'), default='bregman_exp')
     parser.add_argument('-B', '--batch-size', type=int, default=mwis.DEFAULT_BATCH_SIZE)
     parser.add_argument('-b', '--max-batches', type=int, default=mwis.DEFAULT_MAX_BATCHES)
     parser.add_argument('-g', '--greedy-generations', type=int, default=mwis.DEFAULT_GREEDY_GENERATIONS, help='Specify number of greedy generation passes per batch.')
