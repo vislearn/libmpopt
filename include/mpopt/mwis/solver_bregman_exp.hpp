@@ -5,6 +5,19 @@ namespace mpopt {
 namespace mwis {
 namespace bregman_exp {
 
+// Can be switch to float for possibly faster dual updates. Loss of precision
+// will not affect the solution quality, because the exp-costs are used to
+// compute a equivalance transformation (reparametrization) at full precsision.
+using cost_exp = cost;
+
+constexpr cost_exp get_default_threshold_stability() {
+  if constexpr (std::is_same_v<cost_exp, float>) {
+    return 1e30f;
+  } else {
+    return 1e300;
+  }
+}
+
 struct range {
   index begin;
   index end;
@@ -30,7 +43,7 @@ public:
   , qpbo_(0, 0)
 #endif
   , threshold_optimality_(1e-2)
-  , threshold_stability_(1e300)
+  , threshold_stability_(get_default_threshold_stability())
   , temperature_drop_factor_(0.5)
   {
 #ifndef ENABLE_QPBO
@@ -196,7 +209,7 @@ public:
 
         is_optimal = true;
         foreach_clique([&](const auto clique_idx) {
-          cost sum = 0.0;
+          cost_exp sum = 0.0;
           foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
             sum += assignment_relaxed_[node_idx];
           });
@@ -516,7 +529,7 @@ protected:
       for (auto& x : scratch_)
         x /= s;
     } else {
-      const auto msg = std::reduce(scratch_.cbegin(), scratch_.cend(), -infinity, [](auto a, auto b) { return std::max(a, b); });
+      const auto msg = std::reduce(scratch_.cbegin(), scratch_.cend(), -infinity, [](cost_exp a, cost_exp b) { return std::max(a, b); });
       assert(std::isfinite(msg));
 
       constant_ += msg;
@@ -558,7 +571,7 @@ protected:
   }
 
 
-  bool is_stable(const cost c) const
+  bool is_stable(const cost_exp c) const
   {
     bool result = c <= threshold_stability_ && c >= 1/threshold_stability_;
     // result \implies std::isfinite(result)
@@ -566,7 +579,7 @@ protected:
     return result;
   }
 
-  bool is_unstable(const cost c) const
+  bool is_unstable(const cost_exp c) const
   {
     return !is_stable(c);
   }
@@ -812,7 +825,7 @@ protected:
   std::vector<range> node_neighs_;
   std::vector<index> node_neigh_data_;
 
-  mutable std::vector<cost> scratch_;
+  mutable std::vector<cost_exp> scratch_;
   mutable std::vector<index> scratch_greedy_indices_;
   mutable std::vector<index> scratch_qpbo_indices_;
 
@@ -821,16 +834,16 @@ protected:
   cost value_best_;
   std::vector<int> assignment_best_;
 
-  std::vector<cost> assignment_relaxed_, alphas_;
+  std::vector<cost_exp> assignment_relaxed_, alphas_;
 
   std::default_random_engine gen_;
 #ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
 #endif
 
-  double threshold_optimality_;
-  double threshold_stability_;
-  double temperature_drop_factor_;
+  cost_exp threshold_optimality_;
+  cost_exp threshold_stability_;
+  cost temperature_drop_factor_;
 };
 
 } // namespace mpopt::mwis::bregman_exp
