@@ -29,9 +29,6 @@ public:
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
 #endif
-  , limit_p01b_gap_(0.0)
-  , limit_best_stagnation_(0.0)
-  , limit_runtime_(0.0)
   , threshold_optimality_(1e-2)
   , temperature_drop_factor_(0.5)
   {
@@ -236,10 +233,6 @@ public:
     return std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f1) -
            std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
-
-  void limit_runtime(double seconds) { limit_runtime_ = seconds; }
-  void limit_integer_primal_gap(double percentage) { limit_p01b_gap_ = percentage; }
-  void limit_integer_primal_stagnation(int seconds) { limit_best_stagnation_ = seconds; }
 
   int iterations() const { return iterations_; }
 
@@ -784,10 +777,6 @@ protected:
 #ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
 #endif
-
-  double limit_p01b_gap_;
-  double limit_best_stagnation_;
-  double limit_runtime_;
 
   double threshold_optimality_;
   double temperature_drop_factor_;

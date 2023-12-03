@@ -28,9 +28,6 @@ public:
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
 #endif
-  , limit_p01b_gap_(0.0)
-  , limit_best_stagnation_(0.0)
-  , limit_runtime_(0.0)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -241,10 +238,6 @@ public:
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
-  void limit_runtime(double seconds) { limit_runtime_ = seconds; }
-  void limit_integer_primal_gap(double percentage) { limit_p01b_gap_ = percentage; }
-  void limit_integer_primal_stagnation(int seconds) { limit_best_stagnation_ = seconds; }
-
   int iterations() const { return iterations_; }
 
   void run(const int batch_size=default_batch_size,
@@ -296,21 +289,6 @@ public:
                 << "t=" << total_s << "s "
                 << "t/it=" << batch_ms / batch_size << "ms"
                 << "\n";
-
-      if (limit_runtime_ > 0.0 && total_s >= limit_runtime_) {
-        std::cout << "run time limit reached: " << total_s << "s" << std::endl;
-        return;
-      }
-
-      if (gap01b <= limit_p01b_gap_) {
-        std::cout << "integer-primal / dual gap limit reached: " << gap01b << "%" << std::endl;
-        return;
-      }
-
-      if (limit_best_stagnation_ > 0.0 && best_since_s >= limit_best_stagnation_) {
-        std::cout << "p01* improvement limit reached: " << best_since_s << "s" << std::endl;
-        return;
-      }
     }
 
     std::cout << std::flush;

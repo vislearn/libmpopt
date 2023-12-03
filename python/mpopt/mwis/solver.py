@@ -37,15 +37,6 @@ class Solver(BaseSolver):
         self.lib.solver_get_assignment(self.solver, ptr.value, self.number_of_nodes)
         return array.tolist()
 
-    def limit_runtime(self, seconds):
-        self.lib.solver_limit_runtime(self.solver, seconds)
-
-    def limit_integer_primal_gap(self, percentage):
-        self.lib.solver_limit_integer_primal_gap(self.solver, percentage)
-
-    def limit_integer_primal_stagnation(self, seconds):
-        self.lib.solver_limit_integer_primal_stagnation(self.solver, seconds)
-
     def iterations(self):
         return self._getter_setter('iteration')
 
