@@ -158,7 +158,7 @@ public:
                 << "gap=" << gap << "% "
                 << "p_relaxed=" << p_relaxed << " "
                 << "gap_relaxed=" << gap_relaxed << "% "
-                << "t=" << t_total.seconds<true>() << " "
+                << "t=" << t_total.seconds<true>() << "s "
                 << "T=" << temperature_ << " "
                 << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it" << std::endl;
 
