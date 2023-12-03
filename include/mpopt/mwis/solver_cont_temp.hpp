@@ -12,6 +12,7 @@ struct range {
 };
 
 constexpr int default_greedy_generations = 10;
+constexpr bool initial_reparametrization = true;
 
 template<typename T> bool feasibility_check(const T   sum) { return std::abs(sum - 1.0) < 1e-8; }
 template<>           bool feasibility_check(const int sum) { return sum == 1; }
@@ -23,11 +24,12 @@ public:
   : finalized_graph_(false)
   , finalized_costs_(false)
   , constant_(0.0)
-  , temperature_drop_factor_(0.5)
+  , scaling_(1.0)
   , gen_(std::random_device()())
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
 #endif
+  , temperature_drop_factor_(0.5)
   {
 #ifndef ENABLE_QPBO
     std::cerr << "!!!!!!!!!!\n"
@@ -41,7 +43,7 @@ public:
   {
     assert(!finalized_graph_);
     assert(no_cliques() == 0);
-    costs_.push_back(cost);
+    costs_.push_back(cost / scaling_);
     orig_.push_back(cost);
     return costs_.size() - 1;
   }
@@ -73,14 +75,14 @@ public:
 
   bool finalized() const { return finalized_graph_ && finalized_costs_; }
 
-  cost constant() const { return constant_; }
-  void constant(cost c) { constant_ = c; }
+  cost constant() const { return constant_ * scaling_; }
+  void constant(cost c) { constant_ = c / scaling_; }
 
   template<bool reduced=false>
   cost node_cost(index i) const {
     assert(finalized_graph_);
     assert(i < no_nodes() && i < no_orig());
-    return reduced ? costs_[i] : orig_[i];
+    return reduced ? costs_[i] * scaling_: orig_[i];
   }
 
   void node_cost(index i, cost c)
@@ -89,7 +91,7 @@ public:
     assert(i < no_nodes() && i < no_orig());
     const auto shift = c - orig_[i];
     orig_[i] += shift;
-    costs_[i] += shift;
+    costs_[i] += shift / scaling_;
     finalized_costs_ = false;
   }
 
@@ -100,98 +102,14 @@ public:
     assert(i < no_cliques());
     const auto j = no_orig() + i;
     assert(j < no_nodes());
-    return reduced ? costs_[j] : 0.0;
+    return reduced ? costs_[j] * scaling_ : 0.0;
   }
 
-  cost dual_relaxed() const
-  {
-    // Compute $D(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} <c^\lambda, x>$.
-    // Note that the last term is zero if c^\lambda <= 0 (i.e. after updates
-    // have been performed).
-    assert_negative_node_costs();
+  cost dual_relaxed() const { return dual_relaxed_scaled() * scaling_;}
 
-    // sum of all lambdas = constant_
-    return constant_;
-  }
+  cost primal() const { return value_best_ * scaling_; }
 
-  cost dual_smoothed() const
-  {
-    // Compute $D^T(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} [ <c^\lambda, x> + T H(x) ]$.
-    // The max of $cx - Tx log x$ is obtained at $x = exp(c/T - 1)$.
-    // If $c^\lambda <= 0$ it is within the range [0, 1] and the obtained value is
-    // $T / e * exp(c / T)$.
-    assert_negative_node_costs();
-
-    // sum of all lambdas = constant_
-    auto f = [this](const auto a, const auto c) { return a + std::exp(c / temperature_); };
-    return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
-  }
-
-  template<typename T>
-  bool feasibility(const std::vector<T>& assignment) const
-  {
-    for (const auto& cl : clique_indices_) {
-      T sum = 0;
-      for (index idx = cl.begin; idx < cl.end; ++idx)
-        sum += assignment[clique_index_data_[idx]];
-      if (!feasibility_check(sum))
-        return false;
-    }
-    return true;
-  }
-
-  cost primal() const { return value_best_; }
-
-  cost primal(const std::vector<int>& assignment) const
-  {
-    // Same as relaxed objective, we just check that $x_i \in {0, 1}$.
-#ifndef NDEBUG
-    for (auto a : assignment)
-      assert(a == 0 || a == 1);
-#endif
-
-    return primal_relaxed(assignment);
-  }
-
-  cost primal_relaxed() const { return value_relaxed_; }
-
-  template<typename T>
-  cost primal_relaxed(const std::vector<T>& assignment) const
-  {
-    // Compute $<c, x>$ s.t. uniqueness constraints.
-    assert(assignment.size() == no_nodes());
-    cost result = constant_;
-
-    for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
-      const auto x = assignment[node_idx];
-      assert(x >= 0 && x <= 1);
-      result += costs_[node_idx] * x;
-    }
-
-#ifndef NDEBUG
-    if (!feasibility(assignment))
-      result = infinity;
-#endif
-
-    return result;
-  }
-
-  template<typename T>
-  cost primal_smoothed(const std::vector<T>& assignment) const
-  {
-    // Compute $<c, x> + T H(x)$ s.t. uniqueness constraints.
-    auto relaxed = primal_relaxed(assignment);
-
-    // Compute real entropy of `assignment` (not an estimated one like the
-    // `entropy()`).
-    auto f = [](const auto a, const auto x_i) {
-      const auto log = std::log(x_i);
-        return a + (std::isnormal(log) ? x_i * log : 0.0) - x_i;
-    };
-    const auto H = -std::accumulate(assignment.cbegin(), assignment.cend(), 0.0, f);
-
-    return relaxed + temperature_ * H;
-  }
+  cost primal_relaxed() const { return value_relaxed_ * scaling_; }
 
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
@@ -209,7 +127,141 @@ public:
     return assignment_best_[node_idx];
   }
 
-  cost entropy() const
+  int iterations() const { return iterations_; }
+
+  void run(const int batch_size=default_batch_size,
+           const int max_batches=default_max_batches,
+           const int greedy_generations=default_greedy_generations)
+  {
+    std::cout.precision(std::numeric_limits<cost>::max_digits10);
+    assert(finalized());
+    signal_handler h;
+    dbg::timer t_total;
+
+    for (int i = 0; i < max_batches && !h.signaled(); ++i) {
+      t_total.start();
+      for (int j = 0; j < batch_size; ++j)
+        single_pass();
+      update_integer_assignment(greedy_generations);
+      iterations_ += batch_size;
+      t_total.stop();
+
+      const auto d = dual_relaxed();
+      const auto p = primal();
+      const auto p_relaxed = primal_relaxed();
+      const auto gap = (d - p) / d * 100.0;
+      const auto gap_relaxed = (d - p_relaxed) / d * 100.0;
+
+      std::cout << "it=" << iterations_ << " "
+                << "d=" << d << " "
+                << "p=" << p << " "
+                << "gap=" << gap << "% "
+                << "p_relaxed=" << p_relaxed << " "
+                << "gap_relaxed=" << gap_relaxed << "% "
+                << "t=" << t_total.seconds<true>() << " "
+                << "T=" << temperature_ << " "
+                << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it" << std::endl;
+
+      if (gap < 1e-2) {
+        std::cout << "Gap limit reached." << std::endl;
+        break;
+      }
+    }
+
+    std::cout << "Optimization stopped: "
+              << "d=" << dual_relaxed() << " "
+              << "p=" << primal() << std::endl;
+  }
+
+  index no_nodes() const { return costs_.size(); }
+  index no_orig() const { return orig_.size(); }
+  index no_cliques() const { return clique_indices_.size(); }
+
+  double temperature_drop_factor() const { return temperature_drop_factor_; }
+  void temperature_drop_factor(const double v) { temperature_drop_factor_ = v; }
+
+  double temperature() const { return temperature_; }
+  void temperature(const double v) { temperature_ = v; }
+
+protected:
+
+  template<typename F>
+  void foreach_clique(F f) const
+  {
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+      f(clique_idx);
+  }
+
+  template<bool only_orig=false, typename F>
+  void foreach_node(F f) const
+  {
+    for (index node_idx = 0; node_idx < (only_orig ? no_orig() : no_nodes()); ++node_idx)
+      f(node_idx);
+  }
+
+  template<typename F>
+  void foreach_node_in_clique(const index clique_idx, F f) const
+  {
+    const auto& r = clique_indices_[clique_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index node_idx = clique_index_data_[idx];
+      f(node_idx);
+    }
+  }
+
+  template<typename F>
+  void foreach_clique_of_node(const index node_idx, F f) const
+  {
+    const auto& r = node_cliques_[node_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index clique_idx = node_cliques_data_[idx];
+      f(clique_idx);
+    }
+  }
+
+  template<typename F>
+  void foreach_node_neigh(const index node_idx, F f) const
+  {
+    const auto& r = node_neighs_[node_idx];
+    for (index idx = r.begin; idx < r.end; ++idx) {
+      const index other_node_idx = node_neigh_data_[idx];
+      f(other_node_idx);
+    }
+  }
+
+  cost dual_relaxed_scaled() const
+  {
+    // Compute $D(\lambda) = \sum_i \lambda_i + \sum_i \max_{x \in [0, 1]^N} <c^\lambda, x>$.
+    // Note that the sum of all lambdas = constant_.
+    if constexpr (initial_reparametrization) {
+      // We now that the second sum is always zero, because this is ensured after the first
+      // reparametrization run.
+      return constant_;
+    } else {
+      // Compute $\sum_i \max_{x \in [0, 1]^N} <c^\lambda, x>$.
+      const auto f = [](const auto a, const auto b) {
+        return a + std::max(b, cost{0});
+      };
+
+      const auto sum_max_i = std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
+      return constant_ + sum_max_i;
+    }
+  }
+
+  cost dual_smoothed_scaled() const
+  {
+    // Compute $D^T(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} [ <c^\lambda, x> + T H(x) ]$.
+    // The max of $cx - Tx log x$ is obtained at $x = exp(c/T - 1)$.
+    // If $c^\lambda <= 0$ it is within the range [0, 1] and the obtained value is
+    // $T / e * exp(c / T)$.
+    assert_negative_node_costs();
+
+    // sum of all lambdas = constant_
+    auto f = [this](const auto a, const auto c) { return a + std::exp(c / temperature_); };
+    return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
+  }
+
+  cost entropy_scaled() const
   {
     // Estimate entropy $- \sum_i x_i log x_i$ by assuming $x_i = exp(c^\lambda_i / T)$.
     // Note that the fully simplified formula is more stable (log(0) impossible).
@@ -229,82 +281,62 @@ public:
 
   void update_temperature()
   {
-    const auto d = dual_smoothed();
+    // Note: This is the implementation for section "7.2 Method 2: Duality gap" of the paper.
+    const auto d = dual_smoothed_scaled();
     const auto p = std::max(value_relaxed_, value_best_);
 
-    auto new_temp = (d - p) / (entropy() / temperature_drop_factor_);
+    // std::cout << "update_temperature => d=" << d << " p=" << p << " entropy=" << entropy_scaled() << " drop=" << temperature_drop_factor_ << std::endl;
+
+    auto new_temp = (d - p) / (entropy_scaled() / temperature_drop_factor_);
     assert(std::isnormal(new_temp) && new_temp >= 0.0);
 
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
   }
 
-  int iterations() const { return iterations_; }
-
-  void run(const int batch_size=default_batch_size,
-           const int max_batches=default_max_batches,
-           const int greedy_generations=default_greedy_generations)
+  template<typename T>
+  bool compute_feasibility(const std::vector<T>& assignment) const
   {
-    assert(finalized());
-    auto start = std::chrono::steady_clock::now();
-    auto best_since = start;
-    std::cout << "initial dual = " << dual_relaxed() << std::endl;
-    signal_handler h;
-    for (int i = 0; i < max_batches && !h.signaled(); ++i) {
-      auto batch_start = std::chrono::steady_clock::now();
-      for (int j = 0; j < batch_size; ++j)
-        single_pass();
-      bool best_improved = update_integer_assignment(greedy_generations);
-      auto batch_end = std::chrono::steady_clock::now();
-      iterations_ += batch_size;
-
-      if (best_improved)
-        best_since = batch_end;
-
-      using fsec = std::chrono::duration<float>;
-      using msec = std::chrono::milliseconds;
-      auto total_s      = std::chrono::duration_cast<fsec>(batch_end - start).count();
-      auto best_since_s = std::chrono::duration_cast<fsec>(batch_end - best_since).count();
-      auto batch_ms     = std::chrono::duration_cast<msec>(batch_end - batch_start).count();
-
-      const auto d = dual_relaxed();
-      const auto gap    = (d - value_relaxed_) / d * 100.0;
-      const auto gap01  = (d - value_latest_)  / d * 100.0;
-      const auto gap01b = (d - value_best_)    / d * 100.0;
-
-      std::cout << "it=" << iterations_ << " "
-                << "d=" << d << " "
-                << "p=" << value_relaxed_ << " "
-                << "gap=" << gap << "% "
-                << "p01=" << value_latest_ << " "
-                << "gap01=" << gap01 << "% "
-                << "p01*=" << value_best_ << " "
-                << "gap01*=" << gap01b << "% "
-                << "p01*_since=" << best_since_s << "s "
-#ifndef NDEBUG
-                << "H=" << entropy() << " "
-                << "d_T=" << dual_smoothed() << " "
-                << "p_T=" << primal_smoothed(assignment_relaxed_) << " "
-#endif
-                << "T=" << temperature_ << " "
-                << "t=" << total_s << "s "
-                << "t/it=" << batch_ms / batch_size << "ms"
-                << "\n";
+    for (const auto& cl : clique_indices_) {
+      T sum = 0;
+      for (index idx = cl.begin; idx < cl.end; ++idx)
+        sum += assignment[clique_index_data_[idx]];
+      if (!feasibility_check(sum))
+        return false;
     }
-
-    std::cout << std::flush;
+    return true;
   }
 
-  index no_nodes() const { return costs_.size(); }
-  index no_orig() const { return orig_.size(); }
-  index no_cliques() const { return clique_indices_.size(); }
+  cost compute_primal(const std::vector<int>& assignment) const
+  {
+    // Same as relaxed objective, we just check that $x_i \in {0, 1}$.
+#ifndef NDEBUG
+    for (auto a : assignment)
+      assert(a == 0 || a == 1);
+#endif
 
-  double temperature_drop_factor() const { return temperature_drop_factor_; }
-  void temperature_drop_factor(double v) { temperature_drop_factor_ = v; }
+    return compute_primal_relaxed(assignment);
+  }
 
-  double temperature() const { return temperature_; }
-  void temperature(double t) { temperature_ = t; }
+  template<typename T>
+  cost compute_primal_relaxed(const std::vector<T>& assignment) const
+  {
+    // Compute $<c, x>$ s.t. uniqueness constraints.
+    assert(assignment.size() == no_nodes());
+    cost result = constant_;
 
-protected:
+    for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
+      const auto x = assignment[node_idx];
+      assert(x >= 0 && x <= 1);
+      result += costs_[node_idx] * x;
+    }
+
+#ifndef NDEBUG
+    if (!compute_feasibility(assignment))
+      result = infinity;
+#endif
+
+    return result;
+  }
 
   void finalize_graph()
   {
@@ -392,7 +424,7 @@ protected:
     assignment_latest_.resize(no_nodes());
     for (index nidx = 0; nidx < no_nodes(); ++nidx)
       assignment_latest_[nidx] = nidx < no_orig() ? 0 : 1;
-    value_latest_ = primal(assignment_latest_);
+    value_latest_ = compute_primal(assignment_latest_);
     assert(std::abs(value_latest_) < 1e-8);
 
     assignment_best_ = assignment_latest_;
@@ -400,6 +432,10 @@ protected:
 
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
     value_relaxed_ = value_latest_;
+
+    //
+    // Initialize remaining things.
+    //
 
     scratch_greedy_indices_.resize(no_cliques());
     std::iota(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), 0);
@@ -414,16 +450,30 @@ protected:
     if (finalized_costs_)
       return;
 
-    // Update all lambdas (without smoothing, invariants do not hold) to ensure
-    // that invariants (negative node costs) hold.
-    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
-      update_lambda<false>(clique_idx);
+    if constexpr (initial_reparametrization) {
+      // Update all lambdas (without smoothing, invariants do not hold) to ensure
+      // that invariants (negative node costs) hold.
+      for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+        update_lambda<false>(clique_idx);
+
+      std::cout << "initial reparametrization: lb=" << dual_relaxed() << " ub=" << primal() << std::endl;
+
+      auto it = std::min_element(costs_.cbegin(), costs_.cend());
+      scaling_ = std::abs(*it);
+    } else {
+      auto it = std::max_element(costs_.cbegin(), costs_.cend());
+      scaling_ = std::abs(*it);
+    }
+
+    constant_ /= scaling_;
+    for (auto& c : costs_)
+      c /= scaling_;
 
     // We update the cached values for the corresponding assignments (costs
     // have most likely changed the assignment between calls to
     // finalize_costs).
-    value_relaxed_ = primal_relaxed(assignment_relaxed_);
-    value_best_ = primal(assignment_best_);
+    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_best_ = compute_primal(assignment_best_);
     iterations_ = 0;
 
     // Try to improve naive assignment by greedily sampling an assignment.
@@ -516,7 +566,7 @@ protected:
       }
     }
 
-    value_relaxed_ = primal_relaxed(assignment_relaxed_);
+    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -524,6 +574,8 @@ protected:
     bool has_improved = false;
     for (int i = 0; i < greedy_generations; ++i)
       has_improved |= update_integer_assignment();
+    if (greedy_generations > 0)
+      std::cout << std::endl;
     return has_improved;
   }
 
@@ -546,37 +598,44 @@ protected:
 
   void greedy()
   {
+    std::cout << "g " << std::flush;
     std::shuffle(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), gen_);
 
     std::fill(assignment_latest_.begin(), assignment_latest_.end(), -1);
     for (const auto clique_idx : scratch_greedy_indices_)
-      round(clique_indices_[clique_idx]);
+      greedy_clique(clique_idx);
 
-    value_latest_ = primal(assignment_latest_);
+    value_latest_ = compute_primal(assignment_latest_);
   }
 
-  void round(const range& cl)
+  void greedy_clique(const index clique_idx)
   {
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+
     int count = 0;
-    for (index idx = cl.begin; idx < cl.end; ++idx)
-      count += assignment_latest_[clique_index_data_[idx]] == 1 ? 1 : 0;
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      count += assignment_latest_[node_idx] == 1 ? 1 : 0;
+    });
     assert(count == 0 || count == 1);
 
     if (count > 0)
       return;
 
-    copy_clique_in(cl);
-    for (index idx = 0; idx < cl.size; ++idx) {
-      const auto nidx = clique_index_data_[cl.begin + idx];
-      if (assignment_latest_[nidx] == 0)
-        scratch_[idx] = -infinity;
-    }
+    cost max = -infinity;
+    index argmax = -1;
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      if (assignment_latest_[node_idx] != 0 && costs_[node_idx] > max) {
+        max = costs_[node_idx];
+        argmax = node_idx;
+      }
+    });
 
-    const auto argmax = std::max_element(scratch_.begin(), scratch_.end()) - scratch_.begin();
-    const auto nidx = clique_index_data_[cl.begin + argmax];
-    assignment_latest_[nidx] = 1;
-    for (index idx = node_neighs_[nidx].begin; idx < node_neighs_[nidx].end; ++idx)
-      assignment_latest_[node_neigh_data_[idx]] = 0;
+    assignment_latest_[argmax] = 1;
+    foreach_node_neigh(argmax, [&](const auto node_idx) {
+      assert(node_idx != argmax);
+      assert(assignment_latest_[node_idx] != 1);
+      assignment_latest_[node_idx] = 0;
+    });
   }
 
 #ifdef ENABLE_QPBO
@@ -692,19 +751,20 @@ protected:
         disable_dummy_for_node(nidx);
     }
 
-    assert(feasibility(a0));
+    assert(compute_feasibility(a0));
 
     return changed;
   }
 
   void fusion_move()
   {
+    std::cout << "f " << std::flush;
 #ifndef NDEBUG
     const auto value_best_old = value_best_;
 #endif
     if (fuse_two_assignments(assignment_best_, assignment_latest_))
-      value_best_ = primal(assignment_best_);
-    assert(std::abs(value_best_ - primal(assignment_best_)) <= 1e-8);
+      value_best_ = compute_primal(assignment_best_);
+    assert(dbg::are_identical(value_best_, compute_primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
   }
 #endif
@@ -721,7 +781,10 @@ protected:
   std::vector<cost> costs_;
   std::vector<cost> orig_;
   cost constant_;
-  double temperature_drop_factor_;
+  double scaling_;
+
+  int iterations_;
+  double temperature_;
 
   std::vector<range> clique_indices_;
   std::vector<index> clique_index_data_;
@@ -732,8 +795,6 @@ protected:
   std::vector<range> node_neighs_;
   std::vector<index> node_neigh_data_;
 
-  int iterations_;
-  double temperature_;
   mutable std::vector<cost> scratch_;
   mutable std::vector<index> scratch_greedy_indices_;
   mutable std::vector<index> scratch_qpbo_indices_;
@@ -744,16 +805,14 @@ protected:
   std::vector<int> assignment_best_;
 
   cost value_relaxed_;
-  std::vector<double> assignment_relaxed_;
+  std::vector<cost> assignment_relaxed_;
 
   std::default_random_engine gen_;
 #ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
 #endif
 
-  double limit_p01b_gap_;
-  double limit_best_stagnation_;
-  double limit_runtime_;
+  double temperature_drop_factor_;
 };
 
 } // namespace mpopt::mwis::original
