@@ -44,7 +44,7 @@ public:
   {
     assert(!finalized_graph_);
     assert(no_cliques() == 0);
-    costs_.push_back(cost);
+    costs_.push_back(cost / scaling_);
     orig_.push_back(cost);
     return costs_.size() - 1;
   }
@@ -83,7 +83,7 @@ public:
   cost node_cost(index i) const {
     assert(finalized_graph_);
     assert(i < no_nodes() && i < no_orig());
-    return reduced ? costs_[i] : orig_[i];
+    return reduced ? costs_[i] * scaling_: orig_[i];
   }
 
   void node_cost(index i, cost c)
@@ -92,7 +92,7 @@ public:
     assert(i < no_nodes() && i < no_orig());
     const auto shift = c - orig_[i];
     orig_[i] += shift;
-    costs_[i] += shift;
+    costs_[i] += shift / scaling_;
     finalized_costs_ = false;
   }
 
@@ -103,7 +103,7 @@ public:
     assert(i < no_cliques());
     const auto j = no_orig() + i;
     assert(j < no_nodes());
-    return reduced ? costs_[j] : 0.0;
+    return reduced ? costs_[j] * scaling_ : 0.0;
   }
 
   cost dual_relaxed() const
@@ -124,7 +124,7 @@ public:
     }
   }
 
-  cost primal() const { return value_best_; }
+  cost primal() const { return value_best_ * scaling_; }
 
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
@@ -308,7 +308,7 @@ protected:
       result = infinity;
 #endif
 
-    return result * scaling_;
+    return result;
   }
 
   void finalize_graph()
@@ -404,7 +404,6 @@ protected:
     value_best_ = value_latest_;
 
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
-    value_relaxed_ = value_latest_;
 
     //
     // Initialize remaining things.
@@ -445,7 +444,6 @@ protected:
     // We update the cached values for the corresponding assignments (costs
     // have most likely changed the assignment between calls to
     // finalize_costs).
-    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
     value_best_ = compute_primal(assignment_best_);
     iterations_ = 0;
 
@@ -724,7 +722,6 @@ protected:
   cost value_best_;
   std::vector<int> assignment_best_;
 
-  cost value_relaxed_;
   std::vector<cost> assignment_relaxed_;
 
   std::default_random_engine gen_;
