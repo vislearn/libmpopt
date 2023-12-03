@@ -77,8 +77,8 @@ public:
 
   bool finalized() const { return finalized_graph_ && finalized_costs_; }
 
-  cost constant() const { return constant_; }
-  void constant(cost c) { constant_ = c; }
+  cost constant() const { return constant_ * scaling_; }
+  void constant(cost c) { constant_ = c / scaling_; }
 
   template<bool reduced=false>
   cost node_cost(index i) const {
@@ -113,17 +113,20 @@ public:
     // function then.
     assert_unset_alphas();
 
-    if constexpr (initial_reparametrization)
-      return constant_;
-
-    // Accumulator for ∑ max(c_i, 0).
-    const auto f = [](const auto a, const auto b) {
-      return a + std::max(b, cost{0});
-    };
-
-    // Compute $D(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} <c^\lambda, x>$.
-    // Sum of all lambdas = constant_
-    return constant_ + std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
+    // Compute $D(\lambda) = \sum_i \lambda_i + \sum_i \max_{x \in [0, 1]^N} <c^\lambda, x>$.
+    // Note that the sum of all lambdas = constant_.
+    if constexpr (initial_reparametrization) {
+      // We now that the second sum is always zero, because this is ensured after the first
+      // reparametrization run.
+      return constant_ * scaling_;
+    } else {
+      // Compute $\sum_i \max_{x \in [0, 1]^N} <c^\lambda, x>$.
+      const auto f = [](const auto a, const auto b) {
+        return a + std::max(b, cost{0});
+      };
+      const auto sum_max_i = std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
+      return (constant_ + sum_max_i) * scaling_;
+    }
   }
 
   cost primal() const { return value_best_; }
@@ -313,7 +316,7 @@ protected:
     for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
       const auto x = assignment[node_idx];
       assert(x >= 0 && x <= 1);
-      result += costs_[node_idx] * x * scaling_;
+      result += costs_[node_idx] * x;
     }
 
 #ifndef NDEBUG
@@ -321,7 +324,7 @@ protected:
       result = infinity;
 #endif
 
-    return result;
+    return result * scaling_;
   }
 
   void finalize_graph()
@@ -453,6 +456,7 @@ protected:
       scaling_ = std::abs(*it);
     }
 
+    constant_ /= scaling_;
     for (auto& c : costs_)
       c /= scaling_;
 
@@ -517,7 +521,7 @@ protected:
       const auto msg = std::reduce(scratch_.cbegin(), scratch_.cend(), -infinity, [](auto a, auto b) { return std::max(a, b); });
       assert(std::isfinite(msg));
 
-      constant_ += scaling_ * msg;
+      constant_ += msg;
       for (auto& c : scratch_)
         c -= msg;
     }
@@ -536,7 +540,7 @@ protected:
       cost -= v; assert(std::isfinite(cost));
     });
 
-    constant_ += scaling_ * v;
+    constant_ += v;
     assert(std::isfinite(constant_));
   }
 
