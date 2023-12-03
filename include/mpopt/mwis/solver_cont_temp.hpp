@@ -538,32 +538,53 @@ protected:
 
   void compute_relaxed_truncated_projection()
   {
+    auto node_cost = [this](const index node_idx) {
+      assert(node_idx < no_orig());
+      return &assignment_relaxed_[node_idx];
+    };
+
     auto slack = [this](const index clique_idx) {
       assert(no_orig() + clique_idx < assignment_relaxed_.size());
       return &assignment_relaxed_[no_orig() + clique_idx];
     };
 
+    auto max_allowed = [this, slack](const index node_idx) -> cost {
+      assert(node_idx < no_orig());
+      const auto& nc = node_cliques_[node_idx];
+      cost result = 1.0;
+      for (index idx = nc.begin; idx < nc.end; ++idx) {
+        const auto clique_idx = node_cliques_data_[idx];
+        result = std::min(result, *slack(clique_idx));
+      }
+      assert(!std::isinf(result));
+      return result;
+    };
+
+    auto reduce_max_allowed = [this, &slack](const index node_idx, const cost value) {
+      assert(node_idx < no_orig());
+      const auto& nc = node_cliques_[node_idx];
+      for (index idx = nc.begin; idx < nc.end; ++idx) {
+        const auto clique_idx = node_cliques_data_[idx];
+        assert(value <= *slack(clique_idx));
+        *slack(clique_idx) -= value;
+      }
+    };
+
+    for (index node_idx = 0; node_idx < no_orig(); ++node_idx)
+      *node_cost(node_idx) = std::exp(costs_[node_idx] / temperature_);
+
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
       *slack(clique_idx) = 1.0;
 
-    for (index node_idx = 0; node_idx < no_orig(); ++node_idx) {
-      const auto& nc = node_cliques_[node_idx];
-      const auto x = std::exp(costs_[node_idx] / temperature_);
-
-      cost max_allowed_x = 1.0;
-      for (index idx = nc.begin; idx < nc.end; ++idx) {
-        const auto clique_idx = node_cliques_data_[idx];
-        max_allowed_x = std::min(max_allowed_x, *slack(clique_idx));
-      }
-      assert(!std::isinf(max_allowed_x));
-
-      const auto y = std::min(x, max_allowed_x);
-      assignment_relaxed_[node_idx] = y;
-
-      for (index idx = nc.begin; idx < nc.end; ++idx) {
-        const auto clique_idx = node_cliques_data_[idx];
-        *slack(clique_idx) -= y;
-      }
+    scratch_qpbo_indices_.resize(no_orig());
+    std::iota(scratch_qpbo_indices_.begin(), scratch_qpbo_indices_.end(), 0);
+    std::sort(scratch_qpbo_indices_.begin(), scratch_qpbo_indices_.end(), [&node_cost](index a, index b) {
+      return *node_cost(a) > *node_cost(b);
+    });
+    for (index node_idx : scratch_qpbo_indices_) {
+      cost* x = node_cost(node_idx);
+      *x = std::min(*x, max_allowed(node_idx));
+      reduce_max_allowed(node_idx, *x);
     }
 
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
