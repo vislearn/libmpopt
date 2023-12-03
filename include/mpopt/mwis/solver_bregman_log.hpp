@@ -69,7 +69,7 @@ public:
   }
 
   void finalize() {
-    temperature_ = 10000;
+    temperature_ = 1;
     finalize_graph();
     finalize_costs();
   }
