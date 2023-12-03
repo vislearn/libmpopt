@@ -109,12 +109,12 @@ public:
 
   cost dual_relaxed() const
   {
-    if constexpr (initial_reparametrization)
-      return constant_;
-
     // If alphas are non-zero this computation fails. Reparametrization would be required before calling this
     // function then.
     assert_unset_alphas();
+
+    if constexpr (initial_reparametrization)
+      return constant_;
 
     // Accumulator for ∑ max(c_i, 0).
     const auto f = [](const auto a, const auto b) {
@@ -126,85 +126,7 @@ public:
     return constant_ + std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
   }
 
-  cost dual_smoothed() const
-  {
-    // Compute $D^T(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} [ <c^\lambda, x> + T H(x) ]$.
-    // The max of $cx - Tx log x$ is obtained at $x = exp(c/T - 1)$.
-    // If $c^\lambda <= 0$ it is within the range [0, 1] and the obtained value is
-    // $T / e * exp(c / T)$.
-    assert_negative_node_costs();
-    assert_unset_alphas();
-
-    // sum of all lambdas = constant_
-    auto f = [this](const auto a, const auto c) { return a + std::exp(c / temperature_); };
-    return constant_ + temperature_ * std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f);
-  }
-
-  template<typename T>
-  bool feasibility(const std::vector<T>& assignment) const
-  {
-    for (const auto& cl : clique_indices_) {
-      T sum = 0;
-      for (index idx = cl.begin; idx < cl.end; ++idx)
-        sum += assignment[clique_index_data_[idx]];
-      if (!feasibility_check(sum))
-        return false;
-    }
-    return true;
-  }
-
   cost primal() const { return value_best_; }
-
-  cost primal(const std::vector<int>& assignment) const
-  {
-    // Same as relaxed objective, we just check that $x_i \in {0, 1}$.
-#ifndef NDEBUG
-    for (auto a : assignment)
-      assert(a == 0 || a == 1);
-#endif
-
-    return primal_relaxed(assignment);
-  }
-
-  cost primal_relaxed() const { return value_relaxed_; }
-
-  template<typename T>
-  cost primal_relaxed(const std::vector<T>& assignment) const
-  {
-    // Compute $<c, x>$ s.t. uniqueness constraints.
-    assert(assignment.size() == no_nodes());
-    cost result = constant_;
-
-    for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
-      const auto x = assignment[node_idx];
-      assert(x >= 0 && x <= 1);
-      result += costs_[node_idx] * x * scaling_;
-    }
-
-#ifndef NDEBUG
-    if (!feasibility(assignment))
-      result = infinity;
-#endif
-
-    return result;
-  }
-
-  template<typename T>
-  cost primal_smoothed(const std::vector<T>& assignment) const
-  {
-    // Compute $<c, x> + T H(x)$ s.t. uniqueness constraints.
-    auto relaxed = primal_relaxed(assignment);
-
-    // Compute real entropy of `assignment` (not an estimated one like the
-    // `entropy()`).
-    auto f = [](const auto a, const auto x_i) {
-      const auto log = std::log(x_i);
-        return a + (std::isnormal(log) ? x_i * log : 0.0) - x_i;
-    };
-    const auto H = -std::accumulate(assignment.cbegin(), assignment.cend(), 0.0, f);
-
-    return relaxed + temperature_ * H;
-  }
 
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
@@ -220,24 +142,6 @@ public:
     assert(finalized_graph_);
     assert(node_idx >= 0 && node_idx < orig_.size());
     return assignment_best_[node_idx];
-  }
-
-  cost entropy() const
-  {
-    // Estimate entropy $- \sum_i x_i log x_i$ by assuming $x_i = exp(c^\lambda_i / T)$.
-    // Note that the fully simplified formula is more stable (log(0) impossible).
-    assert_negative_node_costs();
-
-    auto f1 = [this](const auto a, const auto c_i) {
-      return a + std::exp(c_i / temperature_);
-    };
-
-    auto f2 = [this](const auto a, const auto c_i) {
-      return a + c_i * std::exp(c_i / temperature_);
-    };
-
-    return std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f1) -
-           std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
 
   int iterations() const { return iterations_; }
@@ -375,6 +279,51 @@ protected:
     }
   }
 
+  template<typename T>
+  bool compute_feasibility(const std::vector<T>& assignment) const
+  {
+    for (const auto& cl : clique_indices_) {
+      T sum = 0;
+      for (index idx = cl.begin; idx < cl.end; ++idx)
+        sum += assignment[clique_index_data_[idx]];
+      if (!feasibility_check(sum))
+        return false;
+    }
+    return true;
+  }
+
+  cost compute_primal(const std::vector<int>& assignment) const
+  {
+    // Same as relaxed objective, we just check that $x_i \in {0, 1}$.
+#ifndef NDEBUG
+    for (auto a : assignment)
+      assert(a == 0 || a == 1);
+#endif
+
+    return compute_primal_relaxed(assignment);
+  }
+
+  template<typename T>
+  cost compute_primal_relaxed(const std::vector<T>& assignment) const
+  {
+    // Compute $<c, x>$ s.t. uniqueness constraints.
+    assert(assignment.size() == no_nodes());
+    cost result = constant_;
+
+    for (index node_idx = 0; node_idx < no_nodes(); ++node_idx) {
+      const auto x = assignment[node_idx];
+      assert(x >= 0 && x <= 1);
+      result += costs_[node_idx] * x * scaling_;
+    }
+
+#ifndef NDEBUG
+    if (!compute_feasibility(assignment))
+      result = infinity;
+#endif
+
+    return result;
+  }
+
   void finalize_graph()
   {
     if (finalized_graph_)
@@ -461,7 +410,7 @@ protected:
     assignment_latest_.resize(no_nodes());
     for (index nidx = 0; nidx < no_nodes(); ++nidx)
       assignment_latest_[nidx] = nidx < no_orig() ? 0 : 1;
-    value_latest_ = primal(assignment_latest_);
+    value_latest_ = compute_primal(assignment_latest_);
     assert(std::abs(value_latest_) < 1e-8);
 
     assignment_best_ = assignment_latest_;
@@ -510,8 +459,8 @@ protected:
     // We update the cached values for the corresponding assignments (costs
     // have most likely changed the assignment between calls to
     // finalize_costs).
-    value_relaxed_ = primal_relaxed(assignment_relaxed_);
-    value_best_ = primal(assignment_best_);
+    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_best_ = compute_primal(assignment_best_);
     iterations_ = 0;
 
     finalized_costs_ = true;
@@ -663,7 +612,7 @@ protected:
     for (const auto clique_idx : scratch_greedy_indices_)
       greedy_clique(clique_idx);
 
-    value_latest_ = primal(assignment_latest_);
+    value_latest_ = compute_primal(assignment_latest_);
   }
 
   void greedy_clique(const index clique_idx)
@@ -809,7 +758,7 @@ protected:
         disable_dummy_for_node(nidx);
     }
 
-    assert(feasibility(a0));
+    assert(compute_feasibility(a0));
 
     return changed;
   }
@@ -821,8 +770,8 @@ protected:
     const auto value_best_old = value_best_;
 #endif
     if (fuse_two_assignments(assignment_best_, assignment_latest_))
-      value_best_ = primal(assignment_best_);
-    assert(dbg::are_identical(value_best_, primal(assignment_best_)));
+      value_best_ = compute_primal(assignment_best_);
+    assert(dbg::are_identical(value_best_, compute_primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
   }
 #endif
