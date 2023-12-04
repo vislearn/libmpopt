@@ -5,6 +5,11 @@ namespace mpopt {
 namespace mwis {
 namespace cont_temp {
 
+// Can be switch to float for possibly faster dual updates. Loss of precision
+// will not affect the solution quality, because the exp-costs are used to
+// compute a equivalance transformation (reparametrization) at full precsision.
+using cost_exp = cost;
+
 struct range {
   index begin;
   index end;
@@ -140,8 +145,10 @@ public:
 
     for (int i = 0; i < max_batches && !h.signaled(); ++i) {
       t_total.start();
+      init_exponential_domain();
       for (int j = 0; j < batch_size; ++j)
         single_pass();
+      reparametrize();
       update_integer_assignment(greedy_generations);
       iterations_ += batch_size;
       t_total.stop();
@@ -231,6 +238,10 @@ protected:
 
   cost dual_relaxed_scaled() const
   {
+    // If alphas are non-zero this computation fails. Reparametrization would be required before calling this
+    // function then.
+    assert_unset_alphas();
+
     // Compute $D(\lambda) = \sum_i \lambda_i + \sum_i \max_{x \in [0, 1]^N} <c^\lambda, x>$.
     // Note that the sum of all lambdas = constant_.
     if constexpr (initial_reparametrization) {
@@ -446,6 +457,8 @@ protected:
     // Initialize remaining things.
     //
 
+    alphas_.resize(no_cliques());
+
     scratch_greedy_indices_.resize(no_cliques());
     std::iota(scratch_greedy_indices_.begin(), scratch_greedy_indices_.end(), 0);
 
@@ -507,43 +520,93 @@ protected:
     update_temperature();
   }
 
+  void init_exponential_domain() {
+    // Reset alphas to 1.
+    std::fill(alphas_.begin(), alphas_.end(), 1.0);
+
+    // Recompute exponentiated costs.
+    std::transform(costs_.cbegin(), costs_.cend(), assignment_relaxed_.begin(),
+      [this](const auto c) { return std::exp(c / temperature_); });
+
+#ifndef NDEBUG
+    for (const auto v : assignment_relaxed_)
+      assert(std::isfinite(v));
+#endif
+  }
+
+template<bool smoothing=true>
   void copy_clique_in(const range& cl)
   {
     scratch_.resize(cl.size, 0.0);
     for (index idx = 0; idx < cl.size; ++idx)
-      scratch_[idx] = costs_[clique_index_data_[cl.begin + idx]];
+      if constexpr (smoothing)
+        scratch_[idx] = assignment_relaxed_[clique_index_data_[cl.begin + idx]];
+      else
+        scratch_[idx] = costs_[clique_index_data_[cl.begin + idx]];
   }
 
+  template<bool smoothing=true>
   void copy_clique_out(const range& cl)
   {
     for (index idx = 0; idx < cl.size; ++idx)
-      costs_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
+      if constexpr (smoothing)
+        assignment_relaxed_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
+      else
+        costs_[clique_index_data_[cl.begin + idx]] = scratch_[idx];
   }
 
   template<bool smoothing=true>
   void update_lambda(const index clique_idx)
   {
     const auto& cl = clique_indices_[clique_idx];
-    copy_clique_in(cl);
+    copy_clique_in<smoothing>(cl);
 
-    auto f = [](const cost a, const cost b) { return std::max(a, b); };
-    const cost maximum = std::accumulate(scratch_.begin(), scratch_.end(), -infinity, f);
-
-    cost msg = 0.0;
     if constexpr (smoothing) {
-      for (auto c : scratch_)
-        msg += std::exp((c - maximum) / temperature_);
-      msg = maximum + temperature_ * std::log(msg);
+      auto& alpha = alphas_[clique_idx];
+      const auto s = std::reduce(scratch_.cbegin(), scratch_.cend());
+      alpha /= s;
+      for (auto& x : scratch_)
+        x /= s;
     } else {
-      msg = maximum;
-    }
-    assert(std::isfinite(msg));
+      const auto msg = std::reduce(scratch_.cbegin(), scratch_.cend(), -infinity, [](cost_exp a, cost_exp b) { return std::max(a, b); });
+      assert(std::isfinite(msg));
 
-    constant_ += msg;
-    for (auto& c : scratch_)
-      c -= msg;
+      constant_ += msg;
+      for (auto& c : scratch_)
+        c -= msg;
+  }
 
-    copy_clique_out(cl);
+    copy_clique_out<smoothing>(cl);
+  }
+
+  void reparametrize(const index clique_idx, const cost v)
+  {
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+    assert(std::isfinite(v));
+    assert(std::isfinite(constant_));
+
+    foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+      auto& cost = costs_[node_idx]; assert(std::isfinite(cost));
+      cost -= v; assert(std::isfinite(cost));
+    });
+
+    constant_ += v;
+    assert(std::isfinite(constant_));
+  }
+
+  void reparametrize(const index clique_idx)
+  {
+    assert(clique_idx >= 0 && clique_idx < no_cliques());
+    const auto alpha = alphas_[clique_idx];
+    assert(std::isfinite(alpha));
+    reparametrize(clique_idx, -temperature_ * std::log(alpha));
+  }
+
+  void reparametrize()
+  {
+    foreach_clique([this](const auto clique_idx) {
+      reparametrize(clique_idx);
+    });
   }
 
   void compute_relaxed_truncated_projection()
@@ -800,6 +863,14 @@ protected:
   }
 #endif
 
+  void assert_unset_alphas() const
+  {
+#ifndef NDEBUG
+    for (const auto v : alphas_)
+      assert(std::abs(v - 1) < epsilon);
+#endif
+  }
+
   void assert_negative_node_costs() const
   {
 #ifndef NDEBUG
@@ -826,7 +897,7 @@ protected:
   std::vector<range> node_neighs_;
   std::vector<index> node_neigh_data_;
 
-  mutable std::vector<cost> scratch_;
+  mutable std::vector<cost_exp> scratch_;
   mutable std::vector<index> scratch_greedy_indices_;
   mutable std::vector<index> scratch_qpbo_indices_;
 
@@ -836,14 +907,14 @@ protected:
   std::vector<int> assignment_best_;
 
   cost value_relaxed_;
-  std::vector<cost> assignment_relaxed_;
+  std::vector<cost_exp> assignment_relaxed_, alphas_;
 
   std::default_random_engine gen_;
 #ifdef ENABLE_QPBO
   qpbo::QPBO<cost> qpbo_;
 #endif
 
-  double temperature_drop_factor_;
+  cost temperature_drop_factor_;
 };
 
 } // namespace mpopt::mwis::cont_temp
