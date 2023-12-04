@@ -1,0 +1,20 @@
+---
+If:
+    PathMatch: include/mpopt/ct/[^/]+
+CompileFlags:
+    Add: [-include, mpopt/ct.hpp]
+---
+If:
+    PathMatch: include/mpopt/gm/[^/]+
+CompileFlags:
+    Add: [-include, mpopt/gm.hpp]
+---
+If:
+    PathMatch: include/mpopt/mwis/[^/]+
+CompileFlags:
+    Add: [-include, mpopt/mwis.hpp]
+---
+If:
+    PathMatch: include/mpopt/qap/[^/]+
+CompileFlags:
+    Add: [-include, mpopt/qap.hpp]
