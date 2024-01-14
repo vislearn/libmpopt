@@ -1,7 +1,7 @@
 #include <mpopt/mwis.hpp>
 #include <mpopt/mwis_temp_cont.h>
 
-using solver_type = mpopt::mwis::original::solver;
+using solver_type = mpopt::mwis::cont_temp::solver;
 
 struct mpopt_mwis_solver_t { solver_type solver; };
 

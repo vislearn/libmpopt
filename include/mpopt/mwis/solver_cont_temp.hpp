@@ -3,7 +3,7 @@
 
 namespace mpopt {
 namespace mwis {
-namespace original {
+namespace cont_temp {
 
 struct range {
   index begin;
@@ -835,7 +835,7 @@ protected:
   double temperature_drop_factor_;
 };
 
-} // namespace mpopt::mwis::original
+} // namespace mpopt::mwis::cont_temp
 } // namespace mpopt::mwis
 } // namespace mpopt
 
