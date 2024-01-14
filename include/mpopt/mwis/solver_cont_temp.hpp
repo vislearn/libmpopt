@@ -278,15 +278,25 @@ protected:
            std::accumulate(costs_.cbegin(), costs_.cend(), 0.0, f2) / temperature_;
   }
 
+  cost entropy_of_relaxed_assignment_scaled() const
+  {
+    // Estimate entropy $- \sum_i x_i log x_i - x_i$. We use `assignment_relaxed_` for x.
+    auto f = [this](const auto a, const auto x_i) {
+      return a + x_i * std::log(x_i) - x_i;
+    };
+
+    return -std::accumulate(assignment_relaxed_.cbegin(), assignment_relaxed_.cend(), 0.0, f);
+  }
+
   void update_temperature()
   {
     // Note: This is the implementation for section "7.2 Method 2: Duality gap" of the paper.
     const auto d = dual_smoothed_scaled();
-    const auto p = std::max(value_relaxed_, value_best_);
+    const auto p = value_relaxed_;
 
     // std::cout << "update_temperature => d=" << d << " p=" << p << " entropy=" << entropy_scaled() << " drop=" << temperature_drop_factor_ << std::endl;
 
-    auto new_temp = (d - p) / (entropy_scaled() / temperature_drop_factor_);
+    auto new_temp = (d - p) / (entropy_of_relaxed_assignment_scaled() / temperature_drop_factor_);
     assert(std::isnormal(new_temp) && new_temp >= 0.0);
 
     temperature_ = std::max(std::min(temperature_, new_temp), 1e-10);
@@ -482,6 +492,7 @@ protected:
       value_best_ = value_latest_;
       assignment_best_ = assignment_latest_;
     }
+    compute_relaxed_truncated_projection();
     update_temperature();
 
     finalized_costs_ = true;
