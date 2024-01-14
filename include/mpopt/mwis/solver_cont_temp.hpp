@@ -249,10 +249,10 @@ protected:
 
   cost dual_smoothed_scaled() const
   {
-    // Compute $D^T(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} [ <c^\lambda, x> + T H(x) ]$.
-    // The max of $cx - Tx log x$ is obtained at $x = exp(c/T - 1)$.
-    // If $c^\lambda <= 0$ it is within the range [0, 1] and the obtained value is
-    // $T / e * exp(c / T)$.
+    // Compute $D^T(\lambda) = \sum_i \lambda_i + \max_{x \in [0, 1]^N} [ <c^\lambda, x> + T H(x) ]$,
+    // where $H(x) = - \sum_i (x_i \log x_i - x_i)$, i.e., entropy shifted by linear function.
+    // The max of $c_i^\lambda x_i - T (x_i log x_i - x_i)$ is obtained at $x_i = exp(c_i^\lambda / T)$.
+    // Hence $D^T(\lambda) = sum_i \lambda_i + T \sum_i exp(c_i / T)$.
     assert_negative_node_costs();
 
     // sum of all lambdas = constant_
@@ -262,7 +262,7 @@ protected:
 
   cost entropy_scaled() const
   {
-    // Estimate entropy $- \sum_i x_i log x_i$ by assuming $x_i = exp(c^\lambda_i / T)$.
+    // Estimate entropy $- \sum_i x_i log x_i - x_i$ by assuming $x_i = exp(c^\lambda_i / T)$.
     // Note that the fully simplified formula is more stable (log(0) impossible).
     assert_negative_node_costs();
 
