@@ -148,7 +148,13 @@ public:
       init_exponential_domain();
       for (int j = 0; j < batch_size; ++j)
         single_pass();
+      // First, we reparametrize alpha_ into costs_.
       reparametrize();
+      // Second, we compute the primal projection by using costs_.
+      compute_relaxed_truncated_projection();
+      // Third, we can update temperature (uses costs_ and primal projection result).
+      update_temperature();
+      // Last, we can run greedy primal generator and fusion.
       update_integer_assignment(greedy_generations);
       iterations_ += batch_size;
       t_total.stop();
@@ -515,9 +521,6 @@ protected:
   {
     for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
       update_lambda(clique_idx);
-
-    compute_relaxed_truncated_projection();
-    update_temperature();
   }
 
   void init_exponential_domain() {
@@ -534,7 +537,7 @@ protected:
 #endif
   }
 
-template<bool smoothing=true>
+  template<bool smoothing=true>
   void copy_clique_in(const range& cl)
   {
     scratch_.resize(cl.size, 0.0);
