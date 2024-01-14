@@ -242,7 +242,6 @@ protected:
       const auto f = [](const auto a, const auto b) {
         return a + std::max(b, cost{0});
       };
-
       const auto sum_max_i = std::accumulate(costs_.cbegin(), costs_.cend(), cost{0}, f);
       return constant_ + sum_max_i;
     }

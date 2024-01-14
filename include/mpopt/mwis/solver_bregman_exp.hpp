@@ -570,7 +570,6 @@ protected:
     });
   }
 
-
   bool is_stable(const cost_exp c) const
   {
     bool result = c <= threshold_stability_ && c >= 1/threshold_stability_;
