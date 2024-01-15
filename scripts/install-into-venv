@@ -1,0 +1,80 @@
+#!/bin/bash
+set -eu -o pipefail
+
+LIBQPBO_VERSION=1.4.1
+MESON_VERSION=0.64.1
+
+if [[ ! -v VIRTUAL_ENV && ! -v CONDA_PREFIX ]]; then
+	echo "Must be run within activated venv or conda environment!" >&2
+	exit 64
+fi
+
+if [[ -v VIRTUAL_ENV ]]; then
+	prefix="${VIRTUAL_ENV}"
+else
+	if [[ $(conda list | grep python) ]]
+	then 
+		prefix="${CONDA_PREFIX}"
+	else
+		echo "libmpopt is installed as a site package."
+		echo "Explicitly install python into the environment with 'conda install python' first."
+		exit 64
+	fi
+fi
+
+buildtype=debugoptimized
+if [[ $# -ge 1 ]]; then
+	buildtype="$1"
+fi
+
+temp_dir=$(mktemp -d)
+trap 'rm -rf "${temp_dir}"' EXIT
+
+source_dir=$(pwd)
+
+export PKG_CONFIG_PATH="${prefix}/lib/pkgconfig${PKG_CONFIG_PATH:+:${PKG_CONFIG_PATH}}"
+
+meson_args=(
+	--prefix="${prefix}"
+	--bindir=bin
+	--libdir=lib
+	--prefer-static
+	-Db_ndebug=if-release
+	-Dbuildtype="${buildtype}"
+	-Dc_args='-march=native -mtune=native'
+	-Dcpp_args='-march=native -mtune=native'
+)
+
+# Some older Linux distributions (e.g. Ubuntu 22.04) ship an older version of
+# meson. We need some newer features (e.g. prefer-static in 0.63). Therefore we
+# fetch the latest version and link it into our temporary prefix.
+cd "${temp_dir}"
+curl -LO "https://github.com/mesonbuild/meson/releases/download/${MESON_VERSION}/meson-${MESON_VERSION}.tar.gz"
+tar -xf "meson-${MESON_VERSION}.tar.gz"
+mkdir -p "${prefix}/bin"
+
+if [ -L "${prefix}/bin/meson" ] ; then
+    rm "${prefix}/bin/meson"
+fi
+ln -sT "${temp_dir}/meson-${MESON_VERSION}/meson.py" "${prefix}/bin/meson"
+
+# libqpbo is an optional requirement, but used for various important things.
+# Therefore we fetch the latest version and install it into our temporary
+# prefix.
+cd "${temp_dir}"
+curl -LJO "https://github.com/fgrsnau/libqpbo/archive/v${LIBQPBO_VERSION}.tar.gz"
+tar -xf "libqpbo-${LIBQPBO_VERSION}.tar.gz"
+mkdir libqpbo-build
+cd libqpbo-build
+meson setup "${meson_args[@]}" "../libqpbo-${LIBQPBO_VERSION}"
+ninja install
+
+# Now we can build and install libmpopt into our temporary prefix and
+# afterwards run a shell.
+cd "${temp_dir}"
+mkdir libmpopt-build
+cd libmpopt-build
+meson setup "${meson_args[@]}" -Dqpbo=enabled -Dgurobi=auto "${source_dir}"
+ninja install
+
+echo "Done."

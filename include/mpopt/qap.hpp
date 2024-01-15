@@ -27,6 +27,8 @@
 #include <mpopt/qap/gurobi.hpp>
 #include <mpopt/qap/qpbo.hpp>
 #include <mpopt/qap/combilp.hpp>
+#include <mpopt/qap/local_search.hpp>
+#include <mpopt/qap/grasp.hpp>
 #include <mpopt/qap/greedy.hpp>
 #include <mpopt/qap/solver.hpp>
 
