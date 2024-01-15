@@ -97,6 +97,7 @@ struct uniqueness_node {
   using unary_node_type = unary_node<allocator_type>;
 
   index idx;
+  index label_idx;
   mutable uniqueness_factor<allocator_type> factor;
   fixed_vector_alloc_gen<link_info<unary_node_type>, allocator_type> unaries;
 
@@ -204,7 +205,7 @@ public:
 
   unary_node_type* get_unary(index idx) const { return unaries_[idx]; }
 
-  uniqueness_node_type* add_uniqueness(index idx, index number_of_unaries)
+  uniqueness_node_type* add_uniqueness(index idx, index number_of_unaries, index label_idx)
   {
     assert(number_of_unaries >= 0);
     assert(idx == uniqueness_.size());
@@ -216,6 +217,7 @@ public:
     node = a.allocate();
     new (node) uniqueness_node_type(number_of_unaries, allocator_);
     node->idx = idx;
+    node->label_idx = label_idx;
 #ifndef NDEBUG
     node->factor.set_debug_info(idx);
 #endif

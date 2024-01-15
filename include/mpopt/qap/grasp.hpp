@@ -84,6 +84,8 @@ public:
         node->factor.primal() = node->factor.size();
   }
 
+  void set_random_seed(const unsigned long seed) { gen_.seed(seed); }
+
 protected:
 
   const graph_type* graph_{};

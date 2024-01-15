@@ -18,7 +18,7 @@ void mpopt_qap_solver_destroy(mpopt_qap_solver* s);
 void mpopt_qap_solver_finalize(mpopt_qap_solver* s);
 mpopt_qap_graph* mpopt_qap_solver_get_graph(mpopt_qap_solver* s);
 mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx, int number_of_labels, int number_of_forward, int number_of_backward);
-mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries);
+mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries, int label_idx);
 mpopt_qap_pairwise_node* mpopt_qap_graph_add_pairwise(mpopt_qap_graph* graph, int idx, int number_of_labels0, int number_of_labels1);
 void mpopt_qap_graph_add_pairwise_link(mpopt_qap_graph* graph, int idx_unary0, int idx_unary1, int idx_pairwise);
 void mpopt_qap_graph_add_uniqueness_link(mpopt_qap_graph* graph, int idx_unary, int label, int idx_uniqueness, int slot);
@@ -31,6 +31,7 @@ void mpopt_qap_solver_set_local_search_enabled(mpopt_qap_solver* s, bool enabled
 void mpopt_qap_solver_set_grasp_alpha(mpopt_qap_solver* s, double alpha);
 void mpopt_qap_solver_use_grasp(mpopt_qap_solver* s);
 void mpopt_qap_solver_use_greedy(mpopt_qap_solver* s);
+void mpopt_qap_solver_set_random_seed(mpopt_qap_solver* s, const unsigned long seed);
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int batch_size, int max_batches, int greedy_generations);
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s);
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s);

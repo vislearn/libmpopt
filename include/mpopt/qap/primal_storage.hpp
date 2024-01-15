@@ -13,22 +13,35 @@ public:
   primal_storage(const graph_type &graph)
   : graph_(&graph)
   , data_(graph_->unaries().size())
+  , assignment_(graph_->unaries().size())
   {
   }
 
   void resize()
   {
     data_.resize(graph_->unaries().size());
+    assignment_.resize(graph_->unaries().size());
   }
 
   void save()
   {
-    auto it = data_.begin();
+    auto it = data_.begin(); auto as = assignment_.begin();
     for (const auto* node : graph_->unaries()) {
-      assert(it != data_.end());
+      assert(it != data_.end()); assert(as != assignment_.end());
       *it++ = node->factor.primal();
+
+      *as = -1;
+      if (node->factor.is_primal_set()) {
+        auto p = node->factor.primal();
+        assert(p < node->uniqueness.size());
+
+        assert((node->uniqueness[p].node == nullptr) == (p == node->uniqueness.size() - 1));
+        if (p < node->uniqueness.size() - 1)
+          *as = node->uniqueness[p].node->label_idx;
+      }
+      ++as;
     }
-    assert(it == data_.end());
+    assert(it == data_.end()); assert(as == assignment_.end());
   }
 
   void restore()
@@ -74,9 +87,13 @@ public:
     data_[idx] = label;
   }
 
+  const auto& data() const { return data_; }
+  const auto& assignment() const { return assignment_; }
+
 protected:
   const graph_type* graph_;
   std::vector<index> data_;
+  std::vector<index> assignment_;
 };
 
 }

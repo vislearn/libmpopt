@@ -50,9 +50,9 @@ mpopt_qap_unary_node* mpopt_qap_graph_add_unary(mpopt_qap_graph* graph, int idx,
   return to_unary(node);
 }
 
-mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries)
+mpopt_qap_uniqueness_node* mpopt_qap_graph_add_uniqueness(mpopt_qap_graph* graph, int idx, int number_of_unaries, int label_idx)
 {
-  auto* node = from_graph(graph)->add_uniqueness(idx, number_of_unaries);
+  auto* node = from_graph(graph)->add_uniqueness(idx, number_of_unaries, label_idx);
   return to_uniqueness(node);
 }
 
@@ -81,6 +81,7 @@ void mpopt_qap_solver_set_local_search_enabled(mpopt_qap_solver* s, bool enabled
 void mpopt_qap_solver_set_grasp_alpha(mpopt_qap_solver* s, double alpha) { s->solver.set_grasp_alpha(alpha); }
 void mpopt_qap_solver_use_grasp(mpopt_qap_solver* s) { s->solver.use_grasp(); }
 void mpopt_qap_solver_use_greedy(mpopt_qap_solver* s) { s->solver.use_greedy(); }
+void mpopt_qap_solver_set_random_seed(mpopt_qap_solver *s, const unsigned long seed) { s->solver.set_random_seed(seed); }
 void mpopt_qap_solver_run(mpopt_qap_solver* s, int batch_size, int max_batches, int greedy_generations) { s->solver.run(batch_size, max_batches, greedy_generations); }
 void mpopt_qap_solver_solve_ilp(mpopt_qap_solver* s) { s->solver.solve_ilp(); }
 void mpopt_qap_solver_execute_combilp(mpopt_qap_solver* s) { s->solver.execute_combilp(); }
