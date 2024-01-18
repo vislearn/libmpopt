@@ -8,9 +8,9 @@ is computed by rounding strategies.
 
 Supported combinatorial optimization problems:
 
-  - Graphical Models (by reimplementing the TRW-S technique, see references)
-  - Cell Tracking Problems
   - Quadratic Assignment Problems
+  - Cell Tracking Problems
+  - Graphical Models (by reimplementing the TRW-S technique, see references)
 
 
 ## References
@@ -168,3 +168,11 @@ Installation is done by:
 ```sh
 ninja -C /path/to/build/directory install
 ```
+## Usage
+After successfully building the software, the following applications are available:
+
+- ct_jug:  Optimizer for *.jug cell tracking model files
+- gm_uai:  Optimizer for *.uai graphical model files.
+- qap_dd:  Optimizer for *.dd quadratic assignment model files.
+
+In general, the programs can be run with default parameters. However, feel free to experiment with the available options.
