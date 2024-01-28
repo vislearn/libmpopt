@@ -299,7 +299,10 @@ protected:
   {
     // Estimate entropy $- \sum_i x_i log x_i - x_i$. We use `assignment_relaxed_` for x.
     auto f = [this](const auto a, const auto x_i) {
-      return a + x_i * std::log(x_i) - x_i;
+      if (x_i == 0)
+        return a;
+      else
+        return a + x_i * std::log(x_i) - x_i;
     };
 
     return -std::accumulate(assignment_relaxed_.cbegin(), assignment_relaxed_.cend(), 0.0, f);
