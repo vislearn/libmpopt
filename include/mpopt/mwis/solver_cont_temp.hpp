@@ -519,6 +519,7 @@ protected:
     greedy();
     if (value_latest_ > value_best_) {
       value_best_ = value_latest_;
+      value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
       assignment_best_ = assignment_latest_;
     }
     compute_relaxed_truncated_projection();
