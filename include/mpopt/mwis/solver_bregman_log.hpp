@@ -126,6 +126,8 @@ public:
 
   cost primal() const { return value_best_ * scaling_; }
 
+  cost primal_relaxed() const { return value_relaxed_ * scaling_; }
+
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
   {
@@ -154,16 +156,24 @@ public:
     dbg::timer t_total;
 
     while (!h.signaled() && temperature_ > 1e-16) {
+      // We do not use the result, we only output it. This allows to read off
+      // the progress of the dual optimization directly.
+      compute_relaxed_truncated_projection();
+
       const auto d = dual_relaxed();
       const auto p = primal();
+      const auto p_relaxed = primal_relaxed();
       const auto gap = (d - p) / d * 100.0;
+      const auto gap_relaxed = (d - p_relaxed) / d * 100.0;
       std::cout << "it=" << iterations_ << " "
                 << "d=" << d << " "
                 << "p=" << p << " "
                 << "gap=" << gap << "% "
+                << "p_relaxed=" << p_relaxed << " "
+                << "gap_relaxed=" << gap_relaxed << "% "
                 << "t=" << t_total.seconds<true>() << "s "
                 << "T=" << temperature_ << " "
-                << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it " << std::endl;
+                << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it" << std::endl;
 
       if (gap < 1e-2) {
         std::cout << "Gap limit reached." << std::endl;
@@ -404,6 +414,7 @@ protected:
     value_best_ = value_latest_;
 
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
+    value_relaxed_ = value_latest_;
 
     //
     // Initialize remaining things.
@@ -444,6 +455,7 @@ protected:
     // We update the cached values for the corresponding assignments (costs
     // have most likely changed the assignment between calls to
     // finalize_costs).
+    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
     value_best_ = compute_primal(assignment_best_);
     iterations_ = 0;
 
@@ -487,6 +499,60 @@ protected:
       c -= msg;
 
     copy_clique_out(cl);
+  }
+
+  void compute_relaxed_truncated_projection()
+  {
+    auto node_cost = [this](const index node_idx) {
+      assert(node_idx < no_orig());
+      return &assignment_relaxed_[node_idx];
+    };
+
+    auto slack = [this](const index clique_idx) {
+      assert(no_orig() + clique_idx < assignment_relaxed_.size());
+      return &assignment_relaxed_[no_orig() + clique_idx];
+    };
+
+    auto max_allowed = [this, slack](const index node_idx) -> cost {
+      assert(node_idx < no_orig());
+      const auto& nc = node_cliques_[node_idx];
+      cost result = 1.0;
+      for (index idx = nc.begin; idx < nc.end; ++idx) {
+        const auto clique_idx = node_cliques_data_[idx];
+        result = std::min(result, *slack(clique_idx));
+      }
+      assert(!std::isinf(result));
+      return result;
+    };
+
+    auto reduce_max_allowed = [this, &slack](const index node_idx, const cost value) {
+      assert(node_idx < no_orig());
+      const auto& nc = node_cliques_[node_idx];
+      for (index idx = nc.begin; idx < nc.end; ++idx) {
+        const auto clique_idx = node_cliques_data_[idx];
+        assert(value <= *slack(clique_idx));
+        *slack(clique_idx) -= value;
+      }
+    };
+
+    for (index node_idx = 0; node_idx < no_orig(); ++node_idx)
+      *node_cost(node_idx) = std::exp(costs_[node_idx] / temperature_);
+
+    for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+      *slack(clique_idx) = 1.0;
+
+    scratch_qpbo_indices_.resize(no_orig());
+    std::iota(scratch_qpbo_indices_.begin(), scratch_qpbo_indices_.end(), 0);
+    std::sort(scratch_qpbo_indices_.begin(), scratch_qpbo_indices_.end(), [&node_cost](index a, index b) {
+      return *node_cost(a) > *node_cost(b);
+    });
+    for (index node_idx : scratch_qpbo_indices_) {
+      cost* x = node_cost(node_idx);
+      *x = std::min(*x, max_allowed(node_idx));
+      reduce_max_allowed(node_idx, *x);
+    }
+
+    value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -722,6 +788,7 @@ protected:
   cost value_best_;
   std::vector<int> assignment_best_;
 
+  cost value_relaxed_;
   std::vector<cost> assignment_relaxed_;
 
   std::default_random_engine gen_;
