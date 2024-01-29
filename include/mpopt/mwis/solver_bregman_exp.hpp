@@ -172,7 +172,6 @@ public:
     dbg::timer t_total;
 
     while (!h.signaled() && temperature_ > 1e-16) {
-      init_exponential_domain();
       const auto d = dual_relaxed();
       const auto p = primal();
       const auto gap = (d - p) / d * 100.0;
@@ -183,6 +182,8 @@ public:
                 << "t=" << t_total.seconds<true>() << "s "
                 << "T=" << temperature_ << " "
                 << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it " << std::endl;
+
+      init_exponential_domain();
 
       if (gap < 1e-2) {
         std::cout << "Gap limit reached." << std::endl;
@@ -477,6 +478,11 @@ protected:
     // finalize_costs).
     value_best_ = compute_primal(assignment_best_);
     iterations_ = 0;
+
+    // This will set up the corresponding costs in the exponential domain. We
+    // do this so that all invariants hold, e.g., for all functions that call
+    // `assert_unset_alphas`.
+    init_exponential_domain();
 
     finalized_costs_ = true;
   }
