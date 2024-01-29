@@ -144,7 +144,7 @@ public:
 
   cost primal() const { return value_best_ * scaling_; }
 
-  cost primal_relaxed() const { return value_relaxed_ * scaling_; }
+  cost primal_relaxed() const { return value_relaxed_best_ * scaling_; }
 
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
@@ -444,7 +444,7 @@ protected:
     value_best_ = value_latest_;
 
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
-    value_relaxed_ = value_latest_;
+    value_relaxed_best_ = value_relaxed_ = value_latest_;
 
     //
     // Initialize remaining things.
@@ -488,7 +488,9 @@ protected:
     // have most likely changed the assignment between calls to
     // finalize_costs).
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
     value_best_ = compute_primal(assignment_best_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
     iterations_ = 0;
 
     // This will set up the corresponding costs in the exponential domain. We
@@ -662,6 +664,7 @@ protected:
     }
 
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -699,6 +702,7 @@ protected:
       greedy_clique(clique_idx);
 
     value_latest_ = compute_primal(assignment_latest_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_latest_);
   }
 
   void greedy_clique(const index clique_idx)
@@ -859,6 +863,7 @@ protected:
       value_best_ = compute_primal(assignment_best_);
     assert(dbg::are_identical(value_best_, compute_primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
   }
 #endif
 
@@ -905,7 +910,7 @@ protected:
   cost value_best_;
   std::vector<int> assignment_best_;
 
-  cost value_relaxed_;
+  cost value_relaxed_, value_relaxed_best_;
   std::vector<cost_exp> assignment_relaxed_, alphas_;
 
   std::default_random_engine gen_;

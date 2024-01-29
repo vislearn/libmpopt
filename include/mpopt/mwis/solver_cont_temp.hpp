@@ -114,7 +114,7 @@ public:
 
   cost primal() const { return value_best_ * scaling_; }
 
-  cost primal_relaxed() const { return value_relaxed_ * scaling_; }
+  cost primal_relaxed() const { return value_relaxed_best_ * scaling_; }
 
   template<typename OUTPUT_ITERATOR>
   void assignment(OUTPUT_ITERATOR begin, OUTPUT_ITERATOR end) const
@@ -312,7 +312,7 @@ protected:
   {
     // Note: This is the implementation for section "7.2 Method 2: Duality gap" of the paper.
     const auto d = dual_smoothed_scaled();
-    const auto p = value_relaxed_;
+    const auto p = value_relaxed_best_;
 
     // std::cout << "update_temperature => d=" << d << " p=" << p << " entropy=" << entropy_scaled() << " drop=" << temperature_drop_factor_ << std::endl;
 
@@ -460,7 +460,7 @@ protected:
     value_best_ = value_latest_;
 
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
-    value_relaxed_ = value_latest_;
+    value_relaxed_best_ = value_relaxed_ = value_latest_;
 
     //
     // Initialize remaining things.
@@ -504,8 +504,15 @@ protected:
     // have most likely changed the assignment between calls to
     // finalize_costs).
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
     value_best_ = compute_primal(assignment_best_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
     iterations_ = 0;
+
+    // This will set up the corresponding costs in the exponential domain. We
+    // do this so that all invariants hold, e.g., for all functions that call
+    // `assert_unset_alphas`.
+    init_exponential_domain();
 
     // Try to improve naive assignment by greedily sampling an assignment.
     // This will be used for inital temperature selection.
@@ -667,6 +674,7 @@ protected:
     }
 
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -706,6 +714,7 @@ protected:
       greedy_clique(clique_idx);
 
     value_latest_ = compute_primal(assignment_latest_);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_latest_);
   }
 
   void greedy_clique(const index clique_idx)
@@ -866,6 +875,7 @@ protected:
       value_best_ = compute_primal(assignment_best_);
     assert(dbg::are_identical(value_best_, compute_primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
+    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
   }
 #endif
 
@@ -912,7 +922,7 @@ protected:
   cost value_best_;
   std::vector<int> assignment_best_;
 
-  cost value_relaxed_;
+  cost value_relaxed_, value_relaxed_best_;
   std::vector<cost_exp> assignment_relaxed_, alphas_;
 
   std::default_random_engine gen_;
