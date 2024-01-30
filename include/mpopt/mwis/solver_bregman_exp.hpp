@@ -199,20 +199,22 @@ public:
       t_total.start();
       bool is_optimal = false;
       while (!is_optimal && !h.signaled()) {
-        size_t count_stabilization = 0;
-        foreach_clique([&](const auto clique_idx) {
-          update_lambda(clique_idx);
+        for (int j = 0; j < batch_size; ++j) {
+          size_t count_stabilization = 0;
+          foreach_clique([&](const auto clique_idx) {
+            update_lambda(clique_idx);
 
-          const auto& alpha = alphas_[clique_idx];
-          if (alpha + 1/alpha > threshold_stability_) {
-            reparametrize();
-            temperature_ /= 0.5 * temperature_drop_factor_;
-            init_exponential_domain();
-            count_stabilization += 1;
-          }
-        });
+            const auto& alpha = alphas_[clique_idx];
+            if (alpha + 1/alpha > threshold_stability_) {
+              reparametrize();
+              temperature_ /= 0.5 * temperature_drop_factor_;
+              init_exponential_domain();
+              count_stabilization += 1;
+            }
+          });
 
-        std::cout << count_stabilization << " " << std::flush;
+          std::cout << count_stabilization << " " << std::flush;
+        }
 
         is_optimal = true;
         foreach_clique([&](const auto clique_idx) {
@@ -223,7 +225,7 @@ public:
           is_optimal &= std::abs(sum - 1) <= threshold_feasibility_;
         });
 
-        ++iterations_;
+        iterations_ += batch_size;
       }
 
       reparametrize();

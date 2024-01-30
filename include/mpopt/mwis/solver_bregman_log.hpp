@@ -179,11 +179,13 @@ public:
       t_total.start();
       bool is_optimal = false;
       while (!is_optimal && !h.signaled()) {
-        foreach_clique([&](const auto clique_idx) {
-          update_lambda(clique_idx);
-        });
+        for (int j = 0; j < batch_size; ++j) {
+          foreach_clique([&](const auto clique_idx) {
+            update_lambda(clique_idx);
+          });
 
-        std::cout << "0 " << std::flush;
+          std::cout << "0 " << std::flush;
+        }
 
         is_optimal = true;
         foreach_clique([&](const auto clique_idx) {
@@ -194,7 +196,7 @@ public:
           is_optimal &= std::abs(sum - 1) <= threshold_feasibility_;
         });
 
-        ++iterations_;
+        iterations_ += batch_size;
       }
 
       // We do not use the result, we only output it. This allows to read off
