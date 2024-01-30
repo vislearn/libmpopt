@@ -220,8 +220,7 @@ public:
           foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
             sum += assignment_relaxed_[node_idx];
           });
-          if (sum - 1.0 > threshold_feasibility_)
-            is_optimal = false;
+          is_optimal &= std::abs(sum - 1) <= threshold_feasibility_;
         });
 
         ++iterations_;

@@ -179,24 +179,20 @@ public:
       t_total.start();
       bool is_optimal = false;
       while (!is_optimal && !h.signaled()) {
-        is_optimal = true;
-
-        for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx)
+        foreach_clique([&](const auto clique_idx) {
           update_lambda(clique_idx);
-
-        for (index clique_idx = 0; clique_idx < no_cliques(); ++clique_idx) {
-          cost total = 0.0;
-          const auto& cl = clique_indices_[clique_idx];
-          for (index idx = cl.begin; idx < cl.end; ++idx) {
-            const auto node_idx = clique_index_data_[idx];
-            const auto x = std::exp(costs_[node_idx] / temperature_);
-            total += x;
-          }
-
-          is_optimal &= std::abs(total - 1) <= threshold_feasibility_;
-        }
+        });
 
         std::cout << "0 " << std::flush;
+
+        is_optimal = true;
+        foreach_clique([&](const auto clique_idx) {
+          cost sum = 0.0;
+          foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
+            sum += std::exp(costs_[node_idx] / temperature_);
+          });
+          is_optimal &= std::abs(sum - 1) <= threshold_feasibility_;
+        });
 
         ++iterations_;
       }
