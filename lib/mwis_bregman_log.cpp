@@ -44,8 +44,8 @@ double mpopt_mwis_solver_get_reduced_clique_cost(mpopt_mwis_solver* s, int i) { 
 double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s) { return s->solver.temperature(); }
 void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double v) { s->solver.temperature(v); }
 
-double mpopt_mwis_solver_get_threshold_optimality(mpopt_mwis_solver* s) { return s->solver.threshold_optimality(); }
-void mpopt_mwis_solver_set_threshold_optimality(mpopt_mwis_solver* s, double v) { s->solver.threshold_optimality(v); }
+double mpopt_mwis_solver_get_threshold_feasibility(mpopt_mwis_solver* s) { return s->solver.threshold_feasibility(); }
+void mpopt_mwis_solver_set_threshold_feasibility(mpopt_mwis_solver* s, double v) { s->solver.threshold_feasibility(v); }
 
 // double mpopt_mwis_solver_get_threshold_stability(mpopt_mwis_solver* s) { return s->solver.threshold_stability(); }
 // void mpopt_mwis_solver_set_threshold_stability(mpopt_mwis_solver* s, double v) { s->solver.threshold_stability(v); }

@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--python', action='store_true', help='Use Python bregman implementation.')
     parser.add_argument('-t', '--timeout', default=None)
     parser.add_argument('--initial-temperature', type=float)
-    parser.add_argument('--threshold-optimality', type=float)
+    parser.add_argument('--threshold-feasibility', type=float)
     parser.add_argument('--threshold-stability', type=float)
     parser.add_argument('--temperature-drop-factor', type=float)
     parser.add_argument('--output-assignment', help='Writes the primal assignment to a file.')
@@ -32,8 +32,8 @@ if __name__ == '__main__':
     if args.initial_temperature:
         solver.temperature(args.initial_temperature)
 
-    if args.threshold_optimality:
-        solver.threshold_optimality(args.threshold_optimality)
+    if args.threshold_feasibility:
+        solver.threshold_feasibility(args.threshold_feasibility)
 
     if args.threshold_stability:
         solver.threshold_stability(args.threshold_stability)

@@ -37,8 +37,8 @@ double mpopt_mwis_solver_get_clique_cost(mpopt_mwis_solver* s, int i);
 double mpopt_mwis_solver_get_temperature(mpopt_mwis_solver* s);
 void mpopt_mwis_solver_set_temperature(mpopt_mwis_solver* s, double v);
 
-double mpopt_mwis_solver_get_threshold_optimality(mpopt_mwis_solver* s);
-void mpopt_mwis_solver_set_threshold_optimality(mpopt_mwis_solver* s, double v);
+double mpopt_mwis_solver_get_threshold_feasibility(mpopt_mwis_solver* s);
+void mpopt_mwis_solver_set_threshold_feasibility(mpopt_mwis_solver* s, double v);
 
 //double mpopt_mwis_solver_get_threshold_stability(mpopt_mwis_solver* s);
 //void mpopt_mwis_solver_set_threshold_stability(mpopt_mwis_solver* s, double v);

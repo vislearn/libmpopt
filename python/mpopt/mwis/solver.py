@@ -64,8 +64,8 @@ class Solver(BaseSolver):
     def temperature(self, v=None):
         return self._getter_setter('temperature', v)
 
-    def threshold_optimality(self, v=None):
-        return self._getter_setter('threshold_optimality', v)
+    def threshold_feasibility(self, v=None):
+        return self._getter_setter('threshold_feasibility', v)
 
     def threshold_stability(self, v=None):
         return self._getter_setter('threshold_stability', v)

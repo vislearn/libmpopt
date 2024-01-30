@@ -42,7 +42,7 @@ public:
 #ifdef ENABLE_QPBO
   , qpbo_(0, 0)
 #endif
-  , threshold_optimality_(1e-2)
+  , threshold_feasibility_(1e-2)
   , threshold_stability_(get_default_threshold_stability())
   , temperature_drop_factor_(0.5)
   {
@@ -220,7 +220,7 @@ public:
           foreach_node_in_clique(clique_idx, [&](const auto node_idx) {
             sum += assignment_relaxed_[node_idx];
           });
-          if (sum - 1.0 > threshold_optimality_)
+          if (sum - 1.0 > threshold_feasibility_)
             is_optimal = false;
         });
 
@@ -250,8 +250,8 @@ public:
   index no_orig() const { return orig_.size(); }
   index no_cliques() const { return clique_indices_.size(); }
 
-  double threshold_optimality() const { return threshold_optimality_; }
-  void threshold_optimality(const double v) { threshold_optimality_ = v; }
+  double threshold_feasibility() const { return threshold_feasibility_; }
+  void threshold_feasibility(const double v) { threshold_feasibility_ = v; }
 
   double threshold_stability() const { return threshold_stability_; }
   void threshold_stability(const double v) { threshold_stability_ = v; }
@@ -920,7 +920,7 @@ protected:
   qpbo::QPBO<cost> qpbo_;
 #endif
 
-  cost_exp threshold_optimality_;
+  cost_exp threshold_feasibility_;
   cost_exp threshold_stability_;
   cost temperature_drop_factor_;
 };
