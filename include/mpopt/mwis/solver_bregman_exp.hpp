@@ -174,10 +174,6 @@ public:
     dbg::timer t_total;
 
     while (!h.signaled() && temperature_ > 1e-16) {
-      // We do not use the result, we only output it. This allows to read off
-      // the progress of the dual optimization directly.
-      compute_relaxed_truncated_projection();
-
       const auto d = dual_relaxed();
       const auto p = primal();
       const auto p_relaxed = primal_relaxed();
@@ -230,7 +226,13 @@ public:
 
         ++iterations_;
       }
+
       reparametrize();
+
+      // We do not use the relaxed primal, we only output it. This allows to
+      // read off the progress of the dual optimization directly.
+      compute_relaxed_truncated_projection();
+
       temperature_ *= temperature_drop_factor_;
 
       update_integer_assignment(greedy_generations);
