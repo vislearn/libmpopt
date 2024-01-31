@@ -625,20 +625,20 @@ protected:
 
   void compute_relaxed_truncated_projection()
   {
-    auto node_cost = [this](const index node_idx) {
+    auto node_cost = [this](const index node_idx) -> cost_exp* {
       assert(node_idx < no_orig());
       return &assignment_relaxed_[node_idx];
     };
 
-    auto slack = [this](const index clique_idx) {
+    auto slack = [this](const index clique_idx) -> cost_exp* {
       assert(no_orig() + clique_idx < assignment_relaxed_.size());
       return &assignment_relaxed_[no_orig() + clique_idx];
     };
 
-    auto max_allowed = [this, slack](const index node_idx) -> cost {
+    auto max_allowed = [this, slack](const index node_idx) -> cost_exp {
       assert(node_idx < no_orig());
       const auto& nc = node_cliques_[node_idx];
-      cost result = 1.0;
+      cost_exp result = 1.0;
       for (index idx = nc.begin; idx < nc.end; ++idx) {
         const auto clique_idx = node_cliques_data_[idx];
         result = std::min(result, *slack(clique_idx));
@@ -669,7 +669,7 @@ protected:
       return *node_cost(a) > *node_cost(b);
     });
     for (index node_idx : scratch_qpbo_indices_) {
-      cost* x = node_cost(node_idx);
+      cost_exp* x = node_cost(node_idx);
       *x = std::min(*x, max_allowed(node_idx));
       reduce_max_allowed(node_idx, *x);
     }

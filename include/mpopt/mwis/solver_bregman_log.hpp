@@ -504,12 +504,12 @@ protected:
 
   void compute_relaxed_truncated_projection()
   {
-    auto node_cost = [this](const index node_idx) {
+    auto node_cost = [this](const index node_idx) -> cost* {
       assert(node_idx < no_orig());
       return &assignment_relaxed_[node_idx];
     };
 
-    auto slack = [this](const index clique_idx) {
+    auto slack = [this](const index clique_idx) -> cost* {
       assert(no_orig() + clique_idx < assignment_relaxed_.size());
       return &assignment_relaxed_[no_orig() + clique_idx];
     };
