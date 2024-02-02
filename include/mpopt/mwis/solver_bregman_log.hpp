@@ -155,7 +155,7 @@ public:
     signal_handler h;
     dbg::timer t_total;
 
-    while (!h.signaled() && temperature_ > 1e-16) {
+    while (true) {
       const auto d = dual_relaxed();
       const auto p = primal();
       const auto p_relaxed = primal_relaxed();
@@ -170,6 +170,15 @@ public:
                 << "t=" << t_total.seconds<true>() << "s "
                 << "T=" << temperature_ << " "
                 << "total=" << t_total.milliseconds<true>() / iterations_ << "ms/it" << std::endl;
+
+      if (h.signaled()) {
+        break;
+      }
+
+      if (temperature_ < 1e-16) {
+        std::cout << "Temperature limit reached." << std::endl;
+        break;
+      }
 
       if (gap < 1e-2) {
         std::cout << "Gap limit reached." << std::endl;
