@@ -605,28 +605,6 @@ protected:
     });
   }
 
-  bool is_stable(const cost_exp c) const
-  {
-    bool result = c <= threshold_stability_ && c >= 1/threshold_stability_;
-    // result \implies std::isfinite(result)
-    assert(!result || std::isfinite(c));
-    return result;
-  }
-
-  bool is_unstable(const cost_exp c) const
-  {
-    return !is_stable(c);
-  }
-
-  void stabilize()
-  {
-    // If we stabilize all terms, we just reparametrize (moves things from
-    // alphas back to original costs) and reinitialize the values in the
-    // exponential domain in one batch (i.e. set everything to 1).
-    reparametrize();
-    init_exponential_domain();
-  }
-
   void compute_relaxed_truncated_projection()
   {
     auto node_cost = [this](const index node_idx) -> cost_exp* {
