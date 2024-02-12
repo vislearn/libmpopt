@@ -449,17 +449,24 @@ protected:
     // Construct trivial labeling of zero cost.
     //
 
+    // Set assignment_latest_ to zero labeling.
     assignment_latest_.resize(no_nodes());
     for (index nidx = 0; nidx < no_nodes(); ++nidx)
       assignment_latest_[nidx] = nidx < no_orig() ? 0 : 1;
     value_latest_ = compute_primal(assignment_latest_);
     assert(std::abs(value_latest_) < 1e-8);
 
+    // Set assignment_best_ to zero labeling.
     assignment_best_ = assignment_latest_;
     value_best_ = value_latest_;
 
+    // Set assignment_relaxed_ to zero labeling.
     assignment_relaxed_.assign(assignment_latest_.cbegin(), assignment_latest_.cend());
-    value_relaxed_best_ = value_relaxed_ = value_latest_;
+    value_relaxed_ = value_latest_;
+
+    // Set assignment_relaxed_best_ to zero labeling.
+    assignment_relaxed_best_ = assignment_relaxed_;
+    value_relaxed_best_ = value_relaxed_;
 
     //
     // Initialize remaining things.
@@ -503,9 +510,9 @@ protected:
     // have most likely changed the assignment between calls to
     // finalize_costs).
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
-    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
+    update_relaxed_best(assignment_relaxed_, value_relaxed_);
     value_best_ = compute_primal(assignment_best_);
-    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
+    update_relaxed_best(assignment_best_, value_best_);
     iterations_ = 0;
 
     // This will set up the corresponding costs in the exponential domain. We
@@ -605,6 +612,16 @@ protected:
     });
   }
 
+  template<typename T>
+  void update_relaxed_best(const std::vector<T>& assignment, const cost& value)
+  {
+    assert(assignment_relaxed_best_.size() == assignment.size());
+    if (value > value_relaxed_best_) {
+      assignment_relaxed_best_.assign(assignment.cbegin(), assignment.cend());
+      value_relaxed_best_ = value;
+    }
+  }
+
   void compute_relaxed_truncated_projection()
   {
     auto node_cost = [this](const index node_idx) -> cost_exp* {
@@ -657,7 +674,7 @@ protected:
     }
 
     value_relaxed_ = compute_primal_relaxed(assignment_relaxed_);
-    value_relaxed_best_ = std::max(value_relaxed_best_, value_relaxed_);
+    update_relaxed_best(assignment_relaxed_, value_relaxed_);
   }
 
   bool update_integer_assignment(int greedy_generations)
@@ -695,7 +712,7 @@ protected:
       greedy_clique(clique_idx);
 
     value_latest_ = compute_primal(assignment_latest_);
-    value_relaxed_best_ = std::max(value_relaxed_best_, value_latest_);
+    update_relaxed_best(assignment_latest_, value_latest_);
   }
 
   void greedy_clique(const index clique_idx)
@@ -856,7 +873,7 @@ protected:
       value_best_ = compute_primal(assignment_best_);
     assert(dbg::are_identical(value_best_, compute_primal(assignment_best_)));
     assert(value_best_ >= value_best_old - 1e-8);
-    value_relaxed_best_ = std::max(value_relaxed_best_, value_best_);
+    update_relaxed_best(assignment_best_, value_best_);
   }
 #endif
 
@@ -898,13 +915,12 @@ protected:
   mutable std::vector<index> scratch_greedy_indices_;
   mutable std::vector<index> scratch_qpbo_indices_;
 
-  cost value_latest_;
-  std::vector<int> assignment_latest_;
-  cost value_best_;
-  std::vector<int> assignment_best_;
+  cost value_latest_, value_best_;
+  std::vector<int> assignment_latest_, assignment_best_;
 
   cost value_relaxed_, value_relaxed_best_;
-  std::vector<cost_exp> assignment_relaxed_, alphas_;
+  std::vector<cost_exp> assignment_relaxed_, assignment_relaxed_best_;
+  std::vector<cost_exp> alphas_;
 
   std::default_random_engine gen_;
 #ifdef ENABLE_QPBO
