@@ -10,6 +10,7 @@ namespace bregman_exp {
 // compute a equivalance transformation (reparametrization) at full precsision.
 using cost_exp = cost;
 
+constexpr bool enable_stabilization = false;
 constexpr cost_exp get_default_threshold_stability() {
   if constexpr (std::is_same_v<cost_exp, float>) {
     return 1e30f;
@@ -213,12 +214,14 @@ public:
           foreach_clique([&](const auto clique_idx) {
             update_lambda(clique_idx);
 
-            const auto& alpha = alphas_[clique_idx];
-            if (alpha + 1/alpha > threshold_stability_) {
-              reparametrize();
-              temperature_ /= 0.5 * temperature_drop_factor_;
-              init_exponential_domain();
-              count_stabilization += 1;
+            if constexpr (enable_stabilization) {
+              const auto& alpha = alphas_[clique_idx];
+              if (alpha + 1/alpha > threshold_stability_) {
+                reparametrize();
+                temperature_ /= 0.5 * temperature_drop_factor_;
+                init_exponential_domain();
+                count_stabilization += 1;
+              }
             }
           });
 
