@@ -37,7 +37,7 @@ def callback(model, where):
 
 class Gurobi:
 
-    def __init__(self, model, ilp_mode=True, pairwise_relaxation=False, silent=True):
+    def __init__(self, model, ilp_mode=True, pairwise_relaxation=False, silent=True, timeout=None):
         self._constructed = False
         self.model = model
         self.ilp_mode = ilp_mode
@@ -51,6 +51,9 @@ class Gurobi:
         self.gurobi.Params.DisplayInterval = 1
         self.gurobi.Params.MIPGap = 0
         self.gurobi.Params.MIPGapAbs = 0
+
+        if timeout is not None:
+            self.gurobi.Params.TimeLimit = timeout
 
     def construct(self):
         if self._constructed:
