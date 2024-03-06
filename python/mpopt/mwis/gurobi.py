@@ -89,13 +89,11 @@ class Gurobi:
     def solve(self):
         self.construct()
         self.gurobi.optimize(callback)
+        opt = self.gurobi.Status == gurobi.GRB.OPTIMAL
         time = self.gurobi.Runtime
         dual = self.gurobi.ObjVal
-        if self.ilp_mode:
-            primal = dual
-        else:
-            primal = -math.inf
-        obj = {'t': time, 'ub': dual, 'lb': primal, 'opt': True}
+        primal = dual if opt else -math.inf
+        obj = {'t': time, 'ub': dual, 'lb': primal, 'opt': opt}
         json.dump(obj, sys.stdout)
         print(flush=True)
         self.assignment = [var.X for var in self.node_vars.values()]
