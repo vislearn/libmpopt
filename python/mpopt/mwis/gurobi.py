@@ -91,8 +91,8 @@ class Gurobi:
         self.gurobi.optimize(callback)
         opt = self.gurobi.Status == gurobi.GRB.OPTIMAL
         time = self.gurobi.Runtime
-        dual = self.gurobi.ObjVal
-        primal = dual if opt else -math.inf
+        primal = self.gurobi.ObjVal
+        dual = primal if opt else math.inf
         obj = {'t': time, 'ub': dual, 'lb': primal, 'opt': opt}
         json.dump(obj, sys.stdout)
         print(flush=True)
