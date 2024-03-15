@@ -28,7 +28,7 @@
 #endif
 
 #ifdef ENABLE_QPBO
-#  include <qpbo/qpbo.h>
+#  include <qpbo.h>
 #endif
 
 #endif

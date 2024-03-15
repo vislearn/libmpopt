@@ -143,20 +143,20 @@ public:
   void optimize()
   {
 #ifndef NDEBUG
-    std::cout << "Running QPBO ...";
+    //std::cout << "Running QPBO ...";
 #endif
     qpbo_.Solve();
 
     if (enable_weak_persistency_) {
 #ifndef NDEBUG
-      std::cout << " Weak Persistency ...";
+      //std::cout << " Weak Persistency ...";
 #endif
       qpbo_.ComputeWeakPersistencies();
     }
 
     if (enable_probe_) {
 #ifndef NDEBUG
-      std::cout << " Probe ...";
+      //std::cout << " Probe ...";
 #endif
       qpbo_type::ProbeOptions probe_options;
       mapping_.resize(qpbo_.GetNodeNum());
@@ -165,13 +165,13 @@ public:
 
     if (enable_improve_) {
 #ifndef NDEBUG
-      std::cout << " Improve ... ";
+      //std::cout << " Improve ... ";
 #endif
       auto prev = qpbo_.ComputeTwiceEnergy();
       for (int i = 0; i < 5; ++i) {
         qpbo_.Improve();
 #ifndef NDEBUG
-        std::cout << ".";
+        //std::cout << ".";
 #endif
         const auto curr = qpbo_.ComputeTwiceEnergy();
         if (curr < prev) {
@@ -182,7 +182,7 @@ public:
     }
 
 #ifndef NDEBUG
-    std::cout << std::endl;
+    //std::cout << std::endl;
 #endif
   }
 
