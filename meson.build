@@ -28,4 +28,4 @@ libmpopt = static_library(
                     dependencies: libqpbo_dep,
                     install: false)
 
-libmpopt_dep = declare_dependency(include_directories : include_dirs, link_with : libmpopt)
+libmpopt_dep = declare_dependency(include_directories : include_dirs, link_with : libmpopt, dependencies: [libqpbo_dep])
