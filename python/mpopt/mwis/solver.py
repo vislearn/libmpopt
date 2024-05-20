@@ -75,7 +75,7 @@ class Solver(BaseSolver):
 
 
 def construct_solver(model, library):
-    assert library in ('original', 'bregman_exp', 'bregman_log')
+    assert library in ('temp_cont', 'bregman_exp', 'bregman_log')
     lib = globals()[f'lib_{library}']
     s = Solver(lib)
 
