@@ -37,10 +37,10 @@ def persistency(model):
     mapping = [None] * no_nodes
 
     for nidx in range(no_nodes):
-        # Fix nodes with positive cost to 0.
+        # Fix nodes with non-positive cost to 0.
         # Otherwise check if node participates in any clique and if not set
-        # it to 1 (cost known to be < 0).
-        if model.nodes[nidx] >= 0:
+        # it to 1 (cost known to be > 0).
+        if model.nodes[nidx] <= 0:
             mapping[nidx] = 0
         elif not model.edges[nidx]:
             mapping[nidx] = 1
@@ -51,8 +51,8 @@ def persistency(model):
 
         assert all(mapping[nidx] != 1 for nidx2 in model.edges[nidx])
 
-        cost_nb = sum(model.nodes[nidx2] for nidx2 in model.edges[nidx] if nidx != nidx2 and model.nodes[nidx2] <= 0)
-        if model.nodes[nidx] < cost_nb:
+        cost_nb = sum(model.nodes[nidx2] for nidx2 in model.edges[nidx] if nidx != nidx2 and model.nodes[nidx2] >= 0)
+        if model.nodes[nidx] > cost_nb:
             for nidx2 in model.edges[nidx]:
                 mapping[nidx2] = 0
             mapping[nidx] = 1
@@ -62,7 +62,8 @@ def persistency(model):
             continue
 
         for nidx1 in model.edges[nidx0]:
-            assert mapping[nidx] is None
+            if mapping[nidx1] is not None:
+                continue
 
             if nidx0 < nidx1:
                 cost0, cost1 = model.nodes[nidx0], model.nodes[nidx1]
@@ -73,9 +74,9 @@ def persistency(model):
                 if not nb0 or not nb1:
                     continue
 
-                if cost0 <= cost1 and nb0 <= nb1:
+                if cost0 >= cost1 and nb0 <= nb1:
                     mapping[nidx1] = 0
-                elif cost1 <= cost0 and nb1 <= nb0:
+                elif cost1 >= cost0 and nb1 <= nb0:
                     mapping[nidx0] = 0
 
     return reduce_model(model, mapping), mapping
