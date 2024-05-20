@@ -9,7 +9,7 @@ from mpopt import utils, mwis
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='mwis_preprocess', description='TODO')
     parser.add_argument('input_filename', metavar='INPUT', help='Specifies the *.json input file.')
-    parser.add_argument('output_filename', metavar='INPUT', help='Specifies the *.json output file.')
+    parser.add_argument('output_filename', metavar='OUTPUT', help='Specifies the *.json output file.')
     args = parser.parse_args()
 
     with utils.smart_open(args.input_filename, 'rt') as f:
