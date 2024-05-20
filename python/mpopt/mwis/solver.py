@@ -61,6 +61,9 @@ class Solver(BaseSolver):
         else:
             getattr(self.lib, 'solver_set_' + k)(self.solver, v)
 
+    def constant(self, v=None):
+        return self._getter_setter('constant', v)
+
     def temperature(self, v=None):
         return self._getter_setter('temperature', v)
 
@@ -84,6 +87,8 @@ def construct_solver(model, library):
 
     for nodes in model.cliques:
         s.add_clique(nodes)
+
+    s.constant(model.constant)
 
     s.finalize()
     return s
