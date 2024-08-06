@@ -18,7 +18,7 @@ Supported combinatorial optimization problems:
 
 - S. Haller, B. Savchynskyy\
   **“A Bregman-Sinkhorn Algorithm for the Maximum Weight Independent Set Problem”**\
-  arXiv Pre-Print 2024 [[PDF][arxiv2024]] [[Website][arxiv2024_website]]
+  arXiv Pre-Print 2024 [[PDF][arxiv2024]] [[Website & Paper Specific Code][arxiv2024_website]]
 
 - S. Haller, L. Feineis, L. Hutschenreiter, F. Bernard, C. Rother, D. Kainmüller, P. Swoboda, B. Savchynskyy\
   **“A Comparative Study of Graph Matching Algorithms in Computer Vision”**\
