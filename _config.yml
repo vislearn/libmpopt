@@ -1,0 +1,6 @@
+---
+# See <https://github.com/jekyll/jekyll/issues/9297#issuecomment-2137865682>
+# for why we use kramdown.
+markdown: kramdown
+kramdown:
+  parse_block_html: true
