@@ -13,18 +13,30 @@ Supported combinatorial optimization problems:
 
 ## References
 
-L. Hutschenreiter, S. Haller, L. Feineis, C. Rother, D. Kainmüller, B. Savchynskyy.\
-**“Fusion Moves for Graph Matching”**.\
-*arXiv preprint arXiv:2101.12085*. [[pdf][arxiv2021]]
+- S. Haller, B. Savchynskyy.<br>
+  **“A Bregman-Sinkhorn Algorithm for the Maximum Weight Independent Set Problem”**.<br>
+  arXiv Pre-Print 2024. [[PDF][arxiv2024]] [[Website & Paper Specific Code][arxiv2024_website]]
 
-S. Haller, M. Prakash, L. Hutschenreiter, T. Pietzsch, C. Rother, F. Jug, P. Swoboda, B. Savchynskyy.\
-**“A Primal-Dual Solver for Large-Scale Tracking-by-Assignment”**.\
-*AISTATS 2020*. [[pdf][aistats2020]]
+- S. Haller, L. Feineis, L. Hutschenreiter, F. Bernard, C. Rother, D. Kainmüller, P. Swoboda, B. Savchynskyy.<br>
+  **“A Comparative Study of Graph Matching Algorithms in Computer Vision”**.<br>
+  ECCV 2022 [[PDF][eccv2022]] [[Website][eccv2022_website]]
 
-V. Kolmogorov.\
-**“Convergent tree-reweighted message passing for energy minimization”**.\
-*PAMI 2006*. [[pdf][pami2006]]
+- L. Hutschenreiter, S. Haller, L. Feineis, C. Rother, D. Kainmüller, B. Savchynskyy.<br>
+  **“Fusion Moves for Graph Matching”**.<br>
+  ICCV 2021. [[PDF][iccv2021]]
 
-[arxiv2021]: https://arxiv.org/pdf/2101.12085
-[aistats2020]: https://hci.iwr.uni-heidelberg.de/vislearn/HTML/people/stefan_haller/pdf/A%20Primal-Dual%20Solver%20for%20Large-Scale%20Tracking-by-Assignment%20-%20AISTATS2020.pdf
+- S. Haller, M. Prakash, L. Hutschenreiter, T. Pietzsch, C. Rother, F. Jug, P. Swoboda, B. Savchynskyy.<br>
+  **“A Primal-Dual Solver for Large-Scale Tracking-by-Assignment”**.<br>
+  *AISTATS 2020*. [[pdf][aistats2020]]
+
+- V. Kolmogorov.<br>
+  **“Convergent tree-reweighted message passing for energy minimization”**.<br>
+  *PAMI 2006*. [[pdf][pami2006]]
+
 [pami2006]: https://pub.ist.ac.at/~vnk/papers/trw_maxproduct_tr2.pdf
+[aistats2020]: https://arxiv.org/pdf/2004.06375.pdf
+[iccv2021]: https://arxiv.org/pdf/2101.12085.pdf
+[eccv2022]: https://arxiv.org/pdf/2207.00291.pdf
+[eccv2022_website]: https://vislearn.github.io/gmbench/
+[arxiv2024]: https://arxiv.org/pdf/2408.02086
+[arxiv2024_website]: https://vislearn.github.io/libmpopt/mwis2024/
